@@ -1001,7 +1001,16 @@ async function loadStatus() {
     `✅ ${d.user} (${d.login_user})` : '❌ Not connected';
   s('sBROKER', brokerDisplay);
   s('setBROK', brokerDisplay);
-  s('sUSER', d.login_user||d.user||'—');
+  s('sUSER', d.login_user||'—');
+  // Full name from Angel One
+  const brokerFull = d.user ? `${d.user} (${d.login_user})` : (d.login_user||'—');
+  s('sBROKER', d.connected ? '✅ '+brokerFull : '❌ Offline');
+  s('setBROK', d.connected ? '✅ '+brokerFull : '❌ Offline');
+  // Capital from user's own account
+  if(d.capital > 0) {
+    s('kCAP', '₹'+d.capital.toLocaleString('en-IN',{maximumFractionDigits:2}));
+    s('setCAP', '₹'+d.capital.toLocaleString('en-IN',{maximumFractionDigits:2}));
+  }
   s('sML', d.ml_ready ? '✅ Ready' : '⚠️ Not trained');
   s('sACC', (d.ml_accuracy||0)+'%');
   s('sSAMP', (d.ml_samples||0)+' samples');
