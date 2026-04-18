@@ -134,30 +134,29 @@ def logout():
 # ── Status API ─────────────────────────────────────────
 @app.route("/api/v3/status")
 def status():
-    now = datetime.now(IST)
+    # Per-user broker info
+    curr_user = get_current_user()
+    curr_username = curr_user.get("username","")
+    broker_user_name = broker.user_name
+    broker_connected = broker.connected
+    try:
+        from data.users import get_broker_credentials
+        creds = get_broker_credentials(curr_username)
+        if creds and creds.get("connected") and creds.get("api_key"):
+            broker_user_name = creds.get("client_id","")
+            broker_connected = True
+    except Exception:
+        pass
+
     stats = get_today_stats()
     vix = _get_vix()
+    now = datetime.now(IST)
     return jsonify({
         "success":       True,
         "version":       config.VERSION,
-        # Per-user broker info
-        curr_user = get_current_user()
-        curr_username = curr_user.get("username","")
-        broker_user_name = broker.user_name
-        broker_connected = broker.connected
-        # Check user's own broker credentials
-        try:
-            from data.users import get_broker_credentials
-            creds = get_broker_credentials(curr_username)
-            if creds and creds.get("connected") and creds.get("api_key"):
-                broker_user_name = creds.get("client_id","")  # Will be replaced by actual name
-                broker_connected = True
-        except Exception:
-            pass
         "connected":     broker_connected,
         "user":          broker_user_name,
         "login_user":    curr_username,
-        "mode":          "PAPER" if config.PAPER_MODE else "LIVE",
         "market_open":   signal_engine.is_market_open(),
         "mcx_open":      signal_engine.is_market_open("MCX"),
         "time":          now.strftime("%H:%M:%S"),
@@ -619,39 +618,26 @@ def switch_mode():
         # Confirmation required
         if not confirmed:
             return jsonify({
-                "success":  False,
-                "confirm":  True,
-                "message":  f"⚠️ Switch to LIVE trading?
-
-"
-                            f"👤 User: {username}
-"
-                            f"🏦 Broker: Angel One ({creds.get('client_id','')})
-"
-                            f"💰 Real money will be used!
-
-"
-                            f"Send confirmed=true to proceed."
+                "success": False,
+                "confirm": True,
+                "message": "Switch to LIVE trading? User: " + username + " Broker: Angel One (" + creds.get("client_id","") + ") Real money will be used! Confirm to proceed."
             })
 
     config.PAPER_MODE = (mode == "PAPER")
     logger.info(f"🔄 Mode switched to {mode} by {username}")
 
+
     # Telegram alert
     try:
         from engine.telegram import telegram
+        mode_txt = "LIVE TRADING ACTIVE" if mode=="LIVE" else "Paper mode"
         telegram.system_alert(
-            f"🔄 Mode Switch!
-"
-            f"👤 User: {username}
-"
-            f"📊 Mode: {mode}
-"
-            f"{'⚠️ LIVE TRADING ACTIVE' if mode=='LIVE' else '📝 Paper mode'}",
+            "Mode Switch! User: " + username + " Mode: " + mode + " " + mode_txt,
             "WARNING" if mode=="LIVE" else "INFO"
         )
     except Exception:
         pass
+
 
     return jsonify({"success": True, "mode": mode, "username": username})
 
