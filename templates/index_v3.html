@@ -290,6 +290,52 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
   </div>
 </div>
 
+<!-- BROKER CONNECT MODAL -->
+<div id="BROKER_MODAL" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+     background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center;overflow-y:auto">
+  <div style="background:#111827;border:1px solid #00c8ff;border-radius:16px;
+       padding:24px;max-width:460px;width:90%;margin:20px auto">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:28px">🔗</div>
+      <div style="color:#00c8ff;font-size:18px;font-weight:800">Connect Broker</div>
+      <div style="color:#8090a8;font-size:11px">Link your trading account</div>
+    </div>
+
+    <!-- Broker Selection -->
+    <div style="margin-bottom:14px">
+      <div style="color:#8090a8;font-size:10px;margin-bottom:6px">SELECT BROKER</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="brokerList"></div>
+    </div>
+
+    <!-- Credentials Form -->
+    <div id="brokerForm" style="display:none">
+      <div id="brokerFields"></div>
+
+      <!-- Help Section -->
+      <div id="brokerHelp" style="background:#0d1b2a;border-radius:8px;padding:12px;
+           margin-bottom:12px;font-size:10px;color:#8090a8;line-height:1.8"></div>
+
+      <button onclick="saveBroker()" class="btn b-gold" style="width:100%;padding:12px;margin-bottom:8px">
+        🔗 Connect & Verify
+      </button>
+      <div id="brokerMsg" style="font-size:11px;min-height:16px;text-align:center"></div>
+    </div>
+
+    <!-- Paper mode -->
+    <div style="margin-top:12px;text-align:center">
+      <button onclick="connectPaper()"
+              style="background:none;border:1px solid #8090a8;color:#8090a8;
+                     padding:8px 16px;border-radius:8px;cursor:pointer;font-size:11px">
+        📝 Use Paper Trading (No broker needed)
+      </button>
+    </div>
+
+    <button onclick="document.getElementById('BROKER_MODAL').style.display='none'"
+            style="background:none;border:none;color:#8090a8;cursor:pointer;
+                   width:100%;margin-top:12px;font-size:12px">✕ Close</button>
+  </div>
+</div>
+
 <div class="layout">
     <div class="sidebar">
       <div class="nav-sec">Trading</div>
@@ -484,7 +530,13 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
             <div class="ch">⚙️ System</div>
             <div class="cb" style="font-size:12px">
               <div class="rr"><span class="rl">Mode</span><span><button class="btn b-gold btn-sm" onclick="toggleMode()" id="modeBTN">PAPER</button></span></div>
-              <div class="rr"><span class="rl">Broker</span><span id="setBROK">—</span></div>
+              <div class="rr">
+                <span class="rl">Broker</span>
+                <span id="setBROK">—</span>
+                <button onclick="showBroker()" class="btn b-blue" style="padding:3px 8px;font-size:10px;margin-left:4px">
+                  🔗 Connect
+                </button>
+              </div>
               <div class="rr"><span class="rl">Capital</span><span id="setCAP">—</span></div>
               <div class="rr"><span class="rl">Max Open Pos</span><span>3</span></div>
               <div class="rr"><span class="rl">Min R:R</span><span>1.5</span></div>
@@ -554,6 +606,105 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 const API = '/api/v3';
 let TOKEN = localStorage.getItem('cv3t') || '';
 let _sym = 'NIFTY';
+
+// ── BROKER CONNECT ────────────────────────────────────
+let _selBroker = 'angelone';
+
+async function showBroker() {
+  document.getElementById('BROKER_MODAL').style.display='flex';
+  const d = await (await fetch('/api/v3/brokers')).json();
+  if(!d.brokers) return;
+
+  const bl = document.getElementById('brokerList');
+  const brokerIcons = {angelone:'🔴',zerodha:'🟡',upstox:'🔵',fyers:'🟢',paper:'📝'};
+  bl.innerHTML = Object.entries(d.brokers).map(([key,b])=>`
+    <div onclick="selectBroker('${key}',${JSON.stringify(b).replace(/'/g,"\'")})"
+         id="bBtn_${key}"
+         style="background:#0d1b2a;border:1px solid ${b.available?'#1e3a5f':'#0d1b2a'};
+                border-radius:8px;padding:8px;text-align:center;cursor:${b.available?'pointer':'not-allowed'};
+                opacity:${b.available?'1':'0.4'}">
+      <div style="font-size:18px">${brokerIcons[key]||'📊'}</div>
+      <div style="font-size:9px;color:#e0e6f0;font-weight:600">${b.name.split(' ')[0]}</div>
+      ${!b.available?'<div style="font-size:8px;color:#f97316">Soon</div>':''}
+    </div>
+  `).join('');
+
+  // Auto-select angelone
+  selectBroker('angelone', d.brokers.angelone);
+}
+
+function selectBroker(key, broker) {
+  _selBroker = key;
+  // Highlight selected
+  document.querySelectorAll('[id^="bBtn_"]').forEach(b=>b.style.borderColor='#1e3a5f');
+  const btn = document.getElementById('bBtn_'+key);
+  if(btn) btn.style.borderColor='#00c8ff';
+
+  if(!broker.available || key==='paper') {
+    document.getElementById('brokerForm').style.display='none';
+    return;
+  }
+
+  // Show fields
+  const form = document.getElementById('brokerForm');
+  form.style.display='block';
+
+  const fields = document.getElementById('brokerFields');
+  fields.innerHTML = (broker.fields||[]).map((f,i)=>`
+    <input id="bf_${f}" class="inp"
+           placeholder="${broker.labels?.[i]||f}"
+           type="${f.includes('password')||f.includes('totp')||f.includes('secret')?'password':'text'}"
+           style="margin-bottom:8px">
+  `).join('');
+
+  // Help text
+  const help = document.getElementById('brokerHelp');
+  help.innerHTML = '<div style="color:#d4af37;font-weight:700;margin-bottom:6px">📖 How to get API credentials:</div>' +
+    (broker.help||[]).map(h=>`<div>• ${h}</div>`).join('') +
+    (broker.help_url ? `<div style="margin-top:6px"><a href="${broker.help_url}" target="_blank" style="color:#00c8ff">🔗 Open ${broker.name} Portal</a></div>` : '');
+}
+
+async function saveBroker() {
+  const msg = document.getElementById('brokerMsg');
+  msg.style.color='#8090a8';
+  msg.textContent='⏳ Connecting & verifying...';
+
+  const body = {broker: _selBroker};
+
+  // Collect fields
+  document.querySelectorAll('[id^="bf_"]').forEach(inp=>{
+    const key = inp.id.replace('bf_','');
+    body[key] = inp.value.trim();
+  });
+
+  const d = await api('/user/broker/save', {
+    method:'POST', body: JSON.stringify(body)
+  });
+
+  if(d?.success) {
+    msg.style.color='#00e676';
+    msg.textContent = d.message;
+    setTimeout(()=>{
+      document.getElementById('BROKER_MODAL').style.display='none';
+      loadStatus();
+      toast('✅ Broker connected!', '#00e676');
+    }, 2000);
+  } else {
+    msg.style.color='#ff5252';
+    msg.textContent = '❌ '+(d?.error||'Connection failed');
+  }
+}
+
+async function connectPaper() {
+  const d = await api('/user/broker/save', {
+    method:'POST', body: JSON.stringify({broker:'paper'})
+  });
+  if(d?.success) {
+    document.getElementById('BROKER_MODAL').style.display='none';
+    toast('📝 Paper trading enabled', '#d4af37');
+    loadStatus();
+  }
+}
 
 // ── FORGOT PASSWORD ───────────────────────────────────
 function showForgotPwd() {

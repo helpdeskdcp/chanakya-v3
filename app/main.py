@@ -1216,3 +1216,185 @@ def submit_payment_with_plan():
         "amount":     plan["price"],
         "message":    f"Payment submitted! Admin will verify within 2 hours.",
     })
+
+# ── Broker Management APIs ─────────────────────────────
+
+SUPPORTED_BROKERS = {
+    "angelone": {
+        "name":    "Angel One (SmartAPI)",
+        "fields":  ["api_key","client_id","password","totp_key"],
+        "labels":  ["API Key","Client ID","Password","TOTP Secret"],
+        "help_url": "https://smartapi.angelbroking.com",
+        "help": [
+            "1. Login to angelbroking.com",
+            "2. Go to My Profile → API Key",
+            "3. Generate new API key",
+            "4. Client ID = your Angel One login ID",
+            "5. Password = your Angel One login password",
+            "6. TOTP = scan QR in app settings → get secret key",
+        ],
+        "available": True,
+    },
+    "zerodha": {
+        "name":    "Zerodha (KiteConnect)",
+        "fields":  ["api_key","api_secret","client_id"],
+        "labels":  ["API Key","API Secret","Client ID (UserID)"],
+        "help_url": "https://kite.trade",
+        "help": [
+            "1. Login to kite.trade/connect",
+            "2. Create new app",
+            "3. Get API key and API secret",
+            "4. Client ID = your Zerodha UserID",
+        ],
+        "available": False,  # Coming soon
+    },
+    "upstox": {
+        "name":    "Upstox (APIv2)",
+        "fields":  ["api_key","api_secret","redirect_uri"],
+        "labels":  ["API Key","API Secret","Redirect URI"],
+        "help_url": "https://developer.upstox.com",
+        "help": [
+            "1. Login to developer.upstox.com",
+            "2. Create new app",
+            "3. Get API key and secret",
+        ],
+        "available": False,  # Coming soon
+    },
+    "fyers": {
+        "name":    "Fyers API",
+        "fields":  ["app_id","secret_key","client_id"],
+        "labels":  ["App ID","Secret Key","Client ID"],
+        "help_url": "https://myapi.fyers.in",
+        "help": ["1. Login to myapi.fyers.in", "2. Create new app"],
+        "available": False,
+    },
+    "paper": {
+        "name":    "Paper Trading (No Broker)",
+        "fields":  [],
+        "labels":  [],
+        "help": ["No real money — simulated trading only"],
+        "available": True,
+    },
+}
+
+@app.route("/api/v3/brokers")
+def get_brokers():
+    """List supported brokers — no auth needed"""
+    return jsonify({"success": True, "brokers": SUPPORTED_BROKERS})
+
+@app.route("/api/v3/user/broker", methods=["GET"])
+@require_auth
+def get_user_broker():
+    """Get current user's broker details"""
+    user = get_current_user()
+    username = user.get("username","")
+    import sqlite3 as sq
+    conn = sq.connect("data/users.db")
+    conn.row_factory = sq.Row
+    u = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+    conn.close()
+    if not u:
+        return jsonify({"success":False,"error":"User not found"})
+    broker = u["broker_name"] or "angelone"
+    has_creds = bool(u["angel_api_key"])
+    return jsonify({
+        "success":        True,
+        "broker":         broker,
+        "connected":      bool(u["broker_connected"]),
+        "has_credentials": has_creds,
+        "last_sync":      u["broker_last_sync"],
+        "broker_info":    SUPPORTED_BROKERS.get(broker,{}),
+    })
+
+@app.route("/api/v3/user/broker/save", methods=["POST"])
+@require_auth
+def save_broker_credentials():
+    """Save user's broker API credentials"""
+    user     = get_current_user()
+    username = user.get("username","")
+    data     = request.get_json() or {}
+    broker   = data.get("broker","angelone")
+    role     = get_session().get("role") or "viewer"
+
+    # Only admin + premium can connect broker
+    from data.users import get_user_role
+    eff_role = get_user_role(username)
+    if eff_role not in ("admin","premium"):
+        return jsonify({"success":False,"error":"Upgrade to Premium to connect broker"})
+
+    import sqlite3 as sq
+    conn = sq.connect("data/users.db")
+    now  = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+
+    if broker == "angelone":
+        api_key   = data.get("api_key","").strip()
+        client_id = data.get("client_id","").strip()
+        password  = data.get("password","").strip()
+        totp_key  = data.get("totp_key","").strip()
+
+        if not all([api_key, client_id, password, totp_key]):
+            conn.close()
+            return jsonify({"success":False,"error":"All Angel One fields required"})
+
+        # Test connection
+        try:
+            import pyotp
+            from SmartApi import SmartConnect
+            api = SmartConnect(api_key=api_key)
+            totp = pyotp.TOTP(totp_key).now()
+            resp = api.generateSession(client_id, password, totp)
+            if not resp.get("status"):
+                conn.close()
+                return jsonify({"success":False,"error":"Invalid credentials: "+resp.get("message","")})
+            user_name = resp.get("data",{}).get("name","")
+
+            # Save encrypted (basic)
+            conn.execute("""
+                UPDATE users SET
+                    angel_api_key=?, angel_client_id=?,
+                    angel_password=?, angel_totp_key=?,
+                    broker_name='angelone', broker_connected=1,
+                    broker_last_sync=?
+                WHERE username=?
+            """, (api_key, client_id, password, totp_key, now, username))
+            conn.commit()
+            conn.close()
+
+            logger.info(f"✅ Broker connected: {username} → {user_name}")
+            return jsonify({
+                "success":   True,
+                "message":   f"✅ Connected as {user_name}",
+                "broker":    "angelone",
+                "user_name": user_name,
+            })
+        except Exception as e:
+            conn.close()
+            return jsonify({"success":False,"error":f"Connection failed: {str(e)}"})
+
+    elif broker == "paper":
+        conn.execute("""
+            UPDATE users SET broker_name='paper', broker_connected=1,
+            broker_last_sync=? WHERE username=?
+        """, (now, username))
+        conn.commit()
+        conn.close()
+        return jsonify({"success":True,"message":"Paper trading mode enabled"})
+    else:
+        conn.close()
+        return jsonify({"success":False,"error":f"{broker} coming soon!"})
+
+@app.route("/api/v3/user/broker/disconnect", methods=["POST"])
+@require_auth
+def disconnect_broker():
+    user = get_current_user()
+    import sqlite3 as sq
+    conn = sq.connect("data/users.db")
+    conn.execute("""
+        UPDATE users SET broker_connected=0,
+        angel_api_key=NULL, angel_client_id=NULL,
+        angel_password=NULL, angel_totp_key=NULL
+        WHERE username=?
+    """, (user.get("username",""),))
+    conn.commit()
+    conn.close()
+    return jsonify({"success":True,"message":"Broker disconnected"})
