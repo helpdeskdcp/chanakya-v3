@@ -128,7 +128,16 @@ def login():
 
 @app.route("/api/v3/logout", methods=["POST"])
 def logout():
+    user = get_current_user()
+    username = user.get("username","")
+    if username:
+        try:
+            from engine.broker_pool import clear_broker
+            clear_broker(username)
+        except Exception:
+            pass
     session.clear()
+    _tokens.pop(request.headers.get("X-Auth-Token",""), None)
     return jsonify({"success": True})
 
 # ── Status API ─────────────────────────────────────────
@@ -137,37 +146,12 @@ def status():
     # Per-user broker info
     curr_user = get_current_user()
     curr_username = curr_user.get("username","")
-    broker_user_name = broker.user_name
-    broker_connected = broker.connected
-    broker_capital   = 0
-    try:
-        from data.users import get_broker_credentials
-        creds = get_broker_credentials(curr_username)
-        if creds and creds.get("connected") and creds.get("api_key"):
-            # Connect with user's own Angel One
-            import pyotp
-            from SmartApi import SmartConnect
-            _api = SmartConnect(api_key=creds["api_key"])
-            _totp = pyotp.TOTP(creds["totp_key"]).now()
-            _resp = _api.generateSession(
-                creds["client_id"], creds["password"], _totp
-            )
-            if _resp and _resp.get("status"):
-                _data = _resp.get("data", {})
-                broker_user_name = _data.get("name", creds["client_id"])
-                broker_connected = True
-                # Fetch capital
-                try:
-                    _rms = _api.rmsLimit()
-                    if _rms and _rms.get("data"):
-                        broker_capital = float(
-                            _rms["data"].get("availablecash",
-                            _rms["data"].get("net", 0)) or 0
-                        )
-                except Exception:
-                    pass
-    except Exception as _be:
-        logger.debug(f"User broker fetch: {_be}")
+    # Per-user broker pool
+    from engine.broker_pool import get_broker_info
+    _binfo = get_broker_info(curr_username) if curr_username else {}
+    broker_user_name = _binfo.get("user_name") or broker.user_name
+    broker_connected = _binfo.get("connected") or broker.connected
+    broker_capital   = _binfo.get("capital") or 0
 
     stats = get_today_stats()
     vix = _get_vix()
