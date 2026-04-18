@@ -215,7 +215,11 @@ def create_payment_request(username, utr_number):
     conn.close()
     return payment_id
 
-def verify_payment(payment_id, verified_by="admin"):
+def verify_payment(payment_id, verified_by="admin", plan_key="monthly"):
+    """Admin verifies payment → upgrade user based on plan"""
+    from data.eula import get_plan
+    plan = get_plan(plan_key) or get_plan("monthly")
+    days = plan["days"]
     """Admin verifies payment → upgrade user"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -229,7 +233,7 @@ def verify_payment(payment_id, verified_by="admin"):
         return False, "Payment not found"
 
     now = datetime.now(IST)
-    expiry = now + timedelta(days=30)
+    expiry = now + timedelta(days=days)
 
     # Upgrade user
     conn.execute("""
