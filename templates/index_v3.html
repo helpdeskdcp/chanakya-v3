@@ -106,7 +106,35 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <span style="color:#8090a8;font-size:11px" id="tTIME">—</span>
     </div>
   </div>
-  <div class="layout">
+  <!-- SUBSCRIPTION BANNER -->
+<div id="SUB_BANNER" style="display:none;padding:8px 16px;text-align:center;font-size:12px;font-weight:600"></div>
+
+<!-- PAYMENT MODAL -->
+<div id="PAY_MODAL" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:#111827;border:2px solid #d4af37;border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center">
+    <div style="font-size:36px;margin-bottom:8px">⚡</div>
+    <div style="color:#d4af37;font-size:20px;font-weight:800;margin-bottom:4px">Upgrade to Premium</div>
+    <div style="color:#8090a8;font-size:12px;margin-bottom:20px">10 signals/day + All features</div>
+    <div style="background:#0d1b2a;border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="color:#8090a8;font-size:11px">Pay via UPI</div>
+      <div style="color:#00c8ff;font-size:22px;font-weight:800;margin:4px 0">chanakya@upi</div>
+      <div style="color:#d4af37;font-size:28px;font-weight:800">₹3,000/month</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <input id="UTR_INPUT" placeholder="Enter UTR/Transaction ID" 
+             style="width:100%;padding:10px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:8px;font-size:13px;margin-bottom:8px">
+      <button onclick="submitPayment()" class="btn b-gold" style="width:100%;padding:12px">
+        ✅ Submit Payment
+      </button>
+    </div>
+    <button onclick="document.getElementById('PAY_MODAL').style.display='none'" 
+            style="background:none;border:none;color:#8090a8;cursor:pointer;font-size:12px">
+      Close
+    </button>
+  </div>
+</div>
+
+<div class="layout">
     <div class="sidebar">
       <div class="nav-sec">Trading</div>
       <div class="nav-it on" onclick="pg('dash',this)">🏠 Dashboard</div>
@@ -371,6 +399,60 @@ const API = '/api/v3';
 let TOKEN = localStorage.getItem('cv3t') || '';
 let _sym = 'NIFTY';
 
+// ── SUBSCRIPTION ─────────────────────────────────────
+async function loadUserStatus() {
+  const d = await api('/user/status');
+  if(!d?.success) return;
+  const banner = document.getElementById('SUB_BANNER');
+  if(d.sub_message && banner) {
+    banner.style.display = 'block';
+    if(d.role === 'expired') {
+      banner.style.background = 'rgba(255,82,82,.2)';
+      banner.style.borderBottom = '1px solid #ff5252';
+      banner.style.color = '#ff5252';
+      banner.innerHTML = d.sub_message +
+        ' <button onclick="document.getElementById(\'PAY_MODAL\').style.display=\'flex\'" '+
+        'style="background:#ff5252;border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;margin-left:8px">'+
+        '💳 Pay Now</button>';
+    } else {
+      banner.style.background = 'rgba(212,175,55,.15)';
+      banner.style.borderBottom = '1px solid #d4af37';
+      banner.style.color = '#d4af37';
+      banner.innerHTML = d.sub_message +
+        ' <button onclick="document.getElementById(\'PAY_MODAL\').style.display=\'flex\'" '+
+        'style="background:#d4af37;border:none;color:#0a0e1a;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;margin-left:8px">'+
+        '⬆️ Upgrade</button>';
+    }
+  }
+  // Show role in topbar
+  const chip = document.getElementById('tMODE');
+  if(chip && d.role) {
+    const roleColors = {admin:'#d4af37', premium:'#00e676', viewer:'#00c8ff', expired:'#ff5252'};
+    chip.style.color = roleColors[d.role] || '#fff';
+  }
+  // Trade remaining
+  window._tradeAllowed = d.can_trade;
+  window._userRole = d.role;
+}
+
+async function submitPayment() {
+  const utr = document.getElementById('UTR_INPUT').value.trim();
+  if(!utr || utr.length < 10) {
+    toast('❌ Valid UTR required (min 10 digits)', '#ff5252');
+    return;
+  }
+  const d = await api('/user/payment', {
+    method:'POST',
+    body: JSON.stringify({utr})
+  });
+  if(d?.success) {
+    document.getElementById('PAY_MODAL').style.display = 'none';
+    toast('✅ Payment submitted! Admin will verify soon.', '#00e676');
+  } else {
+    toast('❌ '+d?.error, '#ff5252');
+  }
+}
+
 // ── AUTH ──────────────────────────────────────────────
 async function doLogin() {
   const u = document.getElementById('U').value.trim();
@@ -427,6 +509,7 @@ async function startApp() {
   startClock();
   toast('📡 Fetching data...', '#00c8ff');
   await loadStatus();
+  await loadUserStatus();
   toast('📊 Loading market...', '#00c8ff');
   await loadMarket();
   await loadDashboard();

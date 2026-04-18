@@ -843,3 +843,184 @@ def tickers_v3():
         return jsonify({"success": True, **result})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+# ── User Management APIs ───────────────────────────────
+
+# Initialize users DB on startup
+from data.users import init_users_db
+init_users_db()
+
+def get_current_user():
+    """Get current logged in user details"""
+    token = (request.headers.get("X-Auth-Token") or
+             request.args.get("t",""))
+    if token and token in _tokens:
+        return _tokens[token]
+    return session.get("user", {})
+
+def check_subscription(f):
+    """Decorator — check trial/subscription status"""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
+        username = user.get("username","")
+        from data.users import get_user_role, get_trial_status
+        role = get_user_role(username)
+        if role == "expired":
+            return jsonify({
+                "success":  False,
+                "error":    "trial_expired",
+                "message":  "🔴 Your 15-day free trial has expired!",
+                "upgrade":  "Pay ₹3,000/month to continue",
+                "upi_id":   "chanakya@upi",
+                "contact":  "Contact admin to upgrade"
+            }), 403
+        return f(*args, **kwargs)
+    return wrapper
+
+@app.route("/api/v3/user/status")
+@require_auth
+def user_status():
+    user = get_current_user()
+    username = user.get("username","")
+    from data.users import get_user, get_user_role, get_trial_status, get_trade_limit, check_trade_allowed
+    u = get_user(username)
+    if not u:
+        return jsonify({"success": False, "error": "User not found"})
+    role = get_user_role(username)
+    trial_days = get_trial_status(username)
+    limit = get_trade_limit(role)
+    can_trade, trade_msg = check_trade_allowed(username)
+
+    # Subscription message
+    sub_msg = None
+    if role == "viewer" and trial_days is not None:
+        if trial_days <= 3:
+            sub_msg = f"⚠️ Only {trial_days} days left! Upgrade to Premium ₹3,000/month"
+        elif trial_days <= 7:
+            sub_msg = f"📅 {trial_days} days remaining in trial"
+    elif role == "expired":
+        sub_msg = "🔴 Trial expired! Pay ₹3,000 to continue"
+
+    return jsonify({
+        "success":      True,
+        "username":     username,
+        "role":         role,
+        "trial_days":   trial_days,
+        "trade_limit":  limit,
+        "can_trade":    can_trade,
+        "trade_msg":    trade_msg,
+        "sub_message":  sub_msg,
+        "premium_expiry": u.get("premium_expiry"),
+        "upi_id":       "chanakya@upi",
+        "price":        3000,
+    })
+
+@app.route("/api/v3/user/register", methods=["POST"])
+@require_auth
+def register_user():
+    """Admin only — register new user"""
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    data = request.get_json() or {}
+    username = data.get("username","").strip()
+    password = data.get("password","").strip()
+    role     = data.get("role","viewer")
+    if not username or not password:
+        return jsonify({"success": False, "error": "Username/password required"})
+    from data.users import register_user as reg
+    ok, msg = reg(username, password, role)
+    # Send Telegram welcome
+    if ok:
+        from engine.telegram import telegram
+        telegram.system_alert(
+            f"🆕 New user registered!\n"
+            f"👤 Username: {username}\n"
+            f"🎭 Role: {role}\n"
+            f"🎁 15-day free trial started!",
+            "SUCCESS"
+        )
+    return jsonify({"success": ok, "message": msg})
+
+@app.route("/api/v3/user/payment", methods=["POST"])
+@require_auth
+def submit_payment():
+    """User submits UTR for payment verification"""
+    user = get_current_user()
+    username = user.get("username","")
+    data = request.get_json() or {}
+    utr = data.get("utr","").strip()
+    if not utr or len(utr) < 10:
+        return jsonify({"success": False, "error": "Valid UTR required (min 10 digits)"})
+    from data.users import create_payment_request, get_user
+    u = get_user(username)
+    payment_id = create_payment_request(username, utr)
+
+    # Alert admin on Telegram
+    from engine.telegram import telegram
+    telegram.system_alert(
+        f"💰 NEW PAYMENT REQUEST!\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👤 User: {username}\n"
+        f"🔢 UTR: {utr}\n"
+        f"💵 Amount: ₹3,000\n"
+        f"🆔 Payment ID: {payment_id}\n\n"
+        f"To verify, run:\n"
+        f"/verify {payment_id}",
+        "INFO"
+    )
+    return jsonify({
+        "success":    True,
+        "message":    "Payment submitted! Admin will verify within 2 hours.",
+        "payment_id": payment_id,
+    })
+
+@app.route("/api/v3/admin/verify-payment", methods=["POST"])
+@require_auth
+def verify_payment():
+    """Admin verifies payment → upgrade user"""
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    data = request.get_json() or {}
+    payment_id = data.get("payment_id")
+    if not payment_id:
+        return jsonify({"success": False, "error": "payment_id required"})
+    from data.users import verify_payment as vp
+    ok, msg = vp(payment_id, verified_by=user.get("username","admin"))
+    if ok:
+        from engine.telegram import telegram
+        telegram.system_alert(f"✅ Payment #{payment_id} verified!\n{msg}", "SUCCESS")
+    return jsonify({"success": ok, "message": msg})
+
+@app.route("/api/v3/admin/users")
+@require_auth
+def list_users():
+    """Admin — list all users"""
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    from data.users import get_all_users, get_user_role, get_trial_status
+    users = get_all_users()
+    for u in users:
+        u["effective_role"] = get_user_role(u["username"])
+        u["trial_days_left"] = get_trial_status(u["username"])
+        # Hide sensitive data
+        u.pop("password_hash", None)
+        u.pop("angel_password", None)
+        u.pop("angel_totp_key", None)
+    return jsonify({"success": True, "users": users})
+
+@app.route("/api/v3/admin/payments")
+@require_auth
+def list_payments():
+    """Admin — pending payments"""
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    from data.users import get_pending_payments
+    return jsonify({"success": True, "payments": get_pending_payments()})
