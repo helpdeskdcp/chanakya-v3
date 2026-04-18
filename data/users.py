@@ -9,6 +9,43 @@ import pytz
 IST = pytz.timezone("Asia/Kolkata")
 DB_PATH = "data/users.db"
 
+
+import base64 as _b64
+_ENC_KEY = "chanakya_v3_2026"
+
+def _enc(text):
+    """Encrypt sensitive data"""
+    if not text: return ""
+    import hashlib
+    kb = hashlib.sha256(_ENC_KEY.encode()).digest()
+    tb = text.encode()
+    return _b64.b64encode(bytes([tb[i]^kb[i%len(kb)] for i in range(len(tb))])).decode()
+
+def _dec(text):
+    """Decrypt sensitive data"""
+    if not text: return ""
+    import hashlib
+    kb = hashlib.sha256(_ENC_KEY.encode()).digest()
+    eb = _b64.b64decode(text.encode())
+    return bytes([eb[i]^kb[i%len(kb)] for i in range(len(eb))]).decode()
+
+def get_broker_credentials(username):
+    """Get decrypted broker credentials for a user"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    u = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+    conn.close()
+    if not u:
+        return None
+    return {
+        "broker":     u["broker_name"] or "angelone",
+        "connected":  bool(u["broker_connected"]),
+        "api_key":    _dec(u["angel_api_key"] or ""),
+        "client_id":  _dec(u["angel_client_id"] or ""),
+        "password":   _dec(u["angel_password"] or ""),
+        "totp_key":   _dec(u["angel_totp_key"] or ""),
+    }
+
 def init_users_db():
     conn = sqlite3.connect(DB_PATH)
     conn.executescript("""
