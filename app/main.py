@@ -140,9 +140,23 @@ def status():
     return jsonify({
         "success":       True,
         "version":       config.VERSION,
-        "connected":     broker.connected,
-        "user":          broker.user_name,
-        "login_user":    get_current_user().get("username",""),
+        # Per-user broker info
+        curr_user = get_current_user()
+        curr_username = curr_user.get("username","")
+        broker_user_name = broker.user_name
+        broker_connected = broker.connected
+        # Check user's own broker credentials
+        try:
+            from data.users import get_broker_credentials
+            creds = get_broker_credentials(curr_username)
+            if creds and creds.get("connected") and creds.get("api_key"):
+                broker_user_name = creds.get("client_id","")  # Will be replaced by actual name
+                broker_connected = True
+        except Exception:
+            pass
+        "connected":     broker_connected,
+        "user":          broker_user_name,
+        "login_user":    curr_username,
         "mode":          "PAPER" if config.PAPER_MODE else "LIVE",
         "market_open":   signal_engine.is_market_open(),
         "mcx_open":      signal_engine.is_market_open("MCX"),
@@ -578,11 +592,68 @@ def analytics():
 def switch_mode():
     data = request.get_json() or {}
     mode = data.get("mode", "PAPER").upper()
+    confirmed = data.get("confirmed", False)
+
     if mode not in ("PAPER", "LIVE"):
         return jsonify({"success": False, "error": "Invalid mode"})
+
+    # Check role — only premium/admin can go LIVE
+    curr_user = get_current_user()
+    username  = curr_user.get("username","")
+    from data.users import get_user_role, get_broker_credentials
+    role = get_user_role(username)
+
+    if mode == "LIVE":
+        if role not in ("admin","premium"):
+            return jsonify({
+                "success": False,
+                "error": "🔒 Upgrade to Premium to enable Live trading"
+            })
+        # Check broker connected
+        creds = get_broker_credentials(username)
+        if not creds or not creds.get("connected") or not creds.get("api_key"):
+            return jsonify({
+                "success": False,
+                "error": "⚠️ Connect your broker first in Settings → Broker Connect"
+            })
+        # Confirmation required
+        if not confirmed:
+            return jsonify({
+                "success":  False,
+                "confirm":  True,
+                "message":  f"⚠️ Switch to LIVE trading?
+
+"
+                            f"👤 User: {username}
+"
+                            f"🏦 Broker: Angel One ({creds.get('client_id','')})
+"
+                            f"💰 Real money will be used!
+
+"
+                            f"Send confirmed=true to proceed."
+            })
+
     config.PAPER_MODE = (mode == "PAPER")
-    logger.info(f"Mode switched to {mode}")
-    return jsonify({"success": True, "mode": mode})
+    logger.info(f"🔄 Mode switched to {mode} by {username}")
+
+    # Telegram alert
+    try:
+        from engine.telegram import telegram
+        telegram.system_alert(
+            f"🔄 Mode Switch!
+"
+            f"👤 User: {username}
+"
+            f"📊 Mode: {mode}
+"
+            f"{'⚠️ LIVE TRADING ACTIVE' if mode=='LIVE' else '📝 Paper mode'}",
+            "WARNING" if mode=="LIVE" else "INFO"
+        )
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "mode": mode, "username": username})
 
 # ── WebSocket Real-time ────────────────────────────────
 from flask_socketio import SocketIO, emit
