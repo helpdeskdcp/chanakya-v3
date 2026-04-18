@@ -997,7 +997,7 @@ async function loadStatus() {
   document.getElementById('tDOT').className = 'dot '+(conn?'dg':'dr');
   document.getElementById('tMODE').textContent = d.mode||'PAPER';
   s('sBROKER', conn ? '✅ Connected' : '❌ Offline');
-  s('sUSER', d.user||'—');
+  s('sUSER', d.login_user||d.user||'—');
   s('sML', d.ml_ready ? '✅ Ready' : '⚠️ Not trained');
   s('sACC', (d.ml_accuracy||0)+'%');
   s('sSAMP', (d.ml_samples||0)+' samples');

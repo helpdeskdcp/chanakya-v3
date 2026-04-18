@@ -142,6 +142,7 @@ def status():
         "version":       config.VERSION,
         "connected":     broker.connected,
         "user":          broker.user_name,
+        "login_user":    get_current_user().get("username",""),
         "mode":          "PAPER" if config.PAPER_MODE else "LIVE",
         "market_open":   signal_engine.is_market_open(),
         "mcx_open":      signal_engine.is_market_open("MCX"),
