@@ -1072,7 +1072,24 @@ async function loadDashboard() {
   s('kWR',  (d.win_rate||0)+'%');
   s('kOP',  d.open_trades||0);
   s('kAP',  fmt(d.total_pnl||0), (d.total_pnl||0)>=0?'#00e676':'#ff5252');
-  s('kCAP', '₹'+(d.capital||0).toLocaleString('en-IN'));
+  // Capital + broker status
+  const capEl = document.getElementById('kCAP');
+  const setCapEl = document.getElementById('setCAP');
+  if(d.broker_status === 'connected') {
+    const capVal = '₹'+(d.capital||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+    if(capEl) { capEl.textContent=capVal; capEl.style.color='#00c8ff'; }
+    if(setCapEl) setCapEl.textContent = capVal;
+  } else {
+    if(capEl) {
+      capEl.textContent='🔴 Broker Not Connected';
+      capEl.style.color='#ff5252';
+      capEl.style.fontSize='12px';
+    }
+    if(setCapEl) {
+      setCapEl.textContent='🔴 Not Connected';
+      setCapEl.style.color='#ff5252';
+    }
+  }
   s('rPNL', fmt(d.today_pnl||0), (d.today_pnl||0)>=0?'#00e676':'#ff5252');
   s('rTR',  d.today_trades||0);
   s('rWR',  (d.win_rate||0)+'%');

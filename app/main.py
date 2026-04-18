@@ -179,6 +179,7 @@ def status():
 @require_auth
 def dashboard():
     import sqlite3
+    curr_username = get_current_user().get('username','')
     conn = sqlite3.connect(config.DB_PATH)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
