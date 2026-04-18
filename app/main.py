@@ -1024,3 +1024,195 @@ def list_payments():
         return jsonify({"success": False, "error": "Admin only"}), 403
     from data.users import get_pending_payments
     return jsonify({"success": True, "payments": get_pending_payments()})
+
+# ── Registration + OTP APIs ────────────────────────────
+
+@app.route("/api/v3/register/send-otp", methods=["POST"])
+def register_send_otp():
+    """Step 1 — Send OTP to email or telegram"""
+    data       = request.get_json() or {}
+    username   = data.get("username","").strip()
+    contact    = data.get("contact","").strip()  # email or telegram_id
+    password   = data.get("password","").strip()
+
+    if not username or not contact or not password:
+        return jsonify({"success":False,"error":"All fields required"})
+    if len(password) < 6:
+        return jsonify({"success":False,"error":"Password min 6 characters"})
+
+    # Check username taken
+    from data.users import get_user
+    if get_user(username):
+        return jsonify({"success":False,"error":"Username already taken"})
+
+    # Send OTP
+    from data.otp import send_otp
+    ok, msg, channel = send_otp(contact, purpose="verify")
+
+    if ok:
+        # Store temp registration data in session
+        session["reg_pending"] = {
+            "username": username,
+            "password": password,
+            "contact":  contact,
+            "channel":  channel,
+        }
+        return jsonify({
+            "success": True,
+            "channel": channel,
+            "message": msg,
+            "hint":    f"OTP sent via {channel}"
+        })
+    return jsonify({"success":False,"error":msg})
+
+@app.route("/api/v3/register/verify-otp", methods=["POST"])
+def register_verify_otp():
+    """Step 2 — Verify OTP and complete registration"""
+    data      = request.get_json() or {}
+    otp_input = data.get("otp","").strip()
+    eula_accepted = data.get("eula_accepted", False)
+
+    if not eula_accepted:
+        return jsonify({"success":False,"error":"Please accept the User Agreement"})
+
+    reg = session.get("reg_pending")
+    if not reg:
+        return jsonify({"success":False,"error":"Session expired — start registration again"})
+
+    from data.otp import verify_otp
+    ok, msg = verify_otp(reg["contact"], otp_input, purpose="verify")
+
+    if not ok:
+        return jsonify({"success":False,"error":msg})
+
+    # Create user
+    from data.users import register_user
+    ok2, msg2 = register_user(reg["username"], reg["password"], role="viewer")
+    if not ok2:
+        return jsonify({"success":False,"error":msg2})
+
+    # Update contact info
+    import sqlite3
+    conn = sqlite3.connect("data/users.db")
+    if "@" in reg["contact"]:
+        conn.execute("UPDATE users SET upi_name=? WHERE username=?",
+                     (reg["contact"], reg["username"]))
+    else:
+        conn.execute("UPDATE users SET telegram_id=? WHERE username=?",
+                     (reg["contact"], reg["username"]))
+    conn.commit()
+    conn.close()
+
+    session.pop("reg_pending", None)
+
+    # Welcome telegram + email
+    from engine.telegram import telegram
+    telegram.system_alert(
+        f"🎉 New user registered!\n"
+        f"👤 {reg['username']}\n"
+        f"📱 {reg['contact']}\n"
+        f"🎁 15-day free trial started!",
+        "SUCCESS"
+    )
+
+    return jsonify({
+        "success": True,
+        "message": "Registration complete! 15-day free trial started.",
+        "username": reg["username"],
+    })
+
+@app.route("/api/v3/password/send-otp", methods=["POST"])
+def password_reset_otp():
+    """Send OTP for password reset"""
+    data    = request.get_json() or {}
+    contact = data.get("contact","").strip()
+    if not contact:
+        return jsonify({"success":False,"error":"Email or Telegram ID required"})
+    from data.otp import send_otp
+    ok, msg, channel = send_otp(contact, purpose="reset")
+    return jsonify({"success":ok,"message":msg,"channel":channel})
+
+@app.route("/api/v3/password/reset", methods=["POST"])
+def password_reset():
+    """Reset password with OTP"""
+    data        = request.get_json() or {}
+    contact     = data.get("contact","").strip()
+    otp_input   = data.get("otp","").strip()
+    new_password = data.get("new_password","").strip()
+
+    if len(new_password) < 6:
+        return jsonify({"success":False,"error":"Password min 6 characters"})
+
+    from data.otp import verify_otp
+    ok, msg = verify_otp(contact, otp_input, purpose="reset")
+    if not ok:
+        return jsonify({"success":False,"error":msg})
+
+    # Update password
+    import sqlite3
+    from data.users import hash_password
+    conn = sqlite3.connect("data/users.db")
+    field = "upi_name" if "@" in contact else "telegram_id"
+    conn.execute(
+        f"UPDATE users SET password_hash=? WHERE {field}=?",
+        (hash_password(new_password), contact)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"success":True,"message":"Password updated successfully"})
+
+@app.route("/api/v3/plans")
+def get_plans():
+    """Get subscription plans — no auth needed"""
+    from data.eula import get_all_plans
+    return jsonify({"success":True,"plans":get_all_plans()})
+
+@app.route("/api/v3/eula")
+def get_eula():
+    """Get EULA text — no auth needed"""
+    from data.eula import EULA_TEXT
+    return jsonify({"success":True,"eula":EULA_TEXT})
+
+@app.route("/api/v3/user/payment/plan", methods=["POST"])
+@require_auth
+def submit_payment_with_plan():
+    """Submit payment with plan selection"""
+    user = get_current_user()
+    username = user.get("username","")
+    data     = request.get_json() or {}
+    utr      = data.get("utr","").strip()
+    plan_key = data.get("plan","monthly")
+
+    if not utr or len(utr) < 10:
+        return jsonify({"success":False,"error":"Valid UTR required"})
+
+    from data.eula import get_plan
+    plan = get_plan(plan_key)
+    if not plan:
+        return jsonify({"success":False,"error":"Invalid plan"})
+
+    from data.users import create_payment_request
+    payment_id = create_payment_request(username, utr)
+
+    # Alert admin
+    from engine.telegram import telegram
+    telegram.system_alert(
+        f"💰 PAYMENT REQUEST\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👤 User: {username}\n"
+        f"📦 Plan: {plan['label']}\n"
+        f"💵 Amount: ₹{plan['price']:,}\n"
+        f"📅 Duration: {plan['days']} days\n"
+        f"🔢 UTR: {utr}\n"
+        f"🆔 Payment ID: #{payment_id}\n\n"
+        f"Verify: /api/v3/admin/verify-payment\n"
+        f"Body: {{\"payment_id\":{payment_id},\"plan\":\"{plan_key}\"}}",
+        "INFO"
+    )
+    return jsonify({
+        "success":    True,
+        "payment_id": payment_id,
+        "plan":       plan["label"],
+        "amount":     plan["price"],
+        "message":    f"Payment submitted! Admin will verify within 2 hours.",
+    })

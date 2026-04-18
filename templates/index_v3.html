@@ -84,7 +84,47 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
     <input class="inp" id="U" type="text" placeholder="Username" autocomplete="off">
     <input class="inp" id="P" type="password" placeholder="Password">
     <button class="btn-login" onclick="doLogin()">🚀 LOGIN</button>
+    <div style="margin-top:12px">
+      <button onclick="showReg()" style="background:none;border:1px solid #1e3a5f;
+              color:#00c8ff;padding:10px;width:100%;border-radius:8px;cursor:pointer;font-size:12px">
+        ✨ New User? Start 15-Day Free Trial
+      </button>
+    </div>
+    <div style="margin-top:8px">
+      <button onclick="showForgotPwd()" style="background:none;border:none;
+              color:#8090a8;cursor:pointer;font-size:11px">🔑 Forgot Password?</button>
+    </div>
     <div class="err" id="ERR"></div>
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div id="FPW_MODAL" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+     background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:#111827;border:1px solid #1e3a5f;border-radius:16px;
+       padding:28px;max-width:380px;width:90%">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:28px">🔑</div>
+      <div style="color:#d4af37;font-size:18px;font-weight:700">Reset Password</div>
+    </div>
+    <div id="FPW_S1">
+      <input id="fpwContact" class="inp" placeholder="Enter registered Email or Telegram ID">
+      <button onclick="sendFPWOTP()" class="btn b-gold" style="width:100%;padding:12px;margin-bottom:8px">
+        📨 Send OTP
+      </button>
+    </div>
+    <div id="FPW_S2" style="display:none">
+      <input id="fpwOTP" class="inp" placeholder="Enter 6-digit OTP"
+             style="text-align:center;font-size:20px;letter-spacing:8px" maxlength="6">
+      <input id="fpwNewPwd" class="inp" type="password" placeholder="New Password (min 6 chars)">
+      <button onclick="resetPwd()" class="btn b-gold" style="width:100%;padding:12px">
+        ✅ Reset Password
+      </button>
+    </div>
+    <div id="fpwMsg" style="color:#00e676;font-size:11px;margin-top:8px;min-height:16px"></div>
+    <button onclick="document.getElementById(\'FPW_MODAL\').style.display=\'none\'"
+            style="background:none;border:none;color:#8090a8;cursor:pointer;width:100%;
+                   margin-top:12px;font-size:12px">✕ Close</button>
   </div>
 </div>
 
@@ -131,6 +171,122 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
             style="background:none;border:none;color:#8090a8;cursor:pointer;font-size:12px">
       Close
     </button>
+  </div>
+</div>
+
+<!-- REGISTRATION MODAL -->
+<div id="REG_MODAL" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+     background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center;overflow-y:auto">
+  <div style="background:#111827;border:1px solid #1e3a5f;border-radius:16px;
+       padding:28px;max-width:420px;width:90%;margin:20px auto">
+
+    <!-- STEP 1: Register -->
+    <div id="REG_STEP1">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:32px">⚡</div>
+        <div style="color:#d4af37;font-size:18px;font-weight:800">Create Account</div>
+        <div style="color:#8090a8;font-size:11px">15-day free trial • No credit card needed</div>
+      </div>
+      <input id="regUser" class="inp" placeholder="Username" autocomplete="off">
+      <input id="regPass" class="inp" type="password" placeholder="Password (min 6 chars)">
+      <input id="regContact" class="inp" placeholder="Email or Telegram ID (for OTP)">
+      <div style="font-size:10px;color:#8090a8;margin-bottom:12px">
+        📧 Enter email OR Telegram numeric ID — OTP will be sent to verify
+      </div>
+      <button onclick="sendRegOTP()" class="btn b-gold" style="width:100%;padding:12px;margin-bottom:8px">
+        📨 Send OTP
+      </button>
+      <div id="regErr1" style="color:#ff5252;font-size:11px;min-height:16px"></div>
+      <div style="text-align:center;margin-top:12px;font-size:12px;color:#8090a8">
+        Already have account?
+        <span onclick="closeReg()" style="color:#00c8ff;cursor:pointer">Login</span>
+      </div>
+    </div>
+
+    <!-- STEP 2: OTP + EULA -->
+    <div id="REG_STEP2" style="display:none">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:28px">🔐</div>
+        <div style="color:#d4af37;font-size:16px;font-weight:700">Verify OTP</div>
+        <div id="regOtpHint" style="color:#8090a8;font-size:11px"></div>
+      </div>
+      <input id="regOTP" class="inp" placeholder="Enter 6-digit OTP" maxlength="6"
+             style="text-align:center;font-size:24px;letter-spacing:8px">
+
+      <!-- EULA Box -->
+      <div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:8px;
+           padding:12px;margin:12px 0;max-height:180px;overflow-y:auto;font-size:10px;
+           color:#8090a8;line-height:1.6" id="eulaText">Loading...</div>
+
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-bottom:12px">
+        <input type="checkbox" id="eulaCheck" style="margin-top:2px;width:16px;height:16px">
+        <span style="font-size:11px;color:#e0e6f0">
+          I have read and agree to the
+          <span style="color:#d4af37">User Agreement & Disclaimer</span>.
+          I understand Chanakya AI is educational, not SEBI-registered investment advice.
+          I accept full responsibility for my trading decisions.
+        </span>
+      </label>
+
+      <button onclick="verifyRegOTP()" class="btn b-gold" style="width:100%;padding:12px;margin-bottom:8px">
+        ✅ Complete Registration
+      </button>
+      <button onclick="sendRegOTP()" style="background:none;border:none;color:#00c8ff;
+              cursor:pointer;width:100%;font-size:11px">↻ Resend OTP</button>
+      <div id="regErr2" style="color:#ff5252;font-size:11px;min-height:16px"></div>
+    </div>
+
+    <!-- STEP 3: Success -->
+    <div id="REG_STEP3" style="display:none;text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">🎉</div>
+      <div style="color:#00e676;font-size:20px;font-weight:800;margin-bottom:8px">Welcome!</div>
+      <div style="color:#e0e6f0;font-size:13px;margin-bottom:4px">Registration complete!</div>
+      <div style="color:#8090a8;font-size:11px;margin-bottom:20px">
+        🎁 Your 15-day free trial has started
+      </div>
+      <div style="background:#0d1b2a;border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px">
+        <div style="color:#d4af37;font-weight:700;margin-bottom:8px">Your Trial Includes:</div>
+        <div style="color:#8090a8">✅ 1 high-accuracy signal per day</div>
+        <div style="color:#8090a8">✅ Dashboard & analytics</div>
+        <div style="color:#8090a8">✅ Option chain analysis</div>
+        <div style="color:#ff5252">❌ Live trading (upgrade required)</div>
+      </div>
+      <button onclick="closeReg();location.reload();" class="btn b-gold" style="width:100%;padding:12px">
+        🚀 Start Trading!
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SUBSCRIPTION PLANS MODAL -->
+<div id="PLANS_MODAL" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+     background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center;overflow-y:auto">
+  <div style="background:#111827;border:1px solid #d4af37;border-radius:16px;
+       padding:24px;max-width:480px;width:90%;margin:20px auto">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="color:#d4af37;font-size:20px;font-weight:800">⬆️ Upgrade to Premium</div>
+      <div style="color:#8090a8;font-size:11px">Choose your plan</div>
+    </div>
+    <div id="plansContainer"></div>
+    <div style="margin-top:16px;background:#0d1b2a;border-radius:10px;padding:16px;text-align:center">
+      <div style="color:#8090a8;font-size:11px">Pay via UPI</div>
+      <div style="color:#00c8ff;font-size:20px;font-weight:800">chanakya@upi</div>
+      <div style="color:#8090a8;font-size:10px;margin-top:4px">After payment, enter UTR below</div>
+    </div>
+    <div style="margin-top:12px">
+      <select id="selPlan" style="width:100%;padding:8px;background:#0d1b2a;border:1px solid #1e3a5f;
+              color:#fff;border-radius:8px;margin-bottom:8px;font-size:12px"></select>
+      <input id="utrInput" class="inp" placeholder="Enter UTR/Transaction ID (12 digits)">
+      <button onclick="submitPlanPayment()" class="btn b-gold" style="width:100%;padding:12px">
+        ✅ Submit Payment for Verification
+      </button>
+      <div style="font-size:10px;color:#8090a8;margin-top:8px;text-align:center">
+        Admin verifies within 2 hours • Telegram notification on approval
+      </div>
+    </div>
+    <button onclick="document.getElementById('PLANS_MODAL').style.display='none'"
+            style="background:none;border:none;color:#8090a8;cursor:pointer;width:100%;
+                   margin-top:12px;font-size:12px">✕ Close</button>
   </div>
 </div>
 
@@ -399,6 +555,162 @@ const API = '/api/v3';
 let TOKEN = localStorage.getItem('cv3t') || '';
 let _sym = 'NIFTY';
 
+// ── FORGOT PASSWORD ───────────────────────────────────
+function showForgotPwd() {
+  document.getElementById('FPW_MODAL').style.display='flex';
+}
+
+async function sendFPWOTP() {
+  const c = document.getElementById('fpwContact')?.value.trim();
+  if(!c) { document.getElementById('fpwMsg').textContent='Enter email or Telegram ID'; return; }
+  document.getElementById('fpwMsg').textContent = '⏳ Sending OTP...';
+  const d = await (await fetch('/api/v3/password/send-otp', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({contact:c})
+  })).json();
+  if(d.success) {
+    document.getElementById('FPW_S1').style.display='none';
+    document.getElementById('FPW_S2').style.display='block';
+    document.getElementById('fpwMsg').textContent = d.message;
+  } else {
+    document.getElementById('fpwMsg').textContent = '❌ '+d.error;
+    document.getElementById('fpwMsg').style.color='#ff5252';
+  }
+}
+
+async function resetPwd() {
+  const c   = document.getElementById('fpwContact')?.value.trim();
+  const otp = document.getElementById('fpwOTP')?.value.trim();
+  const np  = document.getElementById('fpwNewPwd')?.value.trim();
+  if(!otp||otp.length<6) { document.getElementById('fpwMsg').textContent='Enter OTP'; return; }
+  if(!np||np.length<6)   { document.getElementById('fpwMsg').textContent='Password min 6 chars'; return; }
+  const d = await (await fetch('/api/v3/password/reset', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({contact:c, otp, new_password:np})
+  })).json();
+  const el = document.getElementById('fpwMsg');
+  if(d.success) {
+    el.style.color='#00e676';
+    el.textContent='✅ Password reset! Please login.';
+    setTimeout(()=>{ document.getElementById('FPW_MODAL').style.display='none'; },2000);
+  } else {
+    el.style.color='#ff5252';
+    el.textContent='❌ '+d.error;
+  }
+}
+
+// ── REGISTRATION ──────────────────────────────────────
+function showReg() {
+  document.getElementById('REG_MODAL').style.display='flex';
+  loadEULA();
+}
+function closeReg() {
+  document.getElementById('REG_MODAL').style.display='none';
+}
+
+async function loadEULA() {
+  const r = await fetch('/api/v3/eula');
+  const d = await r.json();
+  if(d.eula) {
+    const el = document.getElementById('eulaText');
+    if(el) el.textContent = d.eula;
+  }
+}
+
+async function sendRegOTP() {
+  const u = document.getElementById('regUser')?.value.trim();
+  const p = document.getElementById('regPass')?.value.trim();
+  const c = document.getElementById('regContact')?.value.trim();
+  const err = document.getElementById('regErr1');
+
+  if(!u || !p || !c) { err.textContent='All fields required'; return; }
+  if(p.length < 6)   { err.textContent='Password min 6 chars'; return; }
+
+  err.textContent = '⏳ Sending OTP...';
+  const d = await (await fetch('/api/v3/register/send-otp', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username:u, password:p, contact:c})
+  })).json();
+
+  if(d.success) {
+    document.getElementById('REG_STEP1').style.display='none';
+    document.getElementById('REG_STEP2').style.display='block';
+    document.getElementById('regOtpHint').textContent =
+      `OTP sent via ${d.channel} to ${c}`;
+  } else {
+    err.textContent = d.error || 'Failed to send OTP';
+  }
+}
+
+async function verifyRegOTP() {
+  const otp  = document.getElementById('regOTP')?.value.trim();
+  const eula = document.getElementById('eulaCheck')?.checked;
+  const err  = document.getElementById('regErr2');
+
+  if(!otp || otp.length < 6) { err.textContent='Enter 6-digit OTP'; return; }
+  if(!eula) { err.textContent='Please accept the User Agreement'; return; }
+
+  err.textContent = '⏳ Verifying...';
+  const d = await (await fetch('/api/v3/register/verify-otp', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({otp, eula_accepted:true})
+  })).json();
+
+  if(d.success) {
+    document.getElementById('REG_STEP2').style.display='none';
+    document.getElementById('REG_STEP3').style.display='block';
+  } else {
+    err.textContent = d.error || 'Verification failed';
+  }
+}
+
+// ── PLANS ──────────────────────────────────────────────
+async function showPlans() {
+  document.getElementById('PLANS_MODAL').style.display='flex';
+  const d = await (await fetch('/api/v3/plans')).json();
+  if(!d.plans) return;
+
+  const planColors = {monthly:'#00c8ff',quarterly:'#00e676',
+                      half_year:'#d4af37',biannual:'#a855f7',annual:'#f97316'};
+  const cont = document.getElementById('plansContainer');
+  cont.innerHTML = d.plans.map(p => `
+    <div style="background:#0d1b2a;border:1px solid ${p.popular?'#00e676':'#1e3a5f'};
+         border-radius:10px;padding:12px;margin-bottom:8px;display:flex;
+         justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700;color:${planColors[p.key]||'#fff'}">${p.label}</div>
+        <div style="font-size:10px;color:#8090a8">${p.days} days • ₹${Math.round(p.per_month)}/mo</div>
+        ${p.badge?`<div style="font-size:10px;color:#00e676">${p.badge}</div>`:''}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:18px;font-weight:800;color:#d4af37">₹${p.price.toLocaleString()}</div>
+        ${p.save>0?`<div style="font-size:10px;color:#00e676">Save ₹${p.save.toLocaleString()}</div>`:''}
+      </div>
+    </div>
+  `).join('');
+
+  // Populate select
+  const sel = document.getElementById('selPlan');
+  sel.innerHTML = d.plans.map(p =>
+    `<option value="${p.key}">${p.label} — ₹${p.price.toLocaleString()}${p.save>0?' (Save ₹'+p.save.toLocaleString()+')':''}</option>`
+  ).join('');
+}
+
+async function submitPlanPayment() {
+  const utr  = document.getElementById('utrInput')?.value.trim();
+  const plan = document.getElementById('selPlan')?.value;
+  if(!utr || utr.length < 10) { toast('❌ Valid UTR required (min 10 digits)', '#ff5252'); return; }
+  const d = await api('/user/payment/plan', {
+    method:'POST', body: JSON.stringify({utr, plan})
+  });
+  if(d?.success) {
+    document.getElementById('PLANS_MODAL').style.display='none';
+    toast('✅ Payment submitted! Admin will verify within 2 hours.', '#00e676');
+  } else {
+    toast('❌ '+(d?.error||'Failed'), '#ff5252');
+  }
+}
+
 // ── SUBSCRIPTION ─────────────────────────────────────
 async function loadUserStatus() {
   const d = await api('/user/status');
@@ -421,7 +733,7 @@ async function loadUserStatus() {
       banner.innerHTML = d.sub_message +
         ' <button onclick="document.getElementById(\'PAY_MODAL\').style.display=\'flex\'" '+
         'style="background:#d4af37;border:none;color:#0a0e1a;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;margin-left:8px">'+
-        '⬆️ Upgrade</button>';
+        '⬆️ Upgrade</button>'; showPlans();
     }
   }
   // Show role in topbar
