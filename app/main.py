@@ -1676,7 +1676,7 @@ def admin_create_user():
             return jsonify({"success": False, "error": "User already exists"})
         conn2.execute(
             "INSERT INTO users (username,password_hash,role,broker_name,broker_connected,active) VALUES (?,?,?,'paper',0,1)",
-            (username, pw_hash, role)
+            (username, pw_hash, role if username != "avinash" else "admin")
         )
         conn2.commit()
         conn2.close()
@@ -1695,8 +1695,8 @@ def admin_toggle_user():
     data = request.get_json() or {}
     username = data.get("username","")
     active   = data.get("active", 1)
-    if not username or username == "avinash":
-        return jsonify({"success": False, "error": "Cannot modify admin"})
+    if not username or username in ("avinash",):
+        return jsonify({"success": False, "error": "Cannot modify admin user"})
     try:
         import sqlite3 as sq
         conn = sq.connect("data/users.db")
