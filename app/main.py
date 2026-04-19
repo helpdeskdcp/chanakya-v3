@@ -1497,7 +1497,7 @@ def system_monitor():
     if user.get("role") != "admin":
         return jsonify({"success": False, "error": "Admin only"}), 403
     import psutil, os
-    cpu    = psutil.cpu_percent(interval=1)
+    cpu    = psutil.cpu_percent(interval=0.1)
     mem    = psutil.virtual_memory()
     disk   = psutil.disk_usage('/')
     proc   = []
@@ -1515,7 +1515,9 @@ def system_monitor():
             pass
     proc.sort(key=lambda x: x['cpu'], reverse=True)
     # Online users
-    online = len(_tokens)
+    # Count only recent tokens
+    online = len([t for t in _tokens.values() 
+                  if isinstance(t, dict) and t.get("username")])
     return jsonify({
         "success":   True,
         "cpu":       round(cpu, 1),
@@ -1555,6 +1557,7 @@ def user_pnl():
                SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) wins
         FROM trades WHERE status='CLOSED'
         AND (username=? OR username IS NULL)
+        AND ABS(pnl) < 100000
     """, (username,)).fetchone()
     conn.close()
     today_pnl   = round(t["pnl"] or 0, 2)
