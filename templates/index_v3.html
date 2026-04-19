@@ -486,7 +486,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
     <div class="main">
 
       <!-- DASHBOARD -->
-      <div class="pg on" id="pg-dash">
+      <div class="pg on" id="pg-dash" style="display:block">
         <div class="krow">
           <div class="kpi"><div class="kl">Today P&L</div><div class="kv" id="kPNL">₹0</div><div class="ks" id="kTR">0 trades</div></div>
           <div class="kpi"><div class="kl">Win Rate</div><div class="kv" id="kWR">—%</div><div class="ks">Today</div></div>
@@ -1175,6 +1175,9 @@ async function api(path, opts={}) {
 
 // ── START ─────────────────────────────────────────────
 async function startApp() {
+  // Force dashboard visible
+  const pgDash = document.getElementById('pg-dash');
+  if(pgDash) pgDash.style.display = 'block';
   startClock();
   toast('📡 Fetching data...', '#00c8ff');
   await loadStatus();
