@@ -1631,12 +1631,21 @@ def admin_create_user():
     if len(password) < 4:
         return jsonify({"success": False, "error": "Password min 4 chars"})
     try:
-        from data.users import create_user
-        ok = create_user(username, password, role)
-        if ok:
-            logger.info(f"Admin created user: {username} role={role}")
-            return jsonify({"success": True, "message": f"User {username} created"})
-        return jsonify({"success": False, "error": "User already exists"})
+        import sqlite3 as sq2, hashlib as hs
+        pw_hash = hs.sha256(password.encode()).hexdigest()
+        conn2 = sq2.connect("data/users.db")
+        ex = conn2.execute("SELECT username FROM users WHERE username=?", (username,)).fetchone()
+        if ex:
+            conn2.close()
+            return jsonify({"success": False, "error": "User already exists"})
+        conn2.execute(
+            "INSERT INTO users (username,password_hash,role,broker_name,broker_connected) VALUES (?,?,?,'paper',0)",
+            (username, pw_hash, role)
+        )
+        conn2.commit()
+        conn2.close()
+        logger.info(f"Admin created user: {username} role={role}")
+        return jsonify({"success": True, "message": f"User {username} created"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
