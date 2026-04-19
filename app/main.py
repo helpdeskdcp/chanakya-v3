@@ -718,12 +718,12 @@ def switch_mode():
                 "message": "Switch to LIVE trading? User: " + username + " Broker: Angel One (" + creds.get("client_id","") + ") Real money will be used! Confirm to proceed."
             })
 
-    # Per-user mode save
+    # Per-user mode save — each user has own mode
     _set_user_mode(username, mode)
-    # Admin switches global
+    # Only admin changes global config
     if username == "avinash":
         config.PAPER_MODE = (mode == "PAPER")
-    logger.info(f"🔄 Mode: {username} -> {mode}")
+    logger.info(f"Mode: {username} -> {mode}")
 
 
     # Telegram alert

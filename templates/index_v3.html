@@ -1078,6 +1078,15 @@ async function api(path, opts={}) {
 // ── START ─────────────────────────────────────────────
 async function startApp() {
   startClock();
+  // Check role immediately — show admin nav
+  api('/status').then(function(sd) {
+    if (sd && (sd.login_user === 'avinash' || sd.role === 'admin')) {
+      var na = document.getElementById('navAdmin');
+      var ns = document.getElementById('navSystem');
+      if (na) na.style.display = 'block';
+      if (ns) ns.style.display = 'block';
+    }
+  }).catch(function(){});
   toast('📡 Fetching data...', '#00c8ff');
   await loadStatus();
   // Show admin-only nav items
@@ -1095,8 +1104,7 @@ async function startApp() {
       }
     }).catch(function(){});
     api('/admin/system').then(d=>{
-      const na=document.getElementById('navAdmin');
-      if(na) na.style.display='none'; // hide by default
+      // Admin nav — always show for admin role
         if(d?.success) ns.style.display='block';
       });
     }
@@ -1128,8 +1136,7 @@ async function loadAll() {
       }
     }).catch(function(){});
     api('/admin/system').then(d=>{
-      const na=document.getElementById('navAdmin');
-      if(na) na.style.display='none'; // hide by default
+      // Admin nav — always show for admin role
         if(d?.success) ns.style.display='block';
       });
     }
