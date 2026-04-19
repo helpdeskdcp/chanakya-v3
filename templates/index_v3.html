@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chanakya AI">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Chanakya AI — Quantum Neural Trading Platform">
 <title>Chanakya AI v3.0</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -72,6 +78,122 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 .b-gold{background:linear-gradient(135deg,#d4af37,#f0d060);color:#0a0e1a}
 .live{display:inline-block;width:6px;height:6px;border-radius:50%;background:#00e676;animation:p 2s infinite}
 @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── RESPONSIVE / MOBILE FIRST ─────────────────────── */
+/* Tablets (768px and below) */
+@media (max-width:768px) {
+  .krow{grid-template-columns:repeat(2,1fr)!important}
+  .g2{grid-template-columns:1fr!important}
+  .sidebar{
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    width:100%!important;height:56px;
+    display:flex;flex-direction:row;align-items:center;
+    padding:0 8px;z-index:200;
+    border-right:none;border-top:1px solid #1e3a5f;
+    overflow-x:auto;overflow-y:hidden;
+    background:#111827;
+  }
+  .nav-sec{display:none}
+  .nav-it{
+    flex-shrink:0;padding:8px 10px;
+    border-left:none!important;border-bottom:3px solid transparent;
+    font-size:11px;white-space:nowrap;
+    flex-direction:column;align-items:center;gap:2px;
+  }
+  .nav-it.on{border-bottom-color:#00c8ff!important;background:rgba(0,200,255,.08)}
+  .layout{flex-direction:column;height:auto}
+  .main{padding:8px;padding-bottom:70px}
+  .rp{display:none}
+  .topbar{padding:6px 10px;flex-wrap:nowrap;gap:6px}
+  .logo{font-size:13px}
+  .tickers{gap:4px}
+  .tk{padding:2px 5px}
+  .tk-s{font-size:8px}
+  .tk-v{font-size:10px}
+  .topbar-r{flex-shrink:0}
+  .kpi{padding:10px}
+  .kv{font-size:18px!important}
+  .kl{font-size:8px}
+  .tbl{font-size:10px}
+  .tbl th,.tbl td{padding:5px 6px}
+  .ch{font-size:11px;padding:10px 12px}
+  .cb{padding:10px 12px}
+  .card{margin-bottom:10px}
+  /* Hide some tickers on small */
+  .tickers .tk:nth-child(n+4){display:none}
+}
+
+/* Mobile phones (480px and below) */
+@media (max-width:480px) {
+  .krow{grid-template-columns:repeat(2,1fr)!important;gap:6px}
+  .kpi{padding:8px}
+  .kv{font-size:16px!important}
+  .topbar{padding:5px 8px}
+  .logo{font-size:12px}
+  .chip{font-size:9px;padding:2px 7px}
+  .tickers .tk:nth-child(n+3){display:none}
+  .main{padding:6px;padding-bottom:65px}
+  h3,.ch{font-size:11px!important}
+  .btn{padding:5px 10px;font-size:10px}
+  /* Login box */
+  .login-box{padding:24px 16px;width:100%;max-width:340px}
+  .login-title{font-size:20px}
+  .login-logo{font-size:36px}
+  /* Modals */
+  #REG_MODAL > div,
+  #PLANS_MODAL > div,
+  #BROKER_MODAL > div,
+  #FPW_MODAL > div{
+    width:95%!important;padding:16px!important;
+    max-height:90vh;overflow-y:auto;
+  }
+  /* Tables scroll */
+  .card > div{overflow-x:auto}
+  .tbl{min-width:350px}
+}
+
+/* Large screens (1200px+) */
+@media (min-width:1200px) {
+  .krow{grid-template-columns:repeat(5,1fr)}
+  .sidebar{width:200px}
+  .rp{width:220px}
+}
+
+/* Ultra wide (1600px+) */
+@media (min-width:1600px) {
+  .krow{grid-template-columns:repeat(6,1fr)}
+}
+
+/* PWA / Standalone */
+@media (display-mode:standalone) {
+  .topbar{padding-top:env(safe-area-inset-top,8px)}
+  .sidebar{padding-bottom:env(safe-area-inset-bottom,0)}
+}
+
+/* Dark mode support (already dark, but ensure) */
+@media (prefers-color-scheme:dark) {
+  body{background:#0a0e1a;color:#e0e6f0}
+}
+
+/* Touch devices — bigger tap targets */
+@media (hover:none) and (pointer:coarse) {
+  .btn{min-height:36px;padding:8px 14px}
+  .nav-it{min-height:44px}
+  .inp{min-height:44px;font-size:16px!important}
+  select{min-height:44px;font-size:16px!important}
+}
+
+/* Landscape mobile */
+@media (max-width:768px) and (orientation:landscape) {
+  .sidebar{
+    position:fixed;left:0;top:0;bottom:0;
+    width:60px!important;height:100vh;
+    flex-direction:column;overflow-y:auto;overflow-x:hidden;
+  }
+  .nav-it{flex-direction:column;font-size:9px;padding:6px 4px}
+  .main{margin-left:60px;padding-bottom:8px}
+}
+
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;background:#111827;border:1px solid #00e676;color:#00e676;font-size:12px;z-index:9999;display:none}
 </style>
 </head>
@@ -353,6 +475,24 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
       <div class="nav-it" id="navSystem" style="display:none" onclick="pg('system',this)">🖥️ System Monitor</div>
       <div class="nav-it" onclick="logout()">⎋ Logout</div>
+    </div>
+    <!-- Mobile Bottom Nav Labels -->
+    <style>
+    @media(max-width:768px){
+      .nav-it::before{font-size:16px;display:block}
+      .nav-it[onclick*="dash"]::before{content:"🏠"}
+      .nav-it[onclick*="signals"]::before{content:"⚡"}
+      .nav-it[onclick*="trades"]::before{content:"📋"}
+      .nav-it[onclick*="positions"]::before{content:"🔴"}
+      .nav-it[onclick*="chain"]::before{content:"🔗"}
+      .nav-it[onclick*="analytics"]::before{content:"📈"}
+      .nav-it[onclick*="brain"]::before{content:"🧠"}
+      .nav-it[onclick*="settings"]::before{content:"⚙️"}
+      .nav-it[onclick*="system"]::before{content:"🖥️"}
+      .nav-it[onclick*="logout"]::before{content:"⎋"}
+    }
+    </style>
+    <div style="display:none"
     </div>
     <div class="main">
 
