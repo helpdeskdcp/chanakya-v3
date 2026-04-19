@@ -749,483 +749,6 @@ let TOKEN = localStorage.getItem('cv3t') || '';
 let _sym = 'NIFTY';
 
 
-// ── SYSTEM MONITOR ────────────────────────────────────
-async function loadSystemData() {
-  const d = await api('/admin/system');
-  if(!d?.success) return;
-  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
-  const cpuColor = d.cpu>80?'#ff5252':d.cpu>60?'#f97316':'#00e676';
-  const ramColor = d.ram_pct>80?'#ff5252':d.ram_pct>60?'#f97316':'#a855f7';
-  s('sysCPU', d.cpu+'%', cpuColor);
-  s('sysRAM', d.ram_used+'GB', ramColor);
-  s('sysRAMF', (d.ram_total-d.ram_used).toFixed(1)+'GB', '#00e676');
-  s('sysDISK', d.disk_used+'GB / '+d.disk_total+'GB', '#00c8ff');
-  s('sysUSERS', d.online_users, '#d4af37');
-  // Processes
-  const pb = document.getElementById('sysProc');
-  if(pb && d.processes) pb.innerHTML = d.processes.map(p=>`<tr>
-    <td style="color:#8090a8">${p.pid}</td>
-    <td style="color:${p.cpu>50?'#ff5252':'#00e676'}">${p.cpu}%</td>
-    <td style="color:#a855f7">${p.ram}%</td>
-    <td style="font-size:10px;color:#8090a8">${p.cmd.slice(-40)}</td>
-  </tr>`).join('');
-}
-
-// Load system data when admin
-async function loadAdminUsers() {
-  const d = await api('/admin/users');
-  if(!d?.success) return;
-  const tb = document.getElementById('sysUsers');
-  if(!tb) return;
-  tb.innerHTML = d.users.map(u=>`<tr>
-    <td><b>${u.username}</b></td>
-    <td style="color:${u.role==='admin'?'#d4af37':u.role==='premium'?'#00e676':'#00c8ff'}">${u.role}</td>
-    <td style="color:#8090a8">${u.trial_days_left!=null?u.trial_days_left+'d':'—'}</td>
-    <td style="color:${u.effective_role==='expired'?'#ff5252':'#00e676'}">${u.effective_role}</td>
-  </tr>`).join('');
-}
-
-// ── SYSTEM MONITOR END ─────────────────────────────────
-
-// ── BROKER CONNECT ────────────────────────────────────
-let _selBroker = 'angelone';
-
-async function showBroker() {
-  document.getElementById('BROKER_MODAL').style.display='flex';
-  const d = await (await fetch('/api/v3/brokers')).json();
-  if(!d.brokers) return;
-
-  const bl = document.getElementById('brokerList');
-  const brokerIcons = {angelone:'🔴',zerodha:'🟡',upstox:'🔵',fyers:'🟢',paper:'📝'};
-  bl.innerHTML = Object.entries(d.brokers).map(([key,b])=>`
-    <div onclick="selectBroker('${key}',${JSON.stringify(b).replace(/'/g,"\'")})"
-         id="bBtn_${key}"
-         style="background:#0d1b2a;border:1px solid ${b.available?'#1e3a5f':'#0d1b2a'};
-                border-radius:8px;padding:8px;text-align:center;cursor:${b.available?'pointer':'not-allowed'};
-                opacity:${b.available?'1':'0.4'}">
-      <div style="font-size:18px">${brokerIcons[key]||'📊'}</div>
-      <div style="font-size:9px;color:#e0e6f0;font-weight:600">${b.name.split(' ')[0]}</div>
-      ${!b.available?'<div style="font-size:8px;color:#f97316">Soon</div>':''}
-    </div>
-  `).join('');
-
-  // Auto-select angelone
-  selectBroker('angelone', d.brokers.angelone);
-}
-
-function selectBroker(key, broker) {
-  _selBroker = key;
-  // Highlight selected
-  document.querySelectorAll('[id^="bBtn_"]').forEach(b=>b.style.borderColor='#1e3a5f');
-  const btn = document.getElementById('bBtn_'+key);
-  if(btn) btn.style.borderColor='#00c8ff';
-
-  if(!broker.available || key==='paper') {
-    document.getElementById('brokerForm').style.display='none';
-    return;
-  }
-
-  // Show fields
-  const form = document.getElementById('brokerForm');
-  form.style.display='block';
-
-  const fields = document.getElementById('brokerFields');
-  fields.innerHTML = (broker.fields||[]).map((f,i)=>`
-    <input id="bf_${f}" class="inp"
-           placeholder="${broker.labels?.[i]||f}"
-           type="${f.includes('password')||f.includes('totp')||f.includes('secret')?'password':'text'}"
-           style="margin-bottom:8px">
-  `).join('');
-
-  // Help text
-  const help = document.getElementById('brokerHelp');
-  help.innerHTML = '<div style="color:#d4af37;font-weight:700;margin-bottom:6px">📖 How to get API credentials:</div>' +
-    (broker.help||[]).map(h=>`<div>• ${h}</div>`).join('') +
-    (broker.help_url ? `<div style="margin-top:6px"><a href="${broker.help_url}" target="_blank" style="color:#00c8ff">🔗 Open ${broker.name} Portal</a></div>` : '');
-}
-
-async function saveBroker() {
-  const msg = document.getElementById('brokerMsg');
-  msg.style.color='#8090a8';
-  msg.textContent='⏳ Connecting & verifying...';
-
-  const body = {broker: _selBroker};
-
-  // Collect fields
-  document.querySelectorAll('[id^="bf_"]').forEach(inp=>{
-    const key = inp.id.replace('bf_','');
-    body[key] = inp.value.trim();
-  });
-
-  const d = await api('/user/broker/save', {
-    method:'POST', body: JSON.stringify(body)
-  });
-
-  if(d?.success) {
-    msg.style.color='#00e676';
-    msg.textContent = d.message;
-    setTimeout(()=>{
-      document.getElementById('BROKER_MODAL').style.display='none';
-      loadStatus();
-      toast('✅ Broker connected!', '#00e676');
-    }, 2000);
-  } else {
-    msg.style.color='#ff5252';
-    msg.textContent = '❌ '+(d?.error||'Connection failed');
-  }
-}
-
-async function connectPaper() {
-  const d = await api('/user/broker/save', {
-    method:'POST', body: JSON.stringify({broker:'paper'})
-  });
-  if(d?.success) {
-    document.getElementById('BROKER_MODAL').style.display='none';
-    toast('📝 Paper trading enabled', '#d4af37');
-    loadStatus();
-  }
-}
-
-// ── FORGOT PASSWORD ───────────────────────────────────
-function showForgotPwd() {
-  document.getElementById('FPW_MODAL').style.display='flex';
-}
-
-async function sendFPWOTP() {
-  const c = document.getElementById('fpwContact')?.value.trim();
-  if(!c) { document.getElementById('fpwMsg').textContent='Enter email or Telegram ID'; return; }
-  document.getElementById('fpwMsg').textContent = '⏳ Sending OTP...';
-  const d = await (await fetch('/api/v3/password/send-otp', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({contact:c})
-  })).json();
-  if(d.success) {
-    document.getElementById('FPW_S1').style.display='none';
-    document.getElementById('FPW_S2').style.display='block';
-    document.getElementById('fpwMsg').textContent = d.message;
-  } else {
-    document.getElementById('fpwMsg').textContent = '❌ '+d.error;
-    document.getElementById('fpwMsg').style.color='#ff5252';
-  }
-}
-
-async function resetPwd() {
-  const c   = document.getElementById('fpwContact')?.value.trim();
-  const otp = document.getElementById('fpwOTP')?.value.trim();
-  const np  = document.getElementById('fpwNewPwd')?.value.trim();
-  if(!otp||otp.length<6) { document.getElementById('fpwMsg').textContent='Enter OTP'; return; }
-  if(!np||np.length<6)   { document.getElementById('fpwMsg').textContent='Password min 6 chars'; return; }
-  const d = await (await fetch('/api/v3/password/reset', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({contact:c, otp, new_password:np})
-  })).json();
-  const el = document.getElementById('fpwMsg');
-  if(d.success) {
-    el.style.color='#00e676';
-    el.textContent='✅ Password reset! Please login.';
-    setTimeout(()=>{ document.getElementById('FPW_MODAL').style.display='none'; },2000);
-  } else {
-    el.style.color='#ff5252';
-    el.textContent='❌ '+d.error;
-  }
-}
-
-// ── REGISTRATION ──────────────────────────────────────
-function showReg() {
-  document.getElementById('REG_MODAL').style.display='flex';
-  loadEULA();
-}
-function closeReg() {
-  document.getElementById('REG_MODAL').style.display='none';
-}
-
-async function loadEULA() {
-  const r = await fetch('/api/v3/eula');
-  const d = await r.json();
-  if(d.eula) {
-    const el = document.getElementById('eulaText');
-    if(el) el.textContent = d.eula;
-  }
-}
-
-async function sendRegOTP() {
-  const u = document.getElementById('regUser')?.value.trim();
-  const p = document.getElementById('regPass')?.value.trim();
-  const c = document.getElementById('regContact')?.value.trim();
-  const err = document.getElementById('regErr1');
-
-  if(!u || !p || !c) { err.textContent='All fields required'; return; }
-  if(p.length < 6)   { err.textContent='Password min 6 chars'; return; }
-
-  err.textContent = '⏳ Sending OTP...';
-  const d = await (await fetch('/api/v3/register/send-otp', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({username:u, password:p, contact:c})
-  })).json();
-
-  if(d.success) {
-    document.getElementById('REG_STEP1').style.display='none';
-    document.getElementById('REG_STEP2').style.display='block';
-    document.getElementById('regOtpHint').textContent =
-      `OTP sent via ${d.channel} to ${c}`;
-  } else {
-    err.textContent = d.error || 'Failed to send OTP';
-  }
-}
-
-async function verifyRegOTP() {
-  const otp  = document.getElementById('regOTP')?.value.trim();
-  const eula = document.getElementById('eulaCheck')?.checked;
-  const err  = document.getElementById('regErr2');
-
-  if(!otp || otp.length < 6) { err.textContent='Enter 6-digit OTP'; return; }
-  if(!eula) { err.textContent='Please accept the User Agreement'; return; }
-
-  err.textContent = '⏳ Verifying...';
-  const d = await (await fetch('/api/v3/register/verify-otp', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({otp, eula_accepted:true})
-  })).json();
-
-  if(d.success) {
-    document.getElementById('REG_STEP2').style.display='none';
-    document.getElementById('REG_STEP3').style.display='block';
-  } else {
-    err.textContent = d.error || 'Verification failed';
-  }
-}
-
-// ── PLANS ──────────────────────────────────────────────
-async function showPlans() {
-  document.getElementById('PLANS_MODAL').style.display='flex';
-  const d = await (await fetch('/api/v3/plans')).json();
-  if(!d.plans) return;
-
-  const planColors = {monthly:'#00c8ff',quarterly:'#00e676',
-                      half_year:'#d4af37',biannual:'#a855f7',annual:'#f97316'};
-  const cont = document.getElementById('plansContainer');
-  cont.innerHTML = d.plans.map(p => `
-    <div style="background:#0d1b2a;border:1px solid ${p.popular?'#00e676':'#1e3a5f'};
-         border-radius:10px;padding:12px;margin-bottom:8px;display:flex;
-         justify-content:space-between;align-items:center">
-      <div>
-        <div style="font-weight:700;color:${planColors[p.key]||'#fff'}">${p.label}</div>
-        <div style="font-size:10px;color:#8090a8">${p.days} days • ₹${Math.round(p.per_month)}/mo</div>
-        ${p.badge?`<div style="font-size:10px;color:#00e676">${p.badge}</div>`:''}
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:18px;font-weight:800;color:#d4af37">₹${p.price.toLocaleString()}</div>
-        ${p.save>0?`<div style="font-size:10px;color:#00e676">Save ₹${p.save.toLocaleString()}</div>`:''}
-      </div>
-    </div>
-  `).join('');
-
-  // Populate select
-  const sel = document.getElementById('selPlan');
-  sel.innerHTML = d.plans.map(p =>
-    `<option value="${p.key}">${p.label} — ₹${p.price.toLocaleString()}${p.save>0?' (Save ₹'+p.save.toLocaleString()+')':''}</option>`
-  ).join('');
-}
-
-async function submitPlanPayment() {
-  const utr  = document.getElementById('utrInput')?.value.trim();
-  const plan = document.getElementById('selPlan')?.value;
-  if(!utr || utr.length < 10) { toast('❌ Valid UTR required (min 10 digits)', '#ff5252'); return; }
-  const d = await api('/user/payment/plan', {
-    method:'POST', body: JSON.stringify({utr, plan})
-  });
-  if(d?.success) {
-    document.getElementById('PLANS_MODAL').style.display='none';
-    toast('✅ Payment submitted! Admin will verify within 2 hours.', '#00e676');
-  } else {
-    toast('❌ '+(d?.error||'Failed'), '#ff5252');
-  }
-}
-
-// ── SUBSCRIPTION ─────────────────────────────────────
-async function loadUserStatus() {
-  const d = await api('/user/status');
-  if(!d?.success) return;
-  const banner = document.getElementById('SUB_BANNER');
-  if(d.sub_message && banner) {
-    banner.style.display = 'block';
-    if(d.role === 'expired') {
-      banner.style.background = 'rgba(255,82,82,.2)';
-      banner.style.borderBottom = '1px solid #ff5252';
-      banner.style.color = '#ff5252';
-      banner.innerHTML = d.sub_message +
-        ' <button onclick="document.getElementById(\'PAY_MODAL\').style.display=\'flex\'" '+
-        'style="background:#ff5252;border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;margin-left:8px">'+
-        '💳 Pay Now</button>';
-    } else {
-      banner.style.background = 'rgba(212,175,55,.15)';
-      banner.style.borderBottom = '1px solid #d4af37';
-      banner.style.color = '#d4af37';
-      banner.innerHTML = d.sub_message +
-        ' <button onclick="document.getElementById(\'PAY_MODAL\').style.display=\'flex\'" '+
-        'style="background:#d4af37;border:none;color:#0a0e1a;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;margin-left:8px">'+
-        '⬆️ Upgrade</button>'; showPlans();
-    }
-  }
-  // Show role in topbar
-  const chip = document.getElementById('tMODE');
-  if(chip && d.role) {
-    const roleColors = {admin:'#d4af37', premium:'#00e676', viewer:'#00c8ff', expired:'#ff5252'};
-    chip.style.color = roleColors[d.role] || '#fff';
-  }
-  // Trade remaining
-  window._tradeAllowed = d.can_trade;
-  window._userRole = d.role;
-}
-
-async function submitPayment() {
-  const utr = document.getElementById('UTR_INPUT').value.trim();
-  if(!utr || utr.length < 10) {
-    toast('❌ Valid UTR required (min 10 digits)', '#ff5252');
-    return;
-  }
-  const d = await api('/user/payment', {
-    method:'POST',
-    body: JSON.stringify({utr})
-  });
-  if(d?.success) {
-    document.getElementById('PAY_MODAL').style.display = 'none';
-    toast('✅ Payment submitted! Admin will verify soon.', '#00e676');
-  } else {
-    toast('❌ '+d?.error, '#ff5252');
-  }
-}
-
-// ── MOBILE MENU ───────────────────────────────────────
-function toggleMobileMenu() {
-  const sb = document.querySelector('.sidebar');
-  if(!sb) return;
-  const vis = sb.style.display === 'block';
-  sb.style.cssText = vis ?
-    'display:none!important' :
-    'display:block!important;position:fixed;top:44px;left:0;bottom:0;z-index:999;width:200px;overflow-y:auto';
-}
-// Close menu on nav click
-document.addEventListener('click', e => {
-  if(e.target.closest('.nav-it') && window.innerWidth <= 600) {
-    const sb = document.querySelector('.sidebar');
-    if(sb) sb.style.display='none';
-  }
-});
-// Admin Panel
-async function loadAdminData() {
-  const ud = await api('/admin/users');
-  if (ud && ud.success) {
-    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
-    s('adTU', ud.users.length);
-    s('adPU', ud.users.filter(u=>u.effective_role==='premium'||u.effective_role==='admin').length, '#00e676');
-    s('adTR', ud.users.filter(u=>u.effective_role==='viewer').length, '#d4af37');
-    const tb = document.getElementById('adUsers');
-    if (tb) tb.innerHTML = ud.users.map(u => {
-      const rc = u.effective_role==='admin'?'#d4af37':u.effective_role==='premium'?'#00e676':u.effective_role==='expired'?'#ff5252':'#00c8ff';
-      return '<tr><td><b>'+u.username+'</b></td><td style="color:'+rc+'">'+u.effective_role+'</td><td>'+(u.trades_today||0)+'</td><td>'+(u.trial_days_left!=null?u.trial_days_left+'d':'OK')+'</td><td><button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="approvePayment(0,''+u.username+'')">Upgrade</button></td></tr>';
-    }).join('');
-  }
-  const pd = await api('/admin/payments');
-  if (pd && pd.success) {
-    document.getElementById('adPP').textContent = pd.payments.length;
-    const tb = document.getElementById('adPayments');
-    if (tb) {
-      if (!pd.payments.length) {
-        tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8090a8;padding:12px">No pending</td></tr>';
-      } else {
-        tb.innerHTML = pd.payments.map(p => '<tr><td><b>'+p.username+'</b></td><td style="color:#d4af37;font-family:monospace">'+p.utr_number+'</td><td class="pos">Rs.3000</td><td><button class="btn b-gold" style="padding:4px 8px;font-size:10px" onclick="approvePayment('+p.id+','')">Approve</button></td></tr>').join('');
-      }
-    }
-  }
-  const sys = await api('/admin/system');
-  if (sys && sys.success) {
-    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
-    s('adCPU', sys.cpu+'%', sys.cpu>80?'#ff5252':sys.cpu>60?'#f97316':'#00e676');
-    s('adRAM', sys.ram_pct+'%', sys.ram_pct>80?'#ff5252':'#a855f7');
-    s('adDISK', sys.disk_pct+'%', sys.disk_pct>85?'#ff5252':'#00c8ff');
-    s('adONL', sys.online_users, '#d4af37');
-    s('adUPT', sys.uptime||'');
-  }
-  const st = await api('/strategies');
-  if (st && st.success) {
-    const tb = document.getElementById('adStrats');
-    if (tb) tb.innerHTML = st.strategies.map(s => '<tr><td style="color:'+(s.win_rate>60?'#00e676':s.win_rate>40?'#d4af37':'#8090a8')+'">'+s.name+'</td><td>'+s.trades+'</td><td style="color:'+(s.win_rate>60?'#00e676':'#ff5252')+'">'+s.win_rate+'%</td><td class="'+(s.total_pnl>=0?'pos':'neg')+'">Rs.'+(s.total_pnl||0).toFixed(0)+'</td></tr>').join('');
-  }
-}
-
-async function approvePayment(paymentId, username) {
-  const plan = prompt('Plan? (monthly/quarterly/half_year/biannual/annual)', 'monthly');
-  if (!plan) return;
-  const body = paymentId > 0 ? {payment_id: paymentId, plan: plan} : {payment_id: 0, username: username, plan: plan};
-  const d = await api('/admin/verify-payment', {method:'POST', body: JSON.stringify(body)});
-  if (d && d.success) { toast('Upgraded! '+d.message, '#00e676'); loadAdminData(); }
-  else toast('Failed: '+(d?d.error:''), '#ff5252');
-}
-
-function showAddUser() { document.getElementById('ADD_USER_MODAL').style.display='flex'; }
-
-async function addUser() {
-  const u = document.getElementById('auUser').value.trim();
-  const p = document.getElementById('auPass').value.trim();
-  const r = document.getElementById('auRole').value;
-  const msg = document.getElementById('auMsg');
-  if (!u || !p) { msg.textContent='All fields required'; return; }
-  const d = await api('/user/register', {method:'POST', body: JSON.stringify({username:u, password:p, role:r})});
-  if (d && d.success) {
-    msg.style.color='#00e676'; msg.textContent='User created!';
-    setTimeout(function(){ document.getElementById('ADD_USER_MODAL').style.display='none'; loadAdminData(); }, 1500);
-  } else { msg.style.color='#ff5252'; msg.textContent='Error: '+(d?d.error:''); }
-}
-
-async function takeBackup() {
-  const d = await api('/backup', {method:'POST'});
-  toast(d && d.success ? 'Backup done!' : 'Backup failed', d && d.success ? '#a855f7' : '#ff5252');
-}
-
-
-// ── AUTH ──────────────────────────────────────────────
-async function doLogin() {
-  const u = document.getElementById('U').value.trim();
-  const p = document.getElementById('P').value.trim();
-  const err = document.getElementById('ERR');
-  err.textContent = '⏳ Logging in...';
-  try {
-    const r = await fetch(API+'/login', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:u, password:p})
-    });
-    const d = await r.json();
-    if(d.success && d.token) {
-      TOKEN = d.token;
-      localStorage.setItem('cv3t', TOKEN);
-      localStorage.setItem('cv3u', u);
-      showApp();
-    } else {
-      err.textContent = d.error || 'Login failed';
-    }
-  } catch(e) {
-    err.textContent = 'Connection error: '+e.message;
-  }
-}
-
-function showApp() {
-  document.getElementById('LOGIN').style.display = 'none';
-  document.getElementById('APP').style.display = 'block';
-  toast('✅ Login OK — Loading...', '#00e676');
-  setTimeout(startApp, 500);
-}
-
-function logout() {
-  localStorage.removeItem('cv3t');
-  localStorage.removeItem('cv3u');
-  TOKEN = '';
-  document.getElementById('APP').style.display = 'none';
-  document.getElementById('LOGIN').style.display = 'flex';
-}
-
-// ── API HELPER ────────────────────────────────────────
 async function api(path, opts={}) {
   const headers = {'Content-Type':'application/json','X-Auth-Token':TOKEN};
   try {
@@ -1760,3 +1283,482 @@ document.getElementById('P').addEventListener('keydown', e => { if(e.key==='Ente
 </script>
 </body>
 </html>
+
+// ── SYSTEM MONITOR ────────────────────────────────────
+async function loadSystemData() {
+  const d = await api('/admin/system');
+  if(!d?.success) return;
+  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+  const cpuColor = d.cpu>80?'#ff5252':d.cpu>60?'#f97316':'#00e676';
+  const ramColor = d.ram_pct>80?'#ff5252':d.ram_pct>60?'#f97316':'#a855f7';
+  s('sysCPU', d.cpu+'%', cpuColor);
+  s('sysRAM', d.ram_used+'GB', ramColor);
+  s('sysRAMF', (d.ram_total-d.ram_used).toFixed(1)+'GB', '#00e676');
+  s('sysDISK', d.disk_used+'GB / '+d.disk_total+'GB', '#00c8ff');
+  s('sysUSERS', d.online_users, '#d4af37');
+  // Processes
+  const pb = document.getElementById('sysProc');
+  if(pb && d.processes) pb.innerHTML = d.processes.map(p=>`<tr>
+    <td style="color:#8090a8">${p.pid}</td>
+    <td style="color:${p.cpu>50?'#ff5252':'#00e676'}">${p.cpu}%</td>
+    <td style="color:#a855f7">${p.ram}%</td>
+    <td style="font-size:10px;color:#8090a8">${p.cmd.slice(-40)}</td>
+  </tr>`).join('');
+}
+
+// Load system data when admin
+async function loadAdminUsers() {
+  const d = await api('/admin/users');
+  if(!d?.success) return;
+  const tb = document.getElementById('sysUsers');
+  if(!tb) return;
+  tb.innerHTML = d.users.map(u=>`<tr>
+    <td><b>${u.username}</b></td>
+    <td style="color:${u.role==='admin'?'#d4af37':u.role==='premium'?'#00e676':'#00c8ff'}">${u.role}</td>
+    <td style="color:#8090a8">${u.trial_days_left!=null?u.trial_days_left+'d':'—'}</td>
+    <td style="color:${u.effective_role==='expired'?'#ff5252':'#00e676'}">${u.effective_role}</td>
+  </tr>`).join('');
+}
+
+// ── SYSTEM MONITOR END ─────────────────────────────────
+
+// ── BROKER CONNECT ────────────────────────────────────
+let _selBroker = 'angelone';
+
+async function showBroker() {
+  document.getElementById('BROKER_MODAL').style.display='flex';
+  const d = await (await fetch('/api/v3/brokers')).json();
+  if(!d.brokers) return;
+
+  const bl = document.getElementById('brokerList');
+  const brokerIcons = {angelone:'🔴',zerodha:'🟡',upstox:'🔵',fyers:'🟢',paper:'📝'};
+  bl.innerHTML = Object.entries(d.brokers).map(([key,b])=>`
+    <div onclick="selectBroker('${key}',${JSON.stringify(b).replace(/'/g,"\'")})"
+         id="bBtn_${key}"
+         style="background:#0d1b2a;border:1px solid ${b.available?'#1e3a5f':'#0d1b2a'};
+                border-radius:8px;padding:8px;text-align:center;cursor:${b.available?'pointer':'not-allowed'};
+                opacity:${b.available?'1':'0.4'}">
+      <div style="font-size:18px">${brokerIcons[key]||'📊'}</div>
+      <div style="font-size:9px;color:#e0e6f0;font-weight:600">${b.name.split(' ')[0]}</div>
+      ${!b.available?'<div style="font-size:8px;color:#f97316">Soon</div>':''}
+    </div>
+  `).join('');
+
+  // Auto-select angelone
+  selectBroker('angelone', d.brokers.angelone);
+}
+
+function selectBroker(key, broker) {
+  _selBroker = key;
+  // Highlight selected
+  document.querySelectorAll('[id^="bBtn_"]').forEach(b=>b.style.borderColor='#1e3a5f');
+  const btn = document.getElementById('bBtn_'+key);
+  if(btn) btn.style.borderColor='#00c8ff';
+
+  if(!broker.available || key==='paper') {
+    document.getElementById('brokerForm').style.display='none';
+    return;
+  }
+
+  // Show fields
+  const form = document.getElementById('brokerForm');
+  form.style.display='block';
+
+  const fields = document.getElementById('brokerFields');
+  fields.innerHTML = (broker.fields||[]).map((f,i)=>`
+    <input id="bf_${f}" class="inp"
+           placeholder="${broker.labels?.[i]||f}"
+           type="${f.includes('password')||f.includes('totp')||f.includes('secret')?'password':'text'}"
+           style="margin-bottom:8px">
+  `).join('');
+
+  // Help text
+  const help = document.getElementById('brokerHelp');
+  help.innerHTML = '<div style="color:#d4af37;font-weight:700;margin-bottom:6px">📖 How to get API credentials:</div>' +
+    (broker.help||[]).map(h=>`<div>• ${h}</div>`).join('') +
+    (broker.help_url ? `<div style="margin-top:6px"><a href="${broker.help_url}" target="_blank" style="color:#00c8ff">🔗 Open ${broker.name} Portal</a></div>` : '');
+}
+
+async function saveBroker() {
+  const msg = document.getElementById('brokerMsg');
+  msg.style.color='#8090a8';
+  msg.textContent='⏳ Connecting & verifying...';
+
+  const body = {broker: _selBroker};
+
+  // Collect fields
+  document.querySelectorAll('[id^="bf_"]').forEach(inp=>{
+    const key = inp.id.replace('bf_','');
+    body[key] = inp.value.trim();
+  });
+
+  const d = await api('/user/broker/save', {
+    method:'POST', body: JSON.stringify(body)
+  });
+
+  if(d?.success) {
+    msg.style.color='#00e676';
+    msg.textContent = d.message;
+    setTimeout(()=>{
+      document.getElementById('BROKER_MODAL').style.display='none';
+      loadStatus();
+      toast('✅ Broker connected!', '#00e676');
+    }, 2000);
+  } else {
+    msg.style.color='#ff5252';
+    msg.textContent = '❌ '+(d?.error||'Connection failed');
+  }
+}
+
+async function connectPaper() {
+  const d = await api('/user/broker/save', {
+    method:'POST', body: JSON.stringify({broker:'paper'})
+  });
+  if(d?.success) {
+    document.getElementById('BROKER_MODAL').style.display='none';
+    toast('📝 Paper trading enabled', '#d4af37');
+    loadStatus();
+  }
+}
+
+// ── FORGOT PASSWORD ───────────────────────────────────
+function showForgotPwd() {
+  document.getElementById('FPW_MODAL').style.display='flex';
+}
+
+async function sendFPWOTP() {
+  const c = document.getElementById('fpwContact')?.value.trim();
+  if(!c) { document.getElementById('fpwMsg').textContent='Enter email or Telegram ID'; return; }
+  document.getElementById('fpwMsg').textContent = '⏳ Sending OTP...';
+  const d = await (await fetch('/api/v3/password/send-otp', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({contact:c})
+  })).json();
+  if(d.success) {
+    document.getElementById('FPW_S1').style.display='none';
+    document.getElementById('FPW_S2').style.display='block';
+    document.getElementById('fpwMsg').textContent = d.message;
+  } else {
+    document.getElementById('fpwMsg').textContent = '❌ '+d.error;
+    document.getElementById('fpwMsg').style.color='#ff5252';
+  }
+}
+
+async function resetPwd() {
+  const c   = document.getElementById('fpwContact')?.value.trim();
+  const otp = document.getElementById('fpwOTP')?.value.trim();
+  const np  = document.getElementById('fpwNewPwd')?.value.trim();
+  if(!otp||otp.length<6) { document.getElementById('fpwMsg').textContent='Enter OTP'; return; }
+  if(!np||np.length<6)   { document.getElementById('fpwMsg').textContent='Password min 6 chars'; return; }
+  const d = await (await fetch('/api/v3/password/reset', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({contact:c, otp, new_password:np})
+  })).json();
+  const el = document.getElementById('fpwMsg');
+  if(d.success) {
+    el.style.color='#00e676';
+    el.textContent='✅ Password reset! Please login.';
+    setTimeout(()=>{ document.getElementById('FPW_MODAL').style.display='none'; },2000);
+  } else {
+    el.style.color='#ff5252';
+    el.textContent='❌ '+d.error;
+  }
+}
+
+// ── REGISTRATION ──────────────────────────────────────
+function showReg() {
+  document.getElementById('REG_MODAL').style.display='flex';
+  loadEULA();
+}
+function closeReg() {
+  document.getElementById('REG_MODAL').style.display='none';
+}
+
+async function loadEULA() {
+  const r = await fetch('/api/v3/eula');
+  const d = await r.json();
+  if(d.eula) {
+    const el = document.getElementById('eulaText');
+    if(el) el.textContent = d.eula;
+  }
+}
+
+async function sendRegOTP() {
+  const u = document.getElementById('regUser')?.value.trim();
+  const p = document.getElementById('regPass')?.value.trim();
+  const c = document.getElementById('regContact')?.value.trim();
+  const err = document.getElementById('regErr1');
+
+  if(!u || !p || !c) { err.textContent='All fields required'; return; }
+  if(p.length < 6)   { err.textContent='Password min 6 chars'; return; }
+
+  err.textContent = '⏳ Sending OTP...';
+  const d = await (await fetch('/api/v3/register/send-otp', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username:u, password:p, contact:c})
+  })).json();
+
+  if(d.success) {
+    document.getElementById('REG_STEP1').style.display='none';
+    document.getElementById('REG_STEP2').style.display='block';
+    document.getElementById('regOtpHint').textContent =
+      `OTP sent via ${d.channel} to ${c}`;
+  } else {
+    err.textContent = d.error || 'Failed to send OTP';
+  }
+}
+
+async function verifyRegOTP() {
+  const otp  = document.getElementById('regOTP')?.value.trim();
+  const eula = document.getElementById('eulaCheck')?.checked;
+  const err  = document.getElementById('regErr2');
+
+  if(!otp || otp.length < 6) { err.textContent='Enter 6-digit OTP'; return; }
+  if(!eula) { err.textContent='Please accept the User Agreement'; return; }
+
+  err.textContent = '⏳ Verifying...';
+  const d = await (await fetch('/api/v3/register/verify-otp', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({otp, eula_accepted:true})
+  })).json();
+
+  if(d.success) {
+    document.getElementById('REG_STEP2').style.display='none';
+    document.getElementById('REG_STEP3').style.display='block';
+  } else {
+    err.textContent = d.error || 'Verification failed';
+  }
+}
+
+// ── PLANS ──────────────────────────────────────────────
+async function showPlans() {
+  document.getElementById('PLANS_MODAL').style.display='flex';
+  const d = await (await fetch('/api/v3/plans')).json();
+  if(!d.plans) return;
+
+  const planColors = {monthly:'#00c8ff',quarterly:'#00e676',
+                      half_year:'#d4af37',biannual:'#a855f7',annual:'#f97316'};
+  const cont = document.getElementById('plansContainer');
+  cont.innerHTML = d.plans.map(p => `
+    <div style="background:#0d1b2a;border:1px solid ${p.popular?'#00e676':'#1e3a5f'};
+         border-radius:10px;padding:12px;margin-bottom:8px;display:flex;
+         justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700;color:${planColors[p.key]||'#fff'}">${p.label}</div>
+        <div style="font-size:10px;color:#8090a8">${p.days} days • ₹${Math.round(p.per_month)}/mo</div>
+        ${p.badge?`<div style="font-size:10px;color:#00e676">${p.badge}</div>`:''}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:18px;font-weight:800;color:#d4af37">₹${p.price.toLocaleString()}</div>
+        ${p.save>0?`<div style="font-size:10px;color:#00e676">Save ₹${p.save.toLocaleString()}</div>`:''}
+      </div>
+    </div>
+  `).join('');
+
+  // Populate select
+  const sel = document.getElementById('selPlan');
+  sel.innerHTML = d.plans.map(p =>
+    `<option value="${p.key}">${p.label} — ₹${p.price.toLocaleString()}${p.save>0?' (Save ₹'+p.save.toLocaleString()+')':''}</option>`
+  ).join('');
+}
+
+async function submitPlanPayment() {
+  const utr  = document.getElementById('utrInput')?.value.trim();
+  const plan = document.getElementById('selPlan')?.value;
+  if(!utr || utr.length < 10) { toast('❌ Valid UTR required (min 10 digits)', '#ff5252'); return; }
+  const d = await api('/user/payment/plan', {
+    method:'POST', body: JSON.stringify({utr, plan})
+  });
+  if(d?.success) {
+    document.getElementById('PLANS_MODAL').style.display='none';
+    toast('✅ Payment submitted! Admin will verify within 2 hours.', '#00e676');
+  } else {
+    toast('❌ '+(d?.error||'Failed'), '#ff5252');
+  }
+}
+
+// ── SUBSCRIPTION ─────────────────────────────────────
+async function loadUserStatus() {
+  const d = await api('/user/status');
+  if(!d?.success) return;
+  const banner = document.getElementById('SUB_BANNER');
+  if(d.sub_message && banner) {
+    banner.style.display = 'block';
+    if(d.role === 'expired') {
+      banner.style.background = 'rgba(255,82,82,.2)';
+      banner.style.borderBottom = '1px solid #ff5252';
+      banner.style.color = '#ff5252';
+      banner.innerHTML = d.sub_message +
+        ' <button onclick="document.getElementById(\'PAY_MODAL\').style.display=\'flex\'" '+
+        'style="background:#ff5252;border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;margin-left:8px">'+
+        '💳 Pay Now</button>';
+    } else {
+      banner.style.background = 'rgba(212,175,55,.15)';
+      banner.style.borderBottom = '1px solid #d4af37';
+      banner.style.color = '#d4af37';
+      banner.innerHTML = d.sub_message +
+        ' <button onclick="document.getElementById(\'PAY_MODAL\').style.display=\'flex\'" '+
+        'style="background:#d4af37;border:none;color:#0a0e1a;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;margin-left:8px">'+
+        '⬆️ Upgrade</button>'; showPlans();
+    }
+  }
+  // Show role in topbar
+  const chip = document.getElementById('tMODE');
+  if(chip && d.role) {
+    const roleColors = {admin:'#d4af37', premium:'#00e676', viewer:'#00c8ff', expired:'#ff5252'};
+    chip.style.color = roleColors[d.role] || '#fff';
+  }
+  // Trade remaining
+  window._tradeAllowed = d.can_trade;
+  window._userRole = d.role;
+}
+
+async function submitPayment() {
+  const utr = document.getElementById('UTR_INPUT').value.trim();
+  if(!utr || utr.length < 10) {
+    toast('❌ Valid UTR required (min 10 digits)', '#ff5252');
+    return;
+  }
+  const d = await api('/user/payment', {
+    method:'POST',
+    body: JSON.stringify({utr})
+  });
+  if(d?.success) {
+    document.getElementById('PAY_MODAL').style.display = 'none';
+    toast('✅ Payment submitted! Admin will verify soon.', '#00e676');
+  } else {
+    toast('❌ '+d?.error, '#ff5252');
+  }
+}
+
+// ── MOBILE MENU ───────────────────────────────────────
+function toggleMobileMenu() {
+  const sb = document.querySelector('.sidebar');
+  if(!sb) return;
+  const vis = sb.style.display === 'block';
+  sb.style.cssText = vis ?
+    'display:none!important' :
+    'display:block!important;position:fixed;top:44px;left:0;bottom:0;z-index:999;width:200px;overflow-y:auto';
+}
+// Close menu on nav click
+document.addEventListener('click', e => {
+  if(e.target.closest('.nav-it') && window.innerWidth <= 600) {
+    const sb = document.querySelector('.sidebar');
+    if(sb) sb.style.display='none';
+  }
+});
+// Admin Panel
+async function loadAdminData() {
+  const ud = await api('/admin/users');
+  if (ud && ud.success) {
+    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
+    s('adTU', ud.users.length);
+    s('adPU', ud.users.filter(u=>u.effective_role==='premium'||u.effective_role==='admin').length, '#00e676');
+    s('adTR', ud.users.filter(u=>u.effective_role==='viewer').length, '#d4af37');
+    const tb = document.getElementById('adUsers');
+    if (tb) tb.innerHTML = ud.users.map(u => {
+      const rc = u.effective_role==='admin'?'#d4af37':u.effective_role==='premium'?'#00e676':u.effective_role==='expired'?'#ff5252':'#00c8ff';
+      return '<tr><td><b>'+u.username+'</b></td><td style="color:'+rc+'">'+u.effective_role+'</td><td>'+(u.trades_today||0)+'</td><td>'+(u.trial_days_left!=null?u.trial_days_left+'d':'OK')+'</td><td><button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="approvePayment(0,''+u.username+'')">Upgrade</button></td></tr>';
+    }).join('');
+  }
+  const pd = await api('/admin/payments');
+  if (pd && pd.success) {
+    document.getElementById('adPP').textContent = pd.payments.length;
+    const tb = document.getElementById('adPayments');
+    if (tb) {
+      if (!pd.payments.length) {
+        tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8090a8;padding:12px">No pending</td></tr>';
+      } else {
+        tb.innerHTML = pd.payments.map(p => '<tr><td><b>'+p.username+'</b></td><td style="color:#d4af37;font-family:monospace">'+p.utr_number+'</td><td class="pos">Rs.3000</td><td><button class="btn b-gold" style="padding:4px 8px;font-size:10px" onclick="approvePayment('+p.id+','')">Approve</button></td></tr>').join('');
+      }
+    }
+  }
+  const sys = await api('/admin/system');
+  if (sys && sys.success) {
+    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
+    s('adCPU', sys.cpu+'%', sys.cpu>80?'#ff5252':sys.cpu>60?'#f97316':'#00e676');
+    s('adRAM', sys.ram_pct+'%', sys.ram_pct>80?'#ff5252':'#a855f7');
+    s('adDISK', sys.disk_pct+'%', sys.disk_pct>85?'#ff5252':'#00c8ff');
+    s('adONL', sys.online_users, '#d4af37');
+    s('adUPT', sys.uptime||'');
+  }
+  const st = await api('/strategies');
+  if (st && st.success) {
+    const tb = document.getElementById('adStrats');
+    if (tb) tb.innerHTML = st.strategies.map(s => '<tr><td style="color:'+(s.win_rate>60?'#00e676':s.win_rate>40?'#d4af37':'#8090a8')+'">'+s.name+'</td><td>'+s.trades+'</td><td style="color:'+(s.win_rate>60?'#00e676':'#ff5252')+'">'+s.win_rate+'%</td><td class="'+(s.total_pnl>=0?'pos':'neg')+'">Rs.'+(s.total_pnl||0).toFixed(0)+'</td></tr>').join('');
+  }
+}
+
+async function approvePayment(paymentId, username) {
+  const plan = prompt('Plan? (monthly/quarterly/half_year/biannual/annual)', 'monthly');
+  if (!plan) return;
+  const body = paymentId > 0 ? {payment_id: paymentId, plan: plan} : {payment_id: 0, username: username, plan: plan};
+  const d = await api('/admin/verify-payment', {method:'POST', body: JSON.stringify(body)});
+  if (d && d.success) { toast('Upgraded! '+d.message, '#00e676'); loadAdminData(); }
+  else toast('Failed: '+(d?d.error:''), '#ff5252');
+}
+
+function showAddUser() { document.getElementById('ADD_USER_MODAL').style.display='flex'; }
+
+async function addUser() {
+  const u = document.getElementById('auUser').value.trim();
+  const p = document.getElementById('auPass').value.trim();
+  const r = document.getElementById('auRole').value;
+  const msg = document.getElementById('auMsg');
+  if (!u || !p) { msg.textContent='All fields required'; return; }
+  const d = await api('/user/register', {method:'POST', body: JSON.stringify({username:u, password:p, role:r})});
+  if (d && d.success) {
+    msg.style.color='#00e676'; msg.textContent='User created!';
+    setTimeout(function(){ document.getElementById('ADD_USER_MODAL').style.display='none'; loadAdminData(); }, 1500);
+  } else { msg.style.color='#ff5252'; msg.textContent='Error: '+(d?d.error:''); }
+}
+
+async function takeBackup() {
+  const d = await api('/backup', {method:'POST'});
+  toast(d && d.success ? 'Backup done!' : 'Backup failed', d && d.success ? '#a855f7' : '#ff5252');
+}
+
+
+// ── AUTH ──────────────────────────────────────────────
+async function doLogin() {
+  const u = document.getElementById('U').value.trim();
+  const p = document.getElementById('P').value.trim();
+  const err = document.getElementById('ERR');
+  err.textContent = '⏳ Logging in...';
+  try {
+    const r = await fetch(API+'/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:u, password:p})
+    });
+    const d = await r.json();
+    if(d.success && d.token) {
+      TOKEN = d.token;
+      localStorage.setItem('cv3t', TOKEN);
+      localStorage.setItem('cv3u', u);
+      showApp();
+    } else {
+      err.textContent = d.error || 'Login failed';
+    }
+  } catch(e) {
+    err.textContent = 'Connection error: '+e.message;
+  }
+}
+
+function showApp() {
+  document.getElementById('LOGIN').style.display = 'none';
+  document.getElementById('APP').style.display = 'block';
+  toast('✅ Login OK — Loading...', '#00e676');
+  setTimeout(startApp, 500);
+}
+
+function logout() {
+  localStorage.removeItem('cv3t');
+  localStorage.removeItem('cv3u');
+  TOKEN = '';
+  document.getElementById('APP').style.display = 'none';
+  document.getElementById('LOGIN').style.display = 'flex';
+}
+
+// ── API HELPER ────────────────────────────────────────
+
