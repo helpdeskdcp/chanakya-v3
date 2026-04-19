@@ -37,7 +37,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .dg{background:#00e676;box-shadow:0 0 6px #00e676} .dr{background:#ff5252}
-.layout{display:flex;height:calc(100vh - 44px)}
+.layout{display:flex;min-height:calc(100vh - 44px)}
 /* SIDEBAR */
 .sidebar{width:175px;background:#111827;border-right:1px solid #1e3a5f;padding:8px 0;overflow-y:auto;flex-shrink:0}
 .nav-sec{color:#8090a8;font-size:9px;padding:10px 12px 4px;text-transform:uppercase;letter-spacing:1px}
@@ -45,7 +45,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 .nav-it:hover{background:rgba(255,255,255,.04);color:#00c8ff}
 .nav-it.on{background:rgba(0,200,255,.08);border-left-color:#00c8ff;color:#00c8ff}
 /* MAIN */
-.main{flex:1;overflow-y:auto;padding:16px}
+.main{flex:1;overflow-y:auto;padding:16px;min-width:0}
 .pg{display:none}.pg.on{display:block}
 /* CARDS */
 .card{background:#111827;border:1px solid #1e3a5f;border-radius:12px;margin-bottom:14px}
@@ -130,17 +130,25 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
   .nav-it.on{border-bottom-color:#00c8ff;color:#00c8ff}
 
   /* Layout — normal flow, main full width */
-  .layout{display:flex;flex-direction:column;width:100%;min-height:calc(100vh - 96px)}
+  .layout{
+    display:flex!important;
+    flex-direction:column!important;
+    width:100vw!important;
+    height:auto!important;
+    min-height:auto!important;
+    overflow:visible!important;
+  }
   .main{
-    width:100%!important;
+    width:100vw!important;
+    max-width:100vw!important;
     padding:8px!important;
     padding-bottom:64px!important;
     display:block!important;
-    overflow-y:visible!important;
-    min-height:70vh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
     height:auto!important;
-    position:relative!important;
-    z-index:1!important;
+    min-height:auto!important;
+    flex:1!important;
   }
   .pg{display:none}
   .pg.on{display:block!important;min-height:100px!important}
@@ -186,7 +194,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 }
 
 @media(min-width:769px){
-  .layout{display:flex;height:calc(100vh - 44px)}
+  .layout{display:flex;min-height:calc(100vh - 44px)}
   .main{overflow-y:auto;padding:16px;flex:1}
 }
 
