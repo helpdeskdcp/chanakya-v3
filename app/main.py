@@ -96,21 +96,17 @@ def login():
         pwd  = (request.form.get("password") or "").strip()
 
     # Hardcoded + env fallback
-    valid = {
-        "avinash": "chanakya2026",
-        "ravi":    "ravi2026",
-    }
-    # Also check env
-    env_user = os.getenv("ADMIN_USER", "avinash")
-    env_pass = os.getenv("ADMIN_PASS", "chanakya2026")
-    valid[env_user] = env_pass
+    # DB-based login — all users
+    logger.info(f"Login attempt: user={user!r}")
+    from data.users import verify_user
+    db_user = verify_user(user, pwd)
 
-    logger.info(f"Login attempt: user={user!r} match={valid.get(user)==pwd}")
-
-    if user in valid and valid[user] == pwd:
+    if db_user:
         import secrets
         token = secrets.token_hex(16)
-        _tokens[token] = {"username": user, "role": "admin" if user == env_user else "user"}
+        _tokens[token] = {"username": user, "role": db_user.get("role","viewer")}
+        _save_tokens(_tokens)
+        session.clear()
         _save_tokens(_tokens)
         session.clear()
         session["user"] = _tokens[token]
