@@ -376,6 +376,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-sec">System</div>
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
       <div class="nav-it" id="navSystem" style="display:none" onclick="pg('system',this)">🖥️ System Monitor</div>
+      <div class="nav-it" id="navAdmin" style="display:none" onclick="pg('admin',this)">👑 Admin Panel</div>
       <div class="nav-it" onclick="logout()">⎋ Logout</div>
     </div>
     <div class="main">
@@ -586,6 +587,83 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
         </div>
       </div>
 
+
+      <!-- ADMIN PANEL -->
+      <div class="pg" id="pg-admin">
+        <div class="krow" style="grid-template-columns:repeat(4,1fr)">
+          <div class="kpi"><div class="kl">Total Users</div><div class="kv" id="adTU" style="color:#00c8ff">-</div></div>
+          <div class="kpi"><div class="kl">Premium</div><div class="kv" id="adPU" style="color:#00e676">-</div></div>
+          <div class="kpi"><div class="kl">Trial</div><div class="kv" id="adTR" style="color:#d4af37">-</div></div>
+          <div class="kpi"><div class="kl">Pending Pay</div><div class="kv" id="adPP" style="color:#ff5252">-</div></div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="ch">Users
+              <button class="btn b-gold" onclick="showAddUser()">+ Add</button>
+            </div>
+            <div style="padding:8px;overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>User</th><th>Role</th><th>Trades</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="adUsers"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch">Pending Payments
+              <button class="btn b-blue" onclick="loadAdminData()">Refresh</button>
+            </div>
+            <div style="padding:8px;overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>User</th><th>UTR</th><th>Amount</th><th>Action</th></tr></thead>
+                <tbody id="adPayments"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch">System Resources</div>
+          <div class="cb" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center">
+            <div><div style="font-size:9px;color:#8090a8">CPU</div><div style="font-size:28px;font-weight:800" id="adCPU">-</div></div>
+            <div><div style="font-size:9px;color:#8090a8">RAM</div><div style="font-size:28px;font-weight:800;color:#a855f7" id="adRAM">-</div></div>
+            <div><div style="font-size:9px;color:#8090a8">DISK</div><div style="font-size:28px;font-weight:800;color:#00c8ff" id="adDISK">-</div></div>
+            <div><div style="font-size:9px;color:#8090a8">ONLINE</div><div style="font-size:28px;font-weight:800;color:#d4af37" id="adONL">-</div><div style="font-size:9px;color:#8090a8" id="adUPT"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch">Strategy Performance + Quick Actions</div>
+          <div class="g2" style="padding:12px;gap:12px">
+            <div>
+              <table class="tbl">
+                <thead><tr><th>Strategy</th><th>Trades</th><th>WR%</th><th>PnL</th></tr></thead>
+                <tbody id="adStrats"></tbody>
+              </table>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn b-gold" style="width:100%" onclick="retrainML()">Retrain ML</button>
+              <button class="btn b-blue" style="width:100%" onclick="forceScan()">Force Scan</button>
+              <button class="btn b-red" style="width:100%" onclick="sqAll()">Square All</button>
+              <button class="btn" style="width:100%;background:rgba(168,85,247,.15);color:#a855f7;border:1px solid #a855f7" onclick="takeBackup()">Take Backup</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD USER MODAL -->
+      <div id="ADD_USER_MODAL" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center">
+        <div style="background:#111827;border:1px solid #d4af37;border-radius:16px;padding:24px;max-width:360px;width:90%">
+          <div style="color:#d4af37;font-size:16px;font-weight:800;margin-bottom:16px">Add New User</div>
+          <input id="auUser" class="inp" placeholder="Username" style="margin-bottom:8px">
+          <input id="auPass" class="inp" type="password" placeholder="Password" style="margin-bottom:8px">
+          <select id="auRole" style="width:100%;padding:10px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:8px;margin-bottom:12px">
+            <option value="viewer">Viewer (15-day trial)</option>
+            <option value="premium">Premium</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button onclick="addUser()" class="btn b-gold" style="width:100%;padding:12px;margin-bottom:8px">Create User</button>
+          <div id="auMsg" style="font-size:11px;min-height:16px"></div>
+          <button onclick="document.getElementById('ADD_USER_MODAL').style.display='none'" style="background:none;border:none;color:#8090a8;cursor:pointer;width:100%;margin-top:8px">Close</button>
+        </div>
+      </div>
       <!-- SETTINGS -->
       <div class="pg" id="pg-settings">
         <div class="g2">
@@ -669,6 +747,78 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 const API = '/api/v3';
 let TOKEN = localStorage.getItem('cv3t') || '';
 let _sym = 'NIFTY';
+
+
+// Admin Panel
+async function loadAdminData() {
+  const ud = await api('/admin/users');
+  if (ud && ud.success) {
+    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
+    s('adTU', ud.users.length);
+    s('adPU', ud.users.filter(u=>u.effective_role==='premium'||u.effective_role==='admin').length, '#00e676');
+    s('adTR', ud.users.filter(u=>u.effective_role==='viewer').length, '#d4af37');
+    const tb = document.getElementById('adUsers');
+    if (tb) tb.innerHTML = ud.users.map(u => {
+      const rc = u.effective_role==='admin'?'#d4af37':u.effective_role==='premium'?'#00e676':u.effective_role==='expired'?'#ff5252':'#00c8ff';
+      return '<tr><td><b>'+u.username+'</b></td><td style="color:'+rc+'">'+u.effective_role+'</td><td>'+(u.trades_today||0)+'</td><td>'+(u.trial_days_left!=null?u.trial_days_left+'d':'OK')+'</td><td><button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="approvePayment(0,''+u.username+'')">Upgrade</button></td></tr>';
+    }).join('');
+  }
+  const pd = await api('/admin/payments');
+  if (pd && pd.success) {
+    document.getElementById('adPP').textContent = pd.payments.length;
+    const tb = document.getElementById('adPayments');
+    if (tb) {
+      if (!pd.payments.length) {
+        tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8090a8;padding:12px">No pending</td></tr>';
+      } else {
+        tb.innerHTML = pd.payments.map(p => '<tr><td><b>'+p.username+'</b></td><td style="color:#d4af37;font-family:monospace">'+p.utr_number+'</td><td class="pos">Rs.3000</td><td><button class="btn b-gold" style="padding:4px 8px;font-size:10px" onclick="approvePayment('+p.id+','')">Approve</button></td></tr>').join('');
+      }
+    }
+  }
+  const sys = await api('/admin/system');
+  if (sys && sys.success) {
+    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
+    s('adCPU', sys.cpu+'%', sys.cpu>80?'#ff5252':sys.cpu>60?'#f97316':'#00e676');
+    s('adRAM', sys.ram_pct+'%', sys.ram_pct>80?'#ff5252':'#a855f7');
+    s('adDISK', sys.disk_pct+'%', sys.disk_pct>85?'#ff5252':'#00c8ff');
+    s('adONL', sys.online_users, '#d4af37');
+    s('adUPT', sys.uptime||'');
+  }
+  const st = await api('/strategies');
+  if (st && st.success) {
+    const tb = document.getElementById('adStrats');
+    if (tb) tb.innerHTML = st.strategies.map(s => '<tr><td style="color:'+(s.win_rate>60?'#00e676':s.win_rate>40?'#d4af37':'#8090a8')+'">'+s.name+'</td><td>'+s.trades+'</td><td style="color:'+(s.win_rate>60?'#00e676':'#ff5252')+'">'+s.win_rate+'%</td><td class="'+(s.total_pnl>=0?'pos':'neg')+'">Rs.'+(s.total_pnl||0).toFixed(0)+'</td></tr>').join('');
+  }
+}
+
+async function approvePayment(paymentId, username) {
+  const plan = prompt('Plan? (monthly/quarterly/half_year/biannual/annual)', 'monthly');
+  if (!plan) return;
+  const body = paymentId > 0 ? {payment_id: paymentId, plan: plan} : {payment_id: 0, username: username, plan: plan};
+  const d = await api('/admin/verify-payment', {method:'POST', body: JSON.stringify(body)});
+  if (d && d.success) { toast('Upgraded! '+d.message, '#00e676'); loadAdminData(); }
+  else toast('Failed: '+(d?d.error:''), '#ff5252');
+}
+
+function showAddUser() { document.getElementById('ADD_USER_MODAL').style.display='flex'; }
+
+async function addUser() {
+  const u = document.getElementById('auUser').value.trim();
+  const p = document.getElementById('auPass').value.trim();
+  const r = document.getElementById('auRole').value;
+  const msg = document.getElementById('auMsg');
+  if (!u || !p) { msg.textContent='All fields required'; return; }
+  const d = await api('/user/register', {method:'POST', body: JSON.stringify({username:u, password:p, role:r})});
+  if (d && d.success) {
+    msg.style.color='#00e676'; msg.textContent='User created!';
+    setTimeout(function(){ document.getElementById('ADD_USER_MODAL').style.display='none'; loadAdminData(); }, 1500);
+  } else { msg.style.color='#ff5252'; msg.textContent='Error: '+(d?d.error:''); }
+}
+
+async function takeBackup() {
+  const d = await api('/backup', {method:'POST'});
+  toast(d && d.success ? 'Backup done!' : 'Backup failed', d && d.success ? '#a855f7' : '#ff5252');
+}
 
 // ── SYSTEM MONITOR ────────────────────────────────────
 async function loadSystemData() {
@@ -1565,6 +1715,7 @@ function pg(id, el) {
   if(id==='analytics') loadAnalytics();
   if(id==='brain')     loadBrain();
   if(id==='settings')  loadSqTimes();
+  if(id==='admin')     { loadAdminData(); }
   if(id==='system')    { loadSystemData(); loadAdminUsers(); }
 }
 
