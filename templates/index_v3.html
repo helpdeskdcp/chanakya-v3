@@ -84,9 +84,10 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 @media (max-width:768px) {
   /* Layout fix — sidebar to bottom */
   .layout{
-    flex-direction:column!important;
-    height:auto!important;
+    flex-direction:row!important;
+    height:calc(100vh - 44px)!important;
     width:100%!important;
+    position:relative!important;
   }
   .sidebar{
     position:fixed!important;
@@ -97,6 +98,9 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
     border-right:none!important;border-top:1px solid #1e3a5f!important;
     overflow-x:auto!important;overflow-y:hidden!important;
     background:#111827!important;
+    /* Remove from normal flow */
+    order:999!important;
+    flex-shrink:0!important;
   }
   .main{
     width:100%!important;
@@ -104,6 +108,8 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
     padding-bottom:66px!important;
     overflow-y:auto!important;
     flex:1!important;
+    display:block!important;
+    min-height:200px!important;
   }
   .rp{display:none!important}
   /* Nav items */
