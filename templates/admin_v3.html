@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chanakya AI — Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-height:100vh}
+.topbar{background:#111827;border-bottom:1px solid #d4af37;padding:10px 16px;
+        display:flex;align-items:center;justify-content:space-between}
+.logo{color:#d4af37;font-size:16px;font-weight:800}
+.main{padding:16px;max-width:1400px;margin:0 auto}
+.card{background:#111827;border:1px solid #1e3a5f;border-radius:12px;margin-bottom:14px}
+.ch{padding:12px 16px;border-bottom:1px solid #1e3a5f;display:flex;align-items:center;
+    justify-content:space-between;font-size:12px;font-weight:600;color:#00c8ff}
+.cb{padding:14px 16px}
+.krow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:#111827;border:1px solid #1e3a5f;border-radius:10px;padding:12px}
+.kl{color:#8090a8;font-size:9px;text-transform:uppercase}
+.kv{font-size:22px;font-weight:700;color:#d4af37;margin-top:4px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{color:#8090a8;font-weight:600;padding:8px 10px;border-bottom:1px solid #1e3a5f;text-align:left}
+.tbl td{padding:7px 10px;border-bottom:1px solid #0d1b2a}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+.btn{padding:6px 14px;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600}
+.b-gold{background:linear-gradient(135deg,#d4af37,#f0d060);color:#0a0e1a}
+.b-blue{background:#1e3a5f;color:#00c8ff;border:1px solid #00c8ff}
+.b-red{background:rgba(255,82,82,.15);color:#ff5252;border:1px solid #ff5252}
+.b-purple{background:rgba(168,85,247,.15);color:#a855f7;border:1px solid #a855f7}
+.pos{color:#00e676}.neg{color:#ff5252}
+.inp{width:100%;padding:10px;background:#0d1b2a;border:1px solid #1e3a5f;
+     color:#fff;border-radius:8px;margin-bottom:8px;font-size:13px}
+.badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.b-admin{background:rgba(212,175,55,.2);color:#d4af37}
+.b-premium{background:rgba(0,230,118,.2);color:#00e676}
+.b-viewer{background:rgba(0,200,255,.2);color:#00c8ff}
+.b-expired{background:rgba(255,82,82,.2);color:#ff5252}
+.live{display:inline-block;width:6px;height:6px;border-radius:50%;
+      background:#00e676;animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+       background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center}
+.modal-box{background:#111827;border:1px solid #d4af37;border-radius:16px;
+           padding:24px;max-width:380px;width:90%}
+@media(max-width:768px){.krow{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">⚡ CHANAKYA AI — Admin Panel</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="color:#8090a8;font-size:11px" id="tTIME">--:--:--</span>
+    <a href="/v3" style="color:#00c8ff;font-size:11px;text-decoration:none">← Dashboard</a>
+    <button class="btn b-red" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- KPI Row -->
+  <div class="krow">
+    <div class="kpi"><div class="kl">Total Users</div><div class="kv" id="kTU">-</div></div>
+    <div class="kpi"><div class="kl">Premium</div><div class="kv pos" id="kPU">-</div></div>
+    <div class="kpi"><div class="kl">Trial</div><div class="kv" style="color:#00c8ff" id="kTR">-</div></div>
+    <div class="kpi"><div class="kl">Pending Pay</div><div class="kv neg" id="kPP">-</div></div>
+    <div class="kpi"><div class="kl">Online Now</div><div class="kv" style="color:#d4af37" id="kON">-</div></div>
+  </div>
+
+  <div class="g2">
+    <!-- User Management -->
+    <div class="card">
+      <div class="ch">👥 User Management
+        <button class="btn b-gold" onclick="document.getElementById('addModal').style.display='flex'">+ Add User</button>
+      </div>
+      <div style="padding:8px;overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>User</th><th>Role</th><th>Trades</th><th>Trial</th><th>Action</th></tr></thead>
+          <tbody id="tUsers"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pending Payments -->
+    <div class="card">
+      <div class="ch">💰 Payment Requests
+        <button class="btn b-blue" onclick="loadAll()">↻ Refresh</button>
+      </div>
+      <div style="padding:8px;overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>User</th><th>UTR</th><th>Plan</th><th>Action</th></tr></thead>
+          <tbody id="tPayments"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Resources -->
+  <div class="card">
+    <div class="ch">🖥️ System Resources <span class="live"></span>
+      <span style="color:#8090a8;font-size:10px" id="sUptime"></span>
+    </div>
+    <div class="cb" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:center">
+      <div>
+        <div style="font-size:10px;color:#8090a8;margin-bottom:4px">CPU</div>
+        <div style="font-size:32px;font-weight:800" id="sCPU">-</div>
+        <div style="height:4px;background:#1e3a5f;border-radius:2px;margin-top:4px">
+          <div id="sCPUB" style="height:4px;background:#00e676;border-radius:2px;width:0"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#8090a8;margin-bottom:4px">RAM</div>
+        <div style="font-size:32px;font-weight:800;color:#a855f7" id="sRAM">-</div>
+        <div style="height:4px;background:#1e3a5f;border-radius:2px;margin-top:4px">
+          <div id="sRAMB" style="height:4px;background:#a855f7;border-radius:2px;width:0"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#8090a8;margin-bottom:4px">DISK</div>
+        <div style="font-size:32px;font-weight:800;color:#00c8ff" id="sDISK">-</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#8090a8;margin-bottom:4px">V3 PID</div>
+        <div style="font-size:14px;font-weight:700;color:#d4af37;margin-top:8px" id="sPID">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <!-- Strategy Performance -->
+    <div class="card">
+      <div class="ch">📊 Strategy Performance</div>
+      <div style="padding:8px">
+        <table class="tbl">
+          <thead><tr><th>Strategy</th><th>Trades</th><th>Win%</th><th>P&L</th></tr></thead>
+          <tbody id="tStrats"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="ch">⚡ Quick Actions</div>
+      <div class="cb" style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn b-gold" style="width:100%;padding:12px" onclick="doAction('retrain')">🔄 Retrain ML Model</button>
+        <button class="btn b-blue" style="width:100%;padding:12px" onclick="doAction('scan')">⚡ Force Market Scan</button>
+        <button class="btn b-red"  style="width:100%;padding:12px" onclick="doAction('squareoff')">⏹ Square All Positions</button>
+        <button class="btn b-purple" style="width:100%;padding:12px" onclick="doAction('backup')">💾 Take Backup Now</button>
+        <div id="actionMsg" style="font-size:11px;text-align:center;min-height:16px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal" id="addModal">
+  <div class="modal-box">
+    <div style="color:#d4af37;font-size:16px;font-weight:800;margin-bottom:16px">👤 Add New User</div>
+    <input class="inp" id="mUser" placeholder="Username">
+    <input class="inp" id="mPass" type="password" placeholder="Password (min 6 chars)">
+    <select id="mRole" style="width:100%;padding:10px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:8px;margin-bottom:12px">
+      <option value="viewer">Viewer — 15-day trial</option>
+      <option value="premium">Premium — Full access</option>
+      <option value="admin">Admin — All rights</option>
+    </select>
+    <button onclick="addUser()" class="btn b-gold" style="width:100%;padding:12px;margin-bottom:8px">✅ Create User</button>
+    <div id="mMsg" style="font-size:11px;min-height:16px;text-align:center"></div>
+    <button onclick="document.getElementById('addModal').style.display='none'"
+            style="background:none;border:none;color:#8090a8;cursor:pointer;width:100%;margin-top:8px">✕ Close</button>
+  </div>
+</div>
+
+<script>
+const API = '/api/v3';
+let TOKEN = localStorage.getItem('cv3t') || '';
+
+if (!TOKEN) { window.location.href = '/v3'; }
+
+function h(v,def) { return v !== undefined && v !== null ? v : (def || '-'); }
+
+async function req(path, opts) {
+  opts = opts || {};
+  const headers = {'Content-Type':'application/json','X-Auth-Token':TOKEN};
+  try {
+    const r = await fetch(API+path, Object.assign({}, opts, {headers:headers}));
+    if (r.status === 401) { window.location.href='/v3'; return null; }
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function loadUsers() {
+  const d = await req('/admin/users');
+  if (!d || !d.success) return;
+  const total = d.users.length;
+  const premium = d.users.filter(function(u){ return u.effective_role==='premium'||u.effective_role==='admin'; }).length;
+  const trial = d.users.filter(function(u){ return u.effective_role==='viewer'; }).length;
+  document.getElementById('kTU').textContent = total;
+  document.getElementById('kPU').textContent = premium;
+  document.getElementById('kTR').textContent = trial;
+  const tb = document.getElementById('tUsers');
+  tb.innerHTML = d.users.map(function(u) {
+    const rc = u.effective_role==='admin'?'b-admin':u.effective_role==='premium'?'b-premium':u.effective_role==='expired'?'b-expired':'b-viewer';
+    return '<tr>' +
+      '<td><b>'+h(u.username)+'</b></td>' +
+      '<td><span class="badge '+rc+'">'+h(u.effective_role)+'</span></td>' +
+      '<td>'+h(u.trades_today,0)+'</td>' +
+      '<td style="color:#8090a8">'+(u.trial_days_left!=null?u.trial_days_left+'d':'—')+'</td>' +
+      '<td><button class="btn b-gold" style="padding:3px 8px;font-size:9px" onclick="upgradeUser(\''+u.username+'\')">⬆️ Upgrade</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function loadPayments() {
+  const d = await req('/admin/payments');
+  if (!d || !d.success) return;
+  document.getElementById('kPP').textContent = d.payments.length;
+  const tb = document.getElementById('tPayments');
+  if (!d.payments.length) {
+    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8090a8;padding:12px">No pending payments</td></tr>';
+    return;
+  }
+  tb.innerHTML = d.payments.map(function(p) {
+    return '<tr>' +
+      '<td><b>'+h(p.username)+'</b></td>' +
+      '<td style="color:#d4af37;font-family:monospace;font-size:10px">'+h(p.utr_number)+'</td>' +
+      '<td class="pos">₹3,000</td>' +
+      '<td><button class="btn b-gold" style="padding:4px 8px;font-size:10px" onclick="approvePayment('+p.id+')">✅ Approve</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function loadSystem() {
+  const d = await req('/admin/system');
+  if (!d || !d.success) return;
+  const cpuC = d.cpu>80?'#ff5252':d.cpu>60?'#f97316':'#00e676';
+  const ramC = d.ram_pct>80?'#ff5252':'#a855f7';
+  document.getElementById('sCPU').textContent = d.cpu+'%';
+  document.getElementById('sCPU').style.color = cpuC;
+  document.getElementById('sRAM').textContent = d.ram_pct+'%';
+  document.getElementById('sDISK').textContent = d.disk_pct+'%';
+  document.getElementById('sDISK').style.color = d.disk_pct>85?'#ff5252':'#00c8ff';
+  document.getElementById('kON').textContent = d.online_users||0;
+  document.getElementById('sUptime').textContent = d.uptime||'';
+  document.getElementById('sPID').textContent = 'V3: Running';
+  const cb = document.getElementById('sCPUB');
+  const rb = document.getElementById('sRAMB');
+  if (cb) { cb.style.width=d.cpu+'%'; cb.style.background=cpuC; }
+  if (rb) { rb.style.width=d.ram_pct+'%'; }
+}
+
+async function loadStrategies() {
+  const d = await req('/strategies');
+  if (!d || !d.success) return;
+  const tb = document.getElementById('tStrats');
+  tb.innerHTML = d.strategies.map(function(s) {
+    const wc = s.win_rate>60?'#00e676':s.win_rate>40?'#d4af37':'#8090a8';
+    return '<tr>' +
+      '<td style="color:'+wc+'"><b>'+s.name+'</b></td>' +
+      '<td>'+s.trades+'</td>' +
+      '<td style="color:'+wc+'">'+s.win_rate+'%</td>' +
+      '<td class="'+(s.total_pnl>=0?'pos':'neg')+'">₹'+parseFloat(s.total_pnl||0).toFixed(0)+'</td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function approvePayment(id) {
+  const plan = prompt('Select plan:\nmonthly(30d-₹3K)\nquarterly(90d-₹8K)\nhalf_year(120d-₹9K)\nbiannual(180d-₹13K)\nannual(365d-₹25K)', 'monthly');
+  if (!plan) return;
+  const d = await req('/admin/verify-payment', {method:'POST', body: JSON.stringify({payment_id:id, plan:plan})});
+  if (d && d.success) { alert('✅ '+d.message); loadAll(); }
+  else alert('❌ '+(d?d.error:'Failed'));
+}
+
+async function upgradeUser(username) {
+  const plan = prompt('Upgrade '+username+' to plan:\nmonthly/quarterly/half_year/biannual/annual', 'monthly');
+  if (!plan) return;
+  const utr = 'MANUAL-'+Date.now();
+  // Create payment then verify
+  const p = await req('/user/payment/plan', {method:'POST', body: JSON.stringify({utr:utr, plan:plan})});
+  if (p && p.success) {
+    const d = await req('/admin/verify-payment', {method:'POST', body: JSON.stringify({payment_id:p.payment_id, plan:plan})});
+    if (d && d.success) { alert('✅ '+username+' upgraded!'); loadAll(); }
+    else alert('❌ '+(d?d.error:'Failed'));
+  }
+}
+
+async function addUser() {
+  const u = document.getElementById('mUser').value.trim();
+  const p = document.getElementById('mPass').value.trim();
+  const r = document.getElementById('mRole').value;
+  const msg = document.getElementById('mMsg');
+  if (!u || !p) { msg.style.color='#ff5252'; msg.textContent='All fields required'; return; }
+  const d = await req('/user/register', {method:'POST', body: JSON.stringify({username:u, password:p, role:r})});
+  if (d && d.success) {
+    msg.style.color='#00e676'; msg.textContent='✅ User created!';
+    setTimeout(function(){ document.getElementById('addModal').style.display='none'; loadAll(); }, 1500);
+  } else { msg.style.color='#ff5252'; msg.textContent='❌ '+(d?d.error:'Failed'); }
+}
+
+async function doAction(action) {
+  const msg = document.getElementById('actionMsg');
+  msg.style.color='#00c8ff'; msg.textContent='⏳ Processing...';
+  let d;
+  if (action==='retrain') {
+    d = await req('/ml/retrain', {method:'POST'});
+    if (d && d.success) { msg.style.color='#00e676'; msg.textContent='✅ ML retrained! Accuracy: '+d.accuracy+'%'; }
+    else { msg.style.color='#ff5252'; msg.textContent='❌ '+(d?d.error:'Failed'); }
+  } else if (action==='scan') {
+    d = await req('/scan', {method:'POST'});
+    if (d && d.success) { msg.style.color='#00e676'; msg.textContent='✅ Scan done! '+( d.signals||0)+' signals'; }
+    else { msg.style.color='#ff5252'; msg.textContent='❌ Failed'; }
+  } else if (action==='squareoff') {
+    if (!confirm('Square off ALL positions?')) { msg.textContent=''; return; }
+    d = await req('/squareoff', {method:'POST', body: JSON.stringify({all:true})});
+    if (d && d.success) { msg.style.color='#00e676'; msg.textContent='✅ Closed '+(d.closed||0)+' positions'; }
+    else { msg.style.color='#ff5252'; msg.textContent='❌ Failed'; }
+  } else if (action==='backup') {
+    d = await req('/backup', {method:'POST'});
+    if (d && d.success) { msg.style.color='#a855f7'; msg.textContent='💾 Backup complete!'; }
+    else { msg.style.color='#ff5252'; msg.textContent='❌ Failed'; }
+  }
+}
+
+function logout() {
+  localStorage.removeItem('cv3t');
+  localStorage.removeItem('cv3u');
+  window.location.href = '/v3';
+}
+
+async function loadAll() {
+  await loadUsers();
+  await loadPayments();
+  await loadSystem();
+  await loadStrategies();
+}
+
+// Clock
+setInterval(function() {
+  const now = new Date(Date.now()+19800000);
+  document.getElementById('tTIME').textContent = now.toISOString().substr(11,8)+' IST';
+}, 1000);
+
+// Load
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>

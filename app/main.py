@@ -1552,6 +1552,14 @@ def get_strategies():
         return jsonify({"success":False,"error":str(e)})
 
 # ── Admin System Monitor ────────────────────────────────
+@app.route("/v3/admin")
+@require_auth
+def admin_panel():
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return redirect("/v3")
+    return render_template("admin_v3.html")
+
 @app.route("/api/v3/admin/system")
 @require_auth
 def system_monitor():
