@@ -155,17 +155,29 @@ def status():
     # Per-user broker info
     curr_user = get_current_user()
     curr_username = curr_user.get("username","")
-    # Per-user broker pool — use cache only (no fresh connect on status)
+    # Per-user broker pool — cache only
     from engine.broker_pool import _pool
     _ub = _pool.get(curr_username) if curr_username else None
     if _ub and _ub.connected:
         broker_user_name = _ub.user_name
         broker_connected = True
-        broker_capital   = _ub.capital  # cached — no API call
-    else:
+        broker_capital   = _ub.capital
+    elif curr_username == "avinash" or not curr_username:
+        # Admin — use global broker
         broker_user_name = broker.user_name
         broker_connected = broker.connected
         broker_capital   = 0
+    else:
+        # Non-admin — show own broker name from DB
+        try:
+            from data.users import get_broker_credentials
+            _creds = get_broker_credentials(curr_username)
+            broker_connected = bool(_creds and _creds.get("connected"))
+            broker_user_name = _creds.get("client_id","") if broker_connected else ""
+        except Exception:
+            broker_connected = False
+            broker_user_name = ""
+        broker_capital = 0
 
     stats = get_today_stats()
     vix = _get_vix()
@@ -189,6 +201,39 @@ def status():
     })
 
 # ── Dashboard API ──────────────────────────────────────
+
+
+def _get_user_mode(username):
+    """Get per-user trading mode"""
+    try:
+        import sqlite3 as _sq
+        conn = _sq.connect("data/users.db")
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN pref_mode TEXT DEFAULT 'PAPER'")
+            conn.commit()
+        except Exception:
+            pass
+        r = conn.execute("SELECT pref_mode FROM users WHERE username=?", (username,)).fetchone()
+        conn.close()
+        return (r[0] if r and r[0] else "PAPER")
+    except Exception:
+        return "PAPER"
+
+def _set_user_mode(username, mode):
+    """Set per-user trading mode"""
+    try:
+        import sqlite3 as _sq
+        conn = _sq.connect("data/users.db")
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN pref_mode TEXT DEFAULT 'PAPER'")
+            conn.commit()
+        except Exception:
+            pass
+        conn.execute("UPDATE users SET pref_mode=? WHERE username=?", (mode, username))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 # ── Per-User Capital Helpers ───────────────────────────
 def _get_user_broker_info(username):
@@ -273,7 +318,7 @@ def dashboard():
         "all_win_rate":  all_wr,
         "open_trades":   open_count,
         "best_strategy": {"name": bs[0], "pnl": round(bs[1],2)} if bs else None,
-        "mode":          "PAPER" if config.PAPER_MODE else "LIVE",
+        "mode":          _get_user_mode(curr_username) if curr_username else ("PAPER" if config.PAPER_MODE else "LIVE"),
         "vix":           _get_vix(),
         "pcr":           1.0,
         "connected":     broker.connected,
@@ -674,8 +719,12 @@ def switch_mode():
                 "message": "Switch to LIVE trading? User: " + username + " Broker: Angel One (" + creds.get("client_id","") + ") Real money will be used! Confirm to proceed."
             })
 
-    config.PAPER_MODE = (mode == "PAPER")
-    logger.info(f"🔄 Mode switched to {mode} by {username}")
+    # Per-user mode save
+    _set_user_mode(username, mode)
+    # Admin switches global
+    if username == "avinash":
+        config.PAPER_MODE = (mode == "PAPER")
+    logger.info(f"🔄 Mode: {username} -> {mode}")
 
 
     # Telegram alert
