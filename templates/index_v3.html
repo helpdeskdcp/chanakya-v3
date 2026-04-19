@@ -2,13 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0a0e1a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Chanakya AI">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="description" content="Chanakya AI — Quantum Neural Trading Platform">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chanakya AI v3.0</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -37,7 +31,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .dg{background:#00e676;box-shadow:0 0 6px #00e676} .dr{background:#ff5252}
-.layout{display:flex;min-height:calc(100vh - 44px)}
+.layout{display:flex;height:calc(100vh - 44px)}
 /* SIDEBAR */
 .sidebar{width:175px;background:#111827;border-right:1px solid #1e3a5f;padding:8px 0;overflow-y:auto;flex-shrink:0}
 .nav-sec{color:#8090a8;font-size:9px;padding:10px 12px 4px;text-transform:uppercase;letter-spacing:1px}
@@ -45,7 +39,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 .nav-it:hover{background:rgba(255,255,255,.04);color:#00c8ff}
 .nav-it.on{background:rgba(0,200,255,.08);border-left-color:#00c8ff;color:#00c8ff}
 /* MAIN */
-.main{flex:1;overflow-y:auto;padding:16px;min-width:0}
+.main{flex:1;overflow-y:auto;padding:16px}
 .pg{display:none}.pg.on{display:block}
 /* CARDS */
 .card{background:#111827;border:1px solid #1e3a5f;border-radius:12px;margin-bottom:14px}
@@ -78,126 +72,6 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 .b-gold{background:linear-gradient(135deg,#d4af37,#f0d060);color:#0a0e1a}
 .live{display:inline-block;width:6px;height:6px;border-radius:50%;background:#00e676;animation:p 2s infinite}
 @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
-
-
-  .sidebar{padding-bottom:env(safe-area-inset-bottom,0)}
-}
-
-/* Dark mode support (already dark, but ensure) */
-@media (prefers-color-scheme:dark) {
-  body{background:#0a0e1a;color:#e0e6f0}
-}
-
-/* Touch devices — bigger tap targets */
-@media (hover:none) and (pointer:coarse) {
-  .btn{min-height:36px;padding:8px 14px}
-  .nav-it{min-height:44px}
-  .inp{min-height:44px;font-size:16px!important}
-  select{min-height:44px;font-size:16px!important}
-}
-
-/* Landscape mobile */
-@media (max-width:768px) and (orientation:landscape) {
-  .sidebar{
-    position:fixed;left:0;top:0;bottom:0;
-    width:60px!important;height:100vh;
-    flex-direction:column;overflow-y:auto;overflow-x:hidden;
-  }
-  .nav-it{flex-direction:column;font-size:9px;padding:6px 4px}
-  .main{margin-left:60px;padding-bottom:8px}
-}
-
-
-/* ── RESPONSIVE ──────────────────────────────────── */
-@media (max-width:768px){
-  /* Sidebar — fixed bottom bar */
-  .sidebar{
-    position:fixed;bottom:0;left:0;right:0;top:auto;
-    width:100%;height:52px;
-    display:flex;flex-direction:row;align-items:center;
-    padding:0;z-index:999;
-    border-right:none;border-top:1px solid #1e3a5f;
-    overflow-x:auto;overflow-y:hidden;background:#111827;
-  }
-  .nav-sec{display:none}
-  .nav-it{
-    flex:0 0 auto;padding:6px 10px;min-width:60px;
-    font-size:9px;text-align:center;
-    display:flex;flex-direction:column;align-items:center;gap:1px;
-    border-left:none;border-bottom:3px solid transparent;
-    white-space:nowrap;
-  }
-  .nav-it.on{border-bottom-color:#00c8ff;color:#00c8ff}
-
-  /* Layout — normal flow, main full width */
-  .layout{
-    display:flex!important;
-    flex-direction:column!important;
-    width:100vw!important;
-    height:auto!important;
-    min-height:auto!important;
-    overflow:visible!important;
-  }
-  .main{
-    width:100vw!important;
-    max-width:100vw!important;
-    padding:8px!important;
-    padding-bottom:64px!important;
-    display:block!important;
-    overflow-y:auto!important;
-    overflow-x:hidden!important;
-    height:auto!important;
-    min-height:auto!important;
-    flex:1!important;
-  }
-  .pg{display:none}
-  .pg.on{display:block!important;min-height:100px!important}
-  .rp{display:none}
-
-  /* Topbar */
-  .topbar{padding:5px 8px;gap:4px}
-  .logo{font-size:12px}
-  .tickers .tk:nth-child(n+4){display:none}
-  .tk{padding:2px 5px}
-  .tk-s{font-size:8px}
-  .tk-v{font-size:10px}
-
-  /* KPI */
-  .krow{grid-template-columns:repeat(2,1fr);gap:6px}
-  .kpi{padding:8px}
-  .kv{font-size:16px}
-  .kl{font-size:9px}
-
-  /* Cards */
-  .g2{grid-template-columns:1fr}
-  .card{margin-bottom:8px;overflow:hidden}
-  .ch{font-size:11px;padding:8px 10px}
-  .cb{padding:8px 10px;overflow-x:auto}
-
-  /* Tables */
-  .tbl{font-size:10px;min-width:300px}
-  .tbl th,.tbl td{padding:4px 6px}
-
-  /* Buttons */
-  .btn{padding:5px 10px;font-size:10px;min-height:32px}
-  .inp{font-size:16px;min-height:40px}
-  select{font-size:14px;min-height:36px}
-
-  /* Pages visible */
-  .pg.on{display:block!important}
-}
-
-@media(max-width:480px){
-  .krow{grid-template-columns:repeat(2,1fr);gap:4px}
-  .tickers .tk:nth-child(n+3){display:none}
-  .login-box{width:95%;padding:20px 14px}
-}
-
-@media(min-width:769px){
-  .layout{display:flex;min-height:calc(100vh - 44px)}
-  .main{overflow-y:auto;padding:16px;flex:1}
-}
-
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;background:#111827;border:1px solid #00e676;color:#00e676;font-size:12px;z-index:9999;display:none}
 </style>
 </head>
@@ -480,28 +354,10 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-it" id="navSystem" style="display:none" onclick="pg('system',this)">🖥️ System Monitor</div>
       <div class="nav-it" onclick="logout()">⎋ Logout</div>
     </div>
-    <!-- Mobile Bottom Nav Labels -->
-    <style>
-    @media(max-width:768px){
-      .nav-it::before{font-size:16px;display:block}
-      .nav-it[onclick*="dash"]::before{content:"🏠"}
-      .nav-it[onclick*="signals"]::before{content:"⚡"}
-      .nav-it[onclick*="trades"]::before{content:"📋"}
-      .nav-it[onclick*="positions"]::before{content:"🔴"}
-      .nav-it[onclick*="chain"]::before{content:"🔗"}
-      .nav-it[onclick*="analytics"]::before{content:"📈"}
-      .nav-it[onclick*="brain"]::before{content:"🧠"}
-      .nav-it[onclick*="settings"]::before{content:"⚙️"}
-      .nav-it[onclick*="system"]::before{content:"🖥️"}
-      .nav-it[onclick*="logout"]::before{content:"⎋"}
-    }
-    </style>
-    <div style="display:none"
-    </div>
-    <div class="main" id="MAIN" style="min-height:200px">
+    <div class="main">
 
       <!-- DASHBOARD -->
-      <div class="pg on" id="pg-dash" style="display:block">
+      <div class="pg on" id="pg-dash">
         <div class="krow">
           <div class="kpi"><div class="kl">Today P&L</div><div class="kv" id="kPNL">₹0</div><div class="ks" id="kTR">0 trades</div></div>
           <div class="kpi"><div class="kl">Win Rate</div><div class="kv" id="kWR">—%</div><div class="ks">Today</div></div>
@@ -1191,28 +1047,23 @@ async function api(path, opts={}) {
 // ── START ─────────────────────────────────────────────
 async function startApp() {
   startClock();
-  // Force dashboard visible immediately
-  const pgDash = document.getElementById('pg-dash');
-  if(pgDash) { pgDash.style.display='block'; pgDash.classList.add('on'); }
-  document.getElementById('APP').style.display='block';
-
-  try { await loadStatus(); } catch(e){}
-  try { await loadUserStatus(); } catch(e){}
-  try { await loadMarket(); } catch(e){}
-  try { await loadDashboard(); } catch(e){}
-  try { await loadTickers(); } catch(e){}
-  try { await loadUserPnl(); } catch(e){}
-  toast('✅ Dashboard Ready!', '#00e676');
-
-  // Admin nav
-  if(TOKEN) {
-    api('/admin/system').then(d=>{
-      if(d?.success){
-        const ns=document.getElementById('navSystem');
-        if(ns) ns.style.display='block';
-      }
-    }).catch(()=>{});
+  toast('📡 Fetching data...', '#00c8ff');
+  await loadStatus();
+  // Show admin-only nav items
+  if(window._userRole === 'admin' || TOKEN) {
+    const ns = document.getElementById('navSystem');
+    if(ns) {
+      api('/admin/system').then(d=>{
+        if(d?.success) ns.style.display='block';
+      });
+    }
   }
+  await loadUserStatus();
+  toast('📊 Loading market...', '#00c8ff');
+  await loadMarket();
+  await loadDashboard();
+  await loadTickers();
+  toast('✅ Dashboard Ready!', '#00e676');
   setInterval(loadAll, 15000);
   setInterval(loadTickers, 15000);
 }
@@ -1309,6 +1160,19 @@ async function loadTickers() {
 // ── DASHBOARD ─────────────────────────────────────────
 async function loadDashboard() {
   const d = await api('/dashboard');
+  // Per-user P&L
+  const pd = await api('/user/pnl');
+  if(pd?.success) {
+    const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
+    const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+    s('kPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
+    s('kTR',  pd.today_trades+' trades today');
+    s('kWR',  pd.win_rate+'%');
+    s('kAP',  fmt(pd.total_pnl), pd.total_pnl>=0?'#00e676':'#ff5252');
+    s('rPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
+    s('rTR',  pd.today_trades);
+    s('rWR',  pd.win_rate+'%');
+  }
   if(!d) return;
   const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
   const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
