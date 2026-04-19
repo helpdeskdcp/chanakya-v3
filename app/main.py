@@ -1639,7 +1639,7 @@ def admin_create_user():
             conn2.close()
             return jsonify({"success": False, "error": "User already exists"})
         conn2.execute(
-            "INSERT INTO users (username,password_hash,role,broker_name,broker_connected) VALUES (?,?,?,'paper',0)",
+            "INSERT INTO users (username,password_hash,role,broker_name,broker_connected,active) VALUES (?,?,?,'paper',0,1)",
             (username, pw_hash, role)
         )
         conn2.commit()
