@@ -1610,11 +1610,8 @@ def get_strategies():
 
 # ── Admin System Monitor ────────────────────────────────
 @app.route("/v3/admin")
-@require_auth
 def admin_panel():
-    user = get_current_user()
-    if user.get("role") != "admin":
-        return redirect("/v3")
+    # Auth handled by JS in admin_v3.html
     return render_template("admin_v3.html")
 
 
