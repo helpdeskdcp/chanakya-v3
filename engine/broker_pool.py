@@ -106,8 +106,12 @@ def get_broker(username):
 
 
 def get_broker_info(username):
-    """Get broker name + capital for a user"""
-    ub = get_broker(username)
+    """Get broker name + capital — cache first, no fresh connect"""
+    # Return from cache only — do not initiate new connection
+    with _lock:
+        ub = _pool.get(username)
+    if not ub:
+        ub = None
     if ub and ub.connected:
         return {
             "connected":  True,

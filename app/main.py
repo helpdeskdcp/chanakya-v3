@@ -114,6 +114,15 @@ def login():
         session["user"] = _tokens[token]
         session.permanent = True
         logger.info(f"Login OK: {user} token={token[:8]}...")
+        # Background madhe broker connect karo
+        import threading
+        def _bg_connect(u):
+            try:
+                from engine.broker_pool import get_broker
+                get_broker(u)
+            except Exception:
+                pass
+        threading.Thread(target=_bg_connect, args=(user,), daemon=True).start()
         if request.is_json:
             return jsonify({"success": True, "username": user, "token": token})
         # Form POST — render directly with logged_in=True
@@ -146,12 +155,17 @@ def status():
     # Per-user broker info
     curr_user = get_current_user()
     curr_username = curr_user.get("username","")
-    # Per-user broker pool
-    from engine.broker_pool import get_broker_info
-    _binfo = get_broker_info(curr_username) if curr_username else {}
-    broker_user_name = _binfo.get("user_name") or broker.user_name
-    broker_connected = _binfo.get("connected") or broker.connected
-    broker_capital   = _binfo.get("capital") or 0
+    # Per-user broker pool — use cache only (no fresh connect on status)
+    from engine.broker_pool import _pool
+    _ub = _pool.get(curr_username) if curr_username else None
+    if _ub and _ub.connected:
+        broker_user_name = _ub.user_name
+        broker_connected = True
+        broker_capital   = _ub.capital  # cached — no API call
+    else:
+        broker_user_name = broker.user_name
+        broker_connected = broker.connected
+        broker_capital   = 0
 
     stats = get_today_stats()
     vix = _get_vix()
