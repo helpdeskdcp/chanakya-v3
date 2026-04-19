@@ -1145,8 +1145,9 @@ async function loadStatus() {
   const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
   const conn = d.connected;
   document.getElementById('tDOT').className = 'dot '+(conn?'dg':'dr');
-  document.getElementById('tMODE').textContent = d.mode||'PAPER';
-  updateModeBtn(d.mode||'PAPER');
+  const serverMode = d.mode || 'PAPER';
+  document.getElementById('tMODE').textContent = serverMode;
+  updateModeBtn(serverMode);
   // Show broker full name + username
   const brokerDisplay = conn ?
     `✅ ${d.user} (${d.login_user})` : '❌ Not connected';
@@ -1494,10 +1495,7 @@ async function sqAll() {
 }
 
 async function toggleMode() {
-  // Read ACTUAL current mode from server — not button text
-  const statusD = await api('/status');
-  if(!statusD) return;
-  const currMode = statusD.mode || 'PAPER';
+  const currMode = document.getElementById('tMODE').textContent.trim() || 'PAPER';
   const newMode  = currMode === 'PAPER' ? 'LIVE' : 'PAPER';
 
   if(newMode === 'LIVE') {

@@ -318,7 +318,7 @@ def dashboard():
         "all_win_rate":  all_wr,
         "open_trades":   open_count,
         "best_strategy": {"name": bs[0], "pnl": round(bs[1],2)} if bs else None,
-        "mode":          _get_user_mode(curr_username) if curr_username else ("PAPER" if config.PAPER_MODE else "LIVE"),
+        "mode":          _get_user_mode(curr_username) if curr_username else "PAPER",
         "vix":           _get_vix(),
         "pcr":           1.0,
         "connected":     broker.connected,
