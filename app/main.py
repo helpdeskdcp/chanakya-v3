@@ -818,19 +818,32 @@ def ml_retrain_v3():
         if len(X) < 50:
             return jsonify({"success": False, "error": f"Too few samples: {len(X)}"})
 
-        from ai.ml_engine import EnsembleModel
-        model = EnsembleModel()
-        ok = model.train(np.array(X), np.array(y))
-        if ok:
-            # Update global ensemble
+        from ai.ml_engine import ChanakayaBrain
+        model = ChanakayaBrain()
+        # Use new train_from_db with full 42 features
+        acc = model.train_from_db(config.DB_PATH)
+        if acc > 0:
             from ai import ml_engine
             ml_engine.ensemble = model
+            ml_engine._brain   = model
             return jsonify({
                 "success":  True,
-                "accuracy": round(model.accuracy*100, 1),
+                "accuracy": round(acc*100, 1),
                 "samples":  model.n_samples,
             })
-        return jsonify({"success": False, "error": "Training failed"})
+        # Fallback — old 15-feature training
+        if len(X) >= 30:
+            ok = model.train(np.array(X), np.array(y))
+            if ok:
+                from ai import ml_engine
+                ml_engine.ensemble = model
+                ml_engine._brain   = model
+                return jsonify({
+                    "success":  True,
+                    "accuracy": round(model.accuracy*100, 1),
+                    "samples":  model.n_samples,
+                })
+        return jsonify({"success": False, "error": "Training failed — need more data"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
