@@ -51,6 +51,25 @@ def _load_tokens():
     except: pass
     return {}
 
+
+def _get_user_tokens(username):
+    """Get all active tokens for a username"""
+    return [t for t,d in _tokens.items()
+            if isinstance(d, dict) and d.get("username") == username]
+
+def _invalidate_user_sessions(username, except_token=None):
+    """Kill all old sessions for user"""
+    to_remove = [t for t,d in _tokens.items()
+                 if isinstance(d, dict)
+                 and d.get("username") == username
+                 and t != except_token]
+    for t in to_remove:
+        _tokens.pop(t, None)
+    if to_remove:
+        _save_tokens(_tokens)
+        logger.info(f"Killed {len(to_remove)} old sessions for {username}")
+    return len(to_remove)
+
 def _save_tokens(t):
     try: _json.dump(t, open(_TOKEN_FILE,"w"))
     except: pass
