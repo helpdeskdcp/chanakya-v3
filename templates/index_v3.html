@@ -1026,7 +1026,7 @@ async function selSym(sym, btn) {
   document.getElementById('cATM').textContent  = ' '+(d.atm||'—');
   document.getElementById('cEXP').textContent  = ' '+(d.expiry||'—');
   const rec = d.recommendation||'—';
-  const rc  = rec.includes('CE')?'#00e676':rec.includes('PE')?'#ff5252':'#d4af37';
+  const rc  = rec && rec.includes('CE')?'#00e676':rec && rec.includes('PE')?'#ff5252':'#d4af37';
   document.getElementById('chainInfo').innerHTML = `
     <div style="text-align:center;padding:10px;border:2px solid ${rc};border-radius:8px;margin-bottom:10px">
       <div style="font-size:18px;font-weight:800;color:${rc}">${rec}</div>
@@ -1123,8 +1123,8 @@ async function testScan() {
   if(d && d.success) {
     document.getElementById('tRES').innerHTML = `
       <div style="padding:8px;background:#0d1b2a;border-radius:6px;margin-top:8px">
-        <div style="font-weight:700;color:${d.recommendation?.includes('CE')?'#00e676':'#ff5252'}">${d.recommendation||'—'}</div>
-        <div style="color:#8090a8;font-size:10px;margin-top:4px">CE:${d.ce_score}% | PE:${d.pe_score}% | ML:${d.ml?.confidence||0}%</div>
+        <div style="font-weight:700;color:${d.recommendation && d.recommendation.includes('CE')?'#00e676':'#ff5252'}">${d.recommendation||'—'}</div>
+        <div style="color:#8090a8;font-size:10px;margin-top:4px">CE:${d.ce_score}% | PE:${d.pe_score}% | ML:${(d.ml ? d.ml.confidence : 0)||0}%</div>
       </div>`;
   } else {
     document.getElementById('tRES').innerHTML = `<div style="color:#ff5252">${(d ? d.error : '')||'No data'}</div>`;
@@ -1222,8 +1222,8 @@ async function loadSqTimes() {
   const fmt = s => { if(s<=0) return '⏰ Done'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}m`:`${m}m`; };
   const t = d.times||{};
   const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
-  s('sqNSE', fmt(t.NFO?.remaining||t.NSE?.remaining||0));
-  s('sqMCX', fmt(t.MCX?.remaining||0));
+  s('sqNSE', fmt((t.NFO ? t.NFO.remaining : 0)||(t.NSE ? t.NSE.remaining : 0)||0));
+  s('sqMCX', fmt((t.MCX ? t.MCX.remaining : 0)||0));
 }
 
 // ── NAVIGATION ────────────────────────────────────────
@@ -1257,7 +1257,7 @@ function startClock() {
 // ── HELPERS ───────────────────────────────────────────
 function ft(s) {
   try { return new Date(s).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}); }
-  catch { return s?.slice(11,16)||'—'; }
+  catch { return (s ? s.slice : function(){return '';})(11,16)||'—'; }
 }
 
 function toast(msg, color='#00e676') {
