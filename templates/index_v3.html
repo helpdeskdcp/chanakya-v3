@@ -1070,7 +1070,20 @@ async function api(path, opts={}) {
   const headers = {'Content-Type':'application/json','X-Auth-Token':TOKEN};
   try {
     const r = await fetch(API+path, {...opts, headers});
-    if(r.status === 401) { logout(); return null; }
+    if(r.status === 401) {
+      const d = await r.json().catch(function(){return {};});
+      if(d.code === 'SESSION_ENDED') {
+        // Show message before logout
+        const msg = document.createElement('div');
+        msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#111827;border:2px solid #ff5252;border-radius:16px;padding:32px;z-index:99999;text-align:center;max-width:340px';
+        msg.innerHTML = '<div style="font-size:32px;margin-bottom:12px">📱</div><div style="color:#ff5252;font-size:16px;font-weight:800;margin-bottom:8px">Session Ended!</div><div style="color:#8090a8;font-size:12px;margin-bottom:16px">Your account was logged in from another device.</div><button onclick="this.parentNode.remove();logout()" style="background:#d4af37;color:#000;border:none;padding:10px 24px;border-radius:8px;font-weight:800;cursor:pointer">Login Again</button>';
+        document.body.appendChild(msg);
+        setTimeout(function(){ logout(); }, 5000);
+      } else {
+        logout();
+      }
+      return null;
+    }
     return await r.json();
   } catch(e) { return null; }
 }

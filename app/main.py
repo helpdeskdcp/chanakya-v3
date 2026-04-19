@@ -77,7 +77,12 @@ def require_auth(f):
         if token and token in _tokens:
             session["user"] = _tokens[token]
             return f(*args, **kwargs)
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
+        # Check if user was logged out due to new session
+        return jsonify({
+            "success": False,
+            "error": "Session ended. Please login again.",
+            "code": "SESSION_ENDED"
+        }), 401
     return wrapper
 
 # ── Auth Routes ────────────────────────────────────────
@@ -103,8 +108,24 @@ def login():
 
     if db_user:
         import secrets
+        from datetime import datetime
+        import pytz
+        IST = pytz.timezone("Asia/Kolkata")
         token = secrets.token_hex(16)
-        _tokens[token] = {"username": user, "role": db_user.get("role","viewer")}
+
+        # Single session — invalidate all old sessions for this user
+        old_count = _invalidate_user_sessions(user, except_token=token)
+        if old_count > 0:
+            logger.info(f"User {user} logged in from new device — {old_count} old session(s) ended")
+
+        # Store token with device info
+        _tokens[token] = {
+            "username":   user,
+            "role":       db_user.get("role","viewer"),
+            "login_time": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
+            "user_agent": request.headers.get("User-Agent","")[:100],
+            "ip":         request.remote_addr or "",
+        }
         _save_tokens(_tokens)
         session.clear()
         _save_tokens(_tokens)
