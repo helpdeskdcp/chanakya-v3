@@ -1175,27 +1175,29 @@ async function api(path, opts={}) {
 
 // ── START ─────────────────────────────────────────────
 async function startApp() {
-  // Force dashboard visible
-  const pgDash = document.getElementById('pg-dash');
-  if(pgDash) pgDash.style.display = 'block';
   startClock();
-  toast('📡 Fetching data...', '#00c8ff');
-  await loadStatus();
-  // Show admin-only nav items
-  if(window._userRole === 'admin' || TOKEN) {
-    const ns = document.getElementById('navSystem');
-    if(ns) {
-      api('/admin/system').then(d=>{
-        if(d?.success) ns.style.display='block';
-      });
-    }
-  }
-  await loadUserStatus();
-  toast('📊 Loading market...', '#00c8ff');
-  await loadMarket();
-  await loadDashboard();
-  await loadTickers();
+  // Force dashboard visible immediately
+  const pgDash = document.getElementById('pg-dash');
+  if(pgDash) { pgDash.style.display='block'; pgDash.classList.add('on'); }
+  document.getElementById('APP').style.display='block';
+
+  try { await loadStatus(); } catch(e){}
+  try { await loadUserStatus(); } catch(e){}
+  try { await loadMarket(); } catch(e){}
+  try { await loadDashboard(); } catch(e){}
+  try { await loadTickers(); } catch(e){}
+  try { await loadUserPnl(); } catch(e){}
   toast('✅ Dashboard Ready!', '#00e676');
+
+  // Admin nav
+  if(TOKEN) {
+    api('/admin/system').then(d=>{
+      if(d?.success){
+        const ns=document.getElementById('navSystem');
+        if(ns) ns.style.display='block';
+      }
+    }).catch(()=>{});
+  }
   setInterval(loadAll, 15000);
   setInterval(loadTickers, 15000);
 }
@@ -1292,19 +1294,6 @@ async function loadTickers() {
 // ── DASHBOARD ─────────────────────────────────────────
 async function loadDashboard() {
   const d = await api('/dashboard');
-  // Per-user P&L
-  const pd = await api('/user/pnl');
-  if(pd?.success) {
-    const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
-    const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
-    s('kPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
-    s('kTR',  pd.today_trades+' trades today');
-    s('kWR',  pd.win_rate+'%');
-    s('kAP',  fmt(pd.total_pnl), pd.total_pnl>=0?'#00e676':'#ff5252');
-    s('rPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
-    s('rTR',  pd.today_trades);
-    s('rWR',  pd.win_rate+'%');
-  }
   if(!d) return;
   const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
   const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
