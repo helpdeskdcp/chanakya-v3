@@ -208,7 +208,8 @@ async function loadUsers() {
       '<td style="color:#8090a8">'+(u.trial_days_left!=null?u.trial_days_left+'d':'—')+'</td>' +
       '<td style="display:flex;gap:4px">' +
       '<button class="btn b-gold" style="padding:3px 6px;font-size:9px" onclick="upgradeUser(\''+u.username+'\')">⬆️</button>' +
-      '<button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="resetPnl(\''+u.username+'\')">↺ P&L</button>' +
+      '<button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="resetPnl(\''+u.username+'\')">↺</button>' +
+      (u.username !== 'avinash' ? '<button class="btn b-red" style="padding:3px 6px;font-size:9px" onclick="deleteUser(\''+u.username+'\')">🗑️</button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
@@ -275,6 +276,13 @@ async function approvePayment(id) {
   else alert('❌ '+(d?d.error:'Failed'));
 }
 
+async function deleteUser(username) {
+  if (!confirm('DELETE user ' + username + '? This cannot be undone!')) return;
+  const d = await req('/admin/delete-user', {method:'POST', body: JSON.stringify({username:username})});
+  if (d && d.success) { alert('✅ '+username+' deleted!'); loadAll(); }
+  else alert('❌ '+(d?d.error:'Failed'));
+}
+
 async function resetPnl(username) {
   if (!confirm('Reset P&L for ' + username + '? This marks all trades as separate.')) return;
   // Set a reset date for this user in DB
@@ -302,7 +310,7 @@ async function addUser() {
   const r = document.getElementById('mRole').value;
   const msg = document.getElementById('mMsg');
   if (!u || !p) { msg.style.color='#ff5252'; msg.textContent='All fields required'; return; }
-  const d = await req('/user/register', {method:'POST', body: JSON.stringify({username:u, password:p, role:r})});
+  const d = await req('/admin/create-user', {method:'POST', body: JSON.stringify({username:u, password:p, role:r})});
   if (d && d.success) {
     msg.style.color='#00e676'; msg.textContent='✅ User created!';
     setTimeout(function(){ document.getElementById('addModal').style.display='none'; loadAll(); }, 1500);

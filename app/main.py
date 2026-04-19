@@ -1615,6 +1615,54 @@ def admin_panel():
     return render_template("admin_v3.html")
 
 
+
+@app.route("/api/v3/admin/create-user", methods=["POST"])
+@require_auth
+def admin_create_user():
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    data = request.get_json() or {}
+    username = data.get("username","").strip().lower()
+    password = data.get("password","").strip()
+    role     = data.get("role","viewer")
+    if not username or not password:
+        return jsonify({"success": False, "error": "Username and password required"})
+    if len(password) < 4:
+        return jsonify({"success": False, "error": "Password min 4 chars"})
+    try:
+        from data.users import create_user
+        ok = create_user(username, password, role)
+        if ok:
+            logger.info(f"Admin created user: {username} role={role}")
+            return jsonify({"success": True, "message": f"User {username} created"})
+        return jsonify({"success": False, "error": "User already exists"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route("/api/v3/admin/delete-user", methods=["POST"])
+@require_auth
+def admin_delete_user():
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    data = request.get_json() or {}
+    username = data.get("username","").strip()
+    if not username:
+        return jsonify({"success": False, "error": "username required"})
+    if username == "avinash":
+        return jsonify({"success": False, "error": "Cannot delete admin"})
+    try:
+        import sqlite3 as sq
+        conn = sq.connect("data/users.db")
+        conn.execute("DELETE FROM users WHERE username=?", (username,))
+        conn.commit()
+        conn.close()
+        logger.info(f"Admin deleted user: {username}")
+        return jsonify({"success": True, "message": f"User {username} deleted"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 @app.route("/api/v3/admin/reset-pnl", methods=["POST"])
 @require_auth
 def reset_user_pnl():
