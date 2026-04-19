@@ -73,6 +73,25 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 .live{display:inline-block;width:6px;height:6px;border-radius:50%;background:#00e676;animation:p 2s infinite}
 @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;background:#111827;border:1px solid #00e676;color:#00e676;font-size:12px;z-index:9999;display:none}
+
+@media(max-width:600px){
+  .sidebar{display:none!important}
+  .rp{display:none!important}
+  .main{width:100%!important;padding:8px!important;padding-bottom:8px!important}
+  .layout{display:block!important}
+  .krow{grid-template-columns:repeat(2,1fr)!important;gap:6px!important}
+  .g2{grid-template-columns:1fr!important}
+  .kv{font-size:16px!important}
+  .tickers .tk:nth-child(n+4){display:none!important}
+  /* Mobile menu button */
+  #mobileMenu{display:flex!important}
+}
+@media(min-width:601px) and (max-width:900px){
+  .rp{display:none!important}
+  .sidebar{width:140px!important}
+  .main{flex:1!important}
+  .krow{grid-template-columns:repeat(3,1fr)!important}
+}
 </style>
 </head>
 <body>
@@ -134,6 +153,11 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 <div class="app" id="APP">
   <div class="topbar">
     <div class="logo">⚡ CHANAKYA AI <span style="font-size:10px;color:#8090a8">v3.0</span></div>
+    <button id="mobileMenu" onclick="toggleMobileMenu()"
+      style="display:none;background:#1e3a5f;border:none;color:#00c8ff;
+             padding:6px 10px;border-radius:6px;cursor:pointer;font-size:16px">
+      ☰
+    </button>
     <div class="tickers">
       <div class="tk"><div class="tk-s">NIFTY</div><div class="tk-v" id="tNIFTY">—</div></div>
       <div class="tk"><div class="tk-s">BANKNIFTY</div><div class="tk-v" id="tBANK">—</div></div>
@@ -993,6 +1017,22 @@ async function submitPayment() {
   }
 }
 
+// ── MOBILE MENU ───────────────────────────────────────
+function toggleMobileMenu() {
+  const sb = document.querySelector('.sidebar');
+  if(!sb) return;
+  const vis = sb.style.display === 'block';
+  sb.style.cssText = vis ?
+    'display:none!important' :
+    'display:block!important;position:fixed;top:44px;left:0;bottom:0;z-index:999;width:200px;overflow-y:auto';
+}
+// Close menu on nav click
+document.addEventListener('click', e => {
+  if(e.target.closest('.nav-it') && window.innerWidth <= 600) {
+    const sb = document.querySelector('.sidebar');
+    if(sb) sb.style.display='none';
+  }
+});
 // ── AUTH ──────────────────────────────────────────────
 async function doLogin() {
   const u = document.getElementById('U').value.trim();
