@@ -132,11 +132,18 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
   /* Layout — normal flow, main full width */
   .layout{display:block;width:100%;height:auto}
   .main{
-    width:100%;padding:8px;
-    padding-bottom:64px;
-    display:block;overflow-y:auto;
-    min-height:calc(100vh - 110px);
+    width:100%!important;
+    padding:8px!important;
+    padding-bottom:64px!important;
+    display:block!important;
+    overflow-y:visible!important;
+    min-height:70vh!important;
+    height:auto!important;
+    position:relative!important;
+    z-index:1!important;
   }
+  .pg{display:none}
+  .pg.on{display:block!important;min-height:100px!important}
   .rp{display:none}
 
   /* Topbar */
@@ -483,7 +490,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
     </style>
     <div style="display:none"
     </div>
-    <div class="main">
+    <div class="main" id="MAIN" style="min-height:200px">
 
       <!-- DASHBOARD -->
       <div class="pg on" id="pg-dash" style="display:block">
