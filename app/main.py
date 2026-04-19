@@ -1489,6 +1489,18 @@ def disconnect_broker():
     conn.close()
     return jsonify({"success":True,"message":"Broker disconnected"})
 
+# ── CPU Cache (non-blocking) ───────────────────────────
+import psutil as _psutil
+_cpu_cache = {"val": 0.0}
+def _cpu_updater():
+    import time
+    while True:
+        try: _cpu_cache["val"] = _psutil.cpu_percent(interval=2)
+        except: pass
+        time.sleep(3)
+import threading as _thr
+_thr.Thread(target=_cpu_updater, daemon=True).start()
+
 # ── Admin System Monitor ────────────────────────────────
 @app.route("/api/v3/admin/system")
 @require_auth
@@ -1497,7 +1509,7 @@ def system_monitor():
     if user.get("role") != "admin":
         return jsonify({"success": False, "error": "Admin only"}), 403
     import psutil, os
-    cpu    = psutil.cpu_percent(interval=0.1)
+    cpu    = _cpu_cache['val']
     mem    = psutil.virtual_memory()
     disk   = psutil.disk_usage('/')
     proc   = []
@@ -1515,9 +1527,7 @@ def system_monitor():
             pass
     proc.sort(key=lambda x: x['cpu'], reverse=True)
     # Online users
-    # Count only recent tokens
-    online = len([t for t in _tokens.values() 
-                  if isinstance(t, dict) and t.get("username")])
+    online = len(set(v.get('username','') for v in _tokens.values() if isinstance(v,dict) and v.get('username')))
     return jsonify({
         "success":   True,
         "cpu":       round(cpu, 1),
