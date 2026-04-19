@@ -225,7 +225,9 @@ def dashboard():
     cur.execute("""SELECT COUNT(*), COALESCE(SUM(pnl),0),
         SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END)
         FROM trades WHERE date(created_at)=date('now','localtime')
-        AND status='CLOSED'""")
+        AND status='CLOSED'
+        AND (username=? OR (? = 'avinash' AND username IS NOT NULL))
+    """, (curr_username, curr_username))
     r = cur.fetchone()
     today_trades = r[0] or 0
     today_pnl    = round(r[1] or 0, 2)
@@ -234,7 +236,10 @@ def dashboard():
     # All time
     cur.execute("""SELECT COUNT(*), COALESCE(SUM(pnl),0),
         SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END)
-        FROM trades WHERE status='CLOSED'""")
+        FROM trades WHERE status='CLOSED'
+        AND ABS(pnl)<100000
+        AND (username=? OR (? = 'avinash' AND username IS NOT NULL))
+    """, (curr_username, curr_username))
     r2 = cur.fetchone()
     all_trades = r2[0] or 0
     all_pnl    = round(r2[1] or 0, 2)
