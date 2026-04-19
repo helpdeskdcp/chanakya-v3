@@ -263,7 +263,7 @@ def dashboard():
         "success":       True,
         "capital":       round(_get_user_capital(curr_username), 2),
         "broker_status": _get_user_broker_status(curr_username),
-        "broker_name":   _get_user_broker_name(curr_username),
+        "broker_name":   _get_user_broker_name(curr_username) or broker.user_name,
         "today_pnl":     today_pnl,
         "today_trades":  today_trades,
         "today_wins":    today_wins,
