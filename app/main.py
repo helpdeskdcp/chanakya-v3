@@ -183,9 +183,9 @@ def status():
         "date":          now.strftime("%d %b %Y"),
         "vix":           vix,
         "today":         stats,
-        "ml_ready":      ensemble.is_trained,
-        "ml_accuracy":   round(ensemble.accuracy * 100, 1),
-        "ml_samples":    ensemble.n_samples,
+        "ml_ready":      __import__("ai.ml_engine",fromlist=["get_brain"]).get_brain().is_trained,
+        "ml_accuracy":   round(__import__("ai.ml_engine",fromlist=["get_brain"]).get_brain().accuracy*100,1),
+        "ml_samples":    __import__("ai.ml_engine",fromlist=["get_brain"]).get_brain().n_samples,
     })
 
 # ── Dashboard API ──────────────────────────────────────
