@@ -768,7 +768,7 @@ async function startApp() {
     const ns = document.getElementById('navSystem');
     if(ns) {
       api('/admin/system').then(d=>{
-        if(d?.success) ns.style.display='block';
+        if(d && d.success) ns.style.display='block';
       });
     }
   }
@@ -789,7 +789,7 @@ async function loadAll() {
     const ns = document.getElementById('navSystem');
     if(ns) {
       api('/admin/system').then(d=>{
-        if(d?.success) ns.style.display='block';
+        if(d && d.success) ns.style.display='block';
       });
     }
   }
@@ -876,7 +876,7 @@ async function loadDashboard() {
   const d = await api('/dashboard');
   // Per-user P&L
   const pd = await api('/user/pnl');
-  if(pd?.success) {
+  if(pd && d.success) {
     const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
     const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
     s('kPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
@@ -1107,7 +1107,7 @@ async function loadBrain() {
 async function retrainML() {
   toast('🔄 Retraining...', '#d4af37');
   const d = await api('/ml/retrain', {method:'POST'});
-  if(d?.success) toast(`✅ ML: ${d.accuracy}%`, '#00e676');
+  if(d && d.success) toast(`✅ ML: ${d.accuracy}%`, '#00e676');
   else toast('❌ Failed', '#ff5252');
   loadBrain();
 }
@@ -1120,14 +1120,14 @@ async function testScan() {
     method:'POST',
     body: JSON.stringify({symbol:sym, strike:0, opt_type:typ, timeframe:'5min'})
   });
-  if(d?.success) {
+  if(d && d.success) {
     document.getElementById('tRES').innerHTML = `
       <div style="padding:8px;background:#0d1b2a;border-radius:6px;margin-top:8px">
         <div style="font-weight:700;color:${d.recommendation?.includes('CE')?'#00e676':'#ff5252'}">${d.recommendation||'—'}</div>
         <div style="color:#8090a8;font-size:10px;margin-top:4px">CE:${d.ce_score}% | PE:${d.pe_score}% | ML:${d.ml?.confidence||0}%</div>
       </div>`;
   } else {
-    document.getElementById('tRES').innerHTML = `<div style="color:#ff5252">${d?.error||'No data'}</div>`;
+    document.getElementById('tRES').innerHTML = `<div style="color:#ff5252">${(d ? d.error : '')||'No data'}</div>`;
   }
 }
 
@@ -1135,21 +1135,21 @@ async function testScan() {
 async function forceScan() {
   toast('🔍 Scanning...', '#00c8ff');
   const d = await api('/scan', {method:'POST'});
-  toast(`⚡ ${d?.signals||0} signals`, '#00e676');
+  toast(`⚡ ${(d ? d.signals : null)||0} signals`, '#00e676');
   loadSignals();
 }
 
 async function exitTrade(id) {
   if(!confirm('Exit this trade?')) return;
   const d = await api('/squareoff', {method:'POST', body: JSON.stringify({trade_id:id})});
-  if(d?.success) { toast('✅ Exited', '#00e676'); loadAll(); }
-  else toast('❌ '+d?.error, '#ff5252');
+  if(d && d.success) { toast('✅ Exited', '#00e676'); loadAll(); }
+  else toast('❌ '+(d ? d.error : ''), '#ff5252');
 }
 
 async function sqAll() {
   if(!confirm('Square off ALL open positions?')) return;
   const d = await api('/squareoff', {method:'POST', body: JSON.stringify({all:true})});
-  if(d?.success) { toast(`✅ Closed ${d.closed}`, '#00e676'); loadAll(); }
+  if(d && d.success) { toast(`✅ Closed ${d.closed}`, '#00e676'); loadAll(); }
 }
 
 async function toggleMode() {
@@ -1165,21 +1165,21 @@ async function toggleMode() {
       method:'POST',
       body: JSON.stringify({mode:'LIVE', confirmed:false})
     });
-    if(d1?.error && !d1?.confirm) {
+    if((d1 ? d1.error : '') && !(d1 ? d1.confirm : false)) {
       toast('❌ '+d1.error, '#ff5252');
       return;
     }
-    if(d1?.confirm) {
+    if((d1 ? d1.confirm : false)) {
       if(!confirm(d1.message)) return;
       const d2 = await api('/switch-mode', {
         method:'POST',
         body: JSON.stringify({mode:'LIVE', confirmed:true})
       });
-      if(d2?.success) {
+      if((d2 && d2.success)) {
         updateModeBtn('LIVE');
         toast('🔴 LIVE MODE — Real money trading!', '#ff5252');
       } else {
-        toast('❌ '+(d2?.error||'Failed'), '#ff5252');
+        toast('❌ '+((d2 ? d2.error : '')||'Failed'), '#ff5252');
       }
     }
   } else {
@@ -1188,11 +1188,11 @@ async function toggleMode() {
       method:'POST',
       body: JSON.stringify({mode:'PAPER', confirmed:true})
     });
-    if(d?.success) {
+    if(d && d.success) {
       updateModeBtn('PAPER');
       toast('📝 Paper mode activated', '#00e676');
     } else {
-      toast('❌ '+(d?.error||'Failed'), '#ff5252');
+      toast('❌ '+((d ? d.error : '')||'Failed'), '#ff5252');
     }
   }
 }
@@ -1275,7 +1275,7 @@ document.getElementById('P').addEventListener('keydown', e => { if(e.key==='Ente
   if(t) {
     TOKEN = t;
     const d = await api('/status');
-    if(d?.success) { showApp(); return; }
+    if(d && d.success) { showApp(); return; }
     localStorage.removeItem('cv3t');
     TOKEN = '';
   }
@@ -1287,7 +1287,7 @@ document.getElementById('P').addEventListener('keydown', e => { if(e.key==='Ente
 // ── SYSTEM MONITOR ────────────────────────────────────
 async function loadSystemData() {
   const d = await api('/admin/system');
-  if(!d?.success) return;
+  if(!d || !d.success) return;
   const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
   const cpuColor = d.cpu>80?'#ff5252':d.cpu>60?'#f97316':'#00e676';
   const ramColor = d.ram_pct>80?'#ff5252':d.ram_pct>60?'#f97316':'#a855f7';
@@ -1309,7 +1309,7 @@ async function loadSystemData() {
 // Load system data when admin
 async function loadAdminUsers() {
   const d = await api('/admin/users');
-  if(!d?.success) return;
+  if(!d || !d.success) return;
   const tb = document.getElementById('sysUsers');
   if(!tb) return;
   tb.innerHTML = d.users.map(u=>`<tr>
@@ -1396,7 +1396,7 @@ async function saveBroker() {
     method:'POST', body: JSON.stringify(body)
   });
 
-  if(d?.success) {
+  if(d && d.success) {
     msg.style.color='#00e676';
     msg.textContent = d.message;
     setTimeout(()=>{
@@ -1406,7 +1406,7 @@ async function saveBroker() {
     }, 2000);
   } else {
     msg.style.color='#ff5252';
-    msg.textContent = '❌ '+(d?.error||'Connection failed');
+    msg.textContent = '❌ '+((d ? d.error : '')||'Connection failed');
   }
 }
 
@@ -1414,7 +1414,7 @@ async function connectPaper() {
   const d = await api('/user/broker/save', {
     method:'POST', body: JSON.stringify({broker:'paper'})
   });
-  if(d?.success) {
+  if(d && d.success) {
     document.getElementById('BROKER_MODAL').style.display='none';
     toast('📝 Paper trading enabled', '#d4af37');
     loadStatus();
@@ -1569,18 +1569,18 @@ async function submitPlanPayment() {
   const d = await api('/user/payment/plan', {
     method:'POST', body: JSON.stringify({utr, plan})
   });
-  if(d?.success) {
+  if(d && d.success) {
     document.getElementById('PLANS_MODAL').style.display='none';
     toast('✅ Payment submitted! Admin will verify within 2 hours.', '#00e676');
   } else {
-    toast('❌ '+(d?.error||'Failed'), '#ff5252');
+    toast('❌ '+((d ? d.error : '')||'Failed'), '#ff5252');
   }
 }
 
 // ── SUBSCRIPTION ─────────────────────────────────────
 async function loadUserStatus() {
   const d = await api('/user/status');
-  if(!d?.success) return;
+  if(!d || !d.success) return;
   const banner = document.getElementById('SUB_BANNER');
   if(d.sub_message && banner) {
     banner.style.display = 'block';
@@ -1623,11 +1623,11 @@ async function submitPayment() {
     method:'POST',
     body: JSON.stringify({utr})
   });
-  if(d?.success) {
+  if(d && d.success) {
     document.getElementById('PAY_MODAL').style.display = 'none';
     toast('✅ Payment submitted! Admin will verify soon.', '#00e676');
   } else {
-    toast('❌ '+d?.error, '#ff5252');
+    toast('❌ '+(d ? d.error : ''), '#ff5252');
   }
 }
 
