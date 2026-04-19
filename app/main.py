@@ -1560,6 +1560,37 @@ def admin_panel():
         return redirect("/v3")
     return render_template("admin_v3.html")
 
+
+@app.route("/api/v3/admin/reset-pnl", methods=["POST"])
+@require_auth
+def reset_user_pnl():
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    data = request.get_json() or {}
+    username = data.get("username","")
+    if not username:
+        return jsonify({"success": False, "error": "username required"})
+    try:
+        import sqlite3 as sq
+        conn = sq.connect("data/users.db")
+        from datetime import datetime
+        import pytz
+        IST = pytz.timezone("Asia/Kolkata")
+        now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        # Add pnl_reset_date column if not exists
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN pnl_reset_date TEXT")
+        except Exception:
+            pass
+        conn.execute("UPDATE users SET pnl_reset_date=? WHERE username=?", (now, username))
+        conn.commit()
+        conn.close()
+        logger.info(f"P&L reset for {username} by {user.get('username')}")
+        return jsonify({"success": True, "message": f"P&L reset for {username}"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 @app.route("/api/v3/admin/system")
 @require_auth
 def system_monitor():
@@ -1626,7 +1657,9 @@ def user_pnl():
         FROM trades WHERE status='CLOSED'
         AND (username=? OR username IS NULL)
         AND ABS(pnl) < 100000
-    """, (username,)).fetchone()
+        AND (created_at >= (SELECT COALESCE(pnl_reset_date,'2000-01-01')
+             FROM users WHERE username=?) OR username IS NULL)
+    """, (username, username)).fetchone()
     conn.close()
     today_pnl   = round(t["pnl"] or 0, 2)
     today_tc    = t["tc"] or 0

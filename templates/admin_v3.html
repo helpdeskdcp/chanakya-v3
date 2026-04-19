@@ -206,7 +206,10 @@ async function loadUsers() {
       '<td><span class="badge '+rc+'">'+h(u.effective_role)+'</span></td>' +
       '<td>'+h(u.trades_today,0)+'</td>' +
       '<td style="color:#8090a8">'+(u.trial_days_left!=null?u.trial_days_left+'d':'—')+'</td>' +
-      '<td><button class="btn b-gold" style="padding:3px 8px;font-size:9px" onclick="upgradeUser(\''+u.username+'\')">⬆️ Upgrade</button></td>' +
+      '<td style="display:flex;gap:4px">' +
+      '<button class="btn b-gold" style="padding:3px 6px;font-size:9px" onclick="upgradeUser(\''+u.username+'\')">⬆️</button>' +
+      '<button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="resetPnl(\''+u.username+'\')">↺ P&L</button>' +
+      '</td>' +
       '</tr>';
   }).join('');
 }
@@ -270,6 +273,14 @@ async function approvePayment(id) {
   const d = await req('/admin/verify-payment', {method:'POST', body: JSON.stringify({payment_id:id, plan:plan})});
   if (d && d.success) { alert('✅ '+d.message); loadAll(); }
   else alert('❌ '+(d?d.error:'Failed'));
+}
+
+async function resetPnl(username) {
+  if (!confirm('Reset P&L for ' + username + '? This marks all trades as separate.')) return;
+  // Set a reset date for this user in DB
+  const d = await req('/admin/reset-pnl', {method:'POST', body: JSON.stringify({username:username})});
+  if (d && d.success) { alert('P&L reset for '+username); loadAll(); }
+  else alert('Failed: '+(d?d.error:''));
 }
 
 async function upgradeUser(username) {

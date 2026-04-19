@@ -1084,9 +1084,19 @@ async function startApp() {
   if(window._userRole === 'admin' || TOKEN) {
     const ns = document.getElementById('navSystem');
     if(ns) {
-      api('/admin/system').then(d=>{
+      api('/status').then(function(sd){
+      if(sd && sd.login_user) {
+        api('/admin/system').then(function(d){
+          if(d && d.success) {
+            const na=document.getElementById('navAdmin');
+            if(na) na.style.display='block';
+          }
+        }).catch(function(){});
+      }
+    }).catch(function(){});
+    api('/admin/system').then(d=>{
       const na=document.getElementById('navAdmin');
-      if(na) na.style.display='block';
+      if(na) na.style.display='none'; // hide by default
         if(d?.success) ns.style.display='block';
       });
     }
@@ -1107,9 +1117,19 @@ async function loadAll() {
   if(window._userRole === 'admin' || TOKEN) {
     const ns = document.getElementById('navSystem');
     if(ns) {
-      api('/admin/system').then(d=>{
+      api('/status').then(function(sd){
+      if(sd && sd.login_user) {
+        api('/admin/system').then(function(d){
+          if(d && d.success) {
+            const na=document.getElementById('navAdmin');
+            if(na) na.style.display='block';
+          }
+        }).catch(function(){});
+      }
+    }).catch(function(){});
+    api('/admin/system').then(d=>{
       const na=document.getElementById('navAdmin');
-      if(na) na.style.display='block';
+      if(na) na.style.display='none'; // hide by default
         if(d?.success) ns.style.display='block';
       });
     }
