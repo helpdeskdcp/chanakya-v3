@@ -210,7 +210,7 @@ async function loadUsers() {
       '<button class="btn b-gold" style="padding:3px 6px;font-size:9px" onclick="upgradeUser(\''+u.username+'\')">⬆️</button>' +
       '<button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="resetPnl(\''+u.username+'\')">↺</button>' +
       (u.username !== 'avinash' ? '<button class="btn b-red" style="padding:3px 6px;font-size:9px" onclick="deleteUser(\''+u.username+'\')">🗑️</button>' : '') +
-      '<button class="btn" style="padding:3px 6px;font-size:9px;background:'+(u.active?'rgba(255,82,82,.2)':'rgba(0,230,118,.2)')+';color:'+(u.active?'#ff5252':'#00e676')+';border:1px solid '+(u.active?'#ff5252':'#00e676')+'" onclick="toggleActive(\''+u.username+'\','+u.active+')">'+(u.active?'🔴 Deactivate':'🟢 Activate')+'</button>' +
+      (u.username !== 'avinash' ? '<button class="btn" style="padding:3px 6px;font-size:9px;background:'+(u.active?'rgba(255,82,82,.2)':'rgba(0,230,118,.2)')+';color:'+(u.active?'#ff5252':'#00e676')+';border:1px solid '+(u.active?'#ff5252':'#00e676')+'" onclick="toggleActive(\''+u.username+'\','+u.active+')">'+(u.active?'🔴 Deactivate':'🟢 Activate')+'</button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
