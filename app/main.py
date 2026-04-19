@@ -61,6 +61,8 @@ _tokens = _load_tokens()
 def get_session():
     return session.get("user") or {}
 
+INTERNAL_TOKEN = "chanakya_internal_2026"
+
 def require_auth(f):
     from functools import wraps
     @wraps(f)
