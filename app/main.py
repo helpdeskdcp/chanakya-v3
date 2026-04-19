@@ -1645,6 +1645,30 @@ def admin_create_user():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+
+@app.route("/api/v3/admin/toggle-user", methods=["POST"])
+@require_auth
+def admin_toggle_user():
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    data = request.get_json() or {}
+    username = data.get("username","")
+    active   = data.get("active", 1)
+    if not username or username == "avinash":
+        return jsonify({"success": False, "error": "Cannot modify admin"})
+    try:
+        import sqlite3 as sq
+        conn = sq.connect("data/users.db")
+        conn.execute("UPDATE users SET active=? WHERE username=?", (active, username))
+        conn.commit()
+        conn.close()
+        status = "activated" if active else "deactivated"
+        logger.info(f"User {username} {status} by {user.get('username')}")
+        return jsonify({"success": True, "message": f"{username} {status}"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 @app.route("/api/v3/admin/delete-user", methods=["POST"])
 @require_auth
 def admin_delete_user():

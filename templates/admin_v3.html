@@ -210,6 +210,7 @@ async function loadUsers() {
       '<button class="btn b-gold" style="padding:3px 6px;font-size:9px" onclick="upgradeUser(\''+u.username+'\')">⬆️</button>' +
       '<button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="resetPnl(\''+u.username+'\')">↺</button>' +
       (u.username !== 'avinash' ? '<button class="btn b-red" style="padding:3px 6px;font-size:9px" onclick="deleteUser(\''+u.username+'\')">🗑️</button>' : '') +
+      '<button class="btn" style="padding:3px 6px;font-size:9px;background:'+(u.active?'rgba(255,82,82,.2)':'rgba(0,230,118,.2)')+';color:'+(u.active?'#ff5252':'#00e676')+';border:1px solid '+(u.active?'#ff5252':'#00e676')+'" onclick="toggleActive(\''+u.username+'\','+u.active+')">'+(u.active?'🔴 Deactivate':'🟢 Activate')+'</button>' +
       '</td>' +
       '</tr>';
   }).join('');
@@ -274,6 +275,14 @@ async function approvePayment(id) {
   const d = await req('/admin/verify-payment', {method:'POST', body: JSON.stringify({payment_id:id, plan:plan})});
   if (d && d.success) { alert('✅ '+d.message); loadAll(); }
   else alert('❌ '+(d?d.error:'Failed'));
+}
+
+async function toggleActive(username, currentActive) {
+  const action = currentActive ? 'Deactivate' : 'Activate';
+  if (!confirm(action + ' user ' + username + '?')) return;
+  const d = await req('/admin/toggle-user', {method:'POST', body: JSON.stringify({username:username, active: currentActive ? 0 : 1})});
+  if (d && d.success) { loadAll(); }
+  else alert('Failed: '+(d?d.error:''));
 }
 
 async function deleteUser(username) {
