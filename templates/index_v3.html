@@ -925,7 +925,7 @@ async function loadPositionsData() {
   const d = await api('/positions');
   if(!d) return;
   const tb = document.getElementById('tbOP');
-  if(!d.positions?.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
+  if(!d.positions && d.positions.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
   tb.innerHTML = d.positions.map(p=>`<tr>
     <td><b style="color:${p.opt_type==='CE'?'#00e676':'#ff5252'}">${p.symbol} ${p.opt_type}</b></td>
     <td>₹${(p.entry_price||0).toFixed(2)}</td>
@@ -941,7 +941,7 @@ async function loadRecentTrades() {
   const d = await api('/trades?status=TODAY&limit=5');
   if(!d) return;
   const tb = document.getElementById('tbRT');
-  if(!d.trades?.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No recent trades</td></tr>'; return; }
+  if(!d.trades && d.trades.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No recent trades</td></tr>'; return; }
   tb.innerHTML = d.trades.map(t=>`<tr>
     <td><b>${t.symbol}</b></td>
     <td style="color:${t.opt_type==='CE'?'#00e676':'#ff5252'}">${t.opt_type}</td>
@@ -959,7 +959,7 @@ async function loadTrades() {
   const d = await api(`/trades?status=${f}&limit=50`);
   if(!d) return;
   const tb = document.getElementById('tbTR');
-  if(!d.trades?.length) { tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:#8090a8">No trades</td></tr>'; return; }
+  if(!d.trades && d.trades.length) { tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:#8090a8">No trades</td></tr>'; return; }
   tb.innerHTML = d.trades.map(t=>`<tr>
     <td style="color:#8090a8">#${t.id}</td>
     <td><b style="color:${t.opt_type==='CE'?'#00e676':'#ff5252'}">${t.symbol}</b></td>
@@ -977,7 +977,7 @@ async function loadPositions() {
   const d = await api('/positions');
   if(!d) return;
   const tb = document.getElementById('tbPOS');
-  if(!d.positions?.length) { tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
+  if(!d.positions && d.positions.length) { tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
   tb.innerHTML = d.positions.map(p=>`<tr>
     <td><b>${p.symbol}</b></td>
     <td>${p.strike||'—'}</td>
@@ -996,7 +996,7 @@ async function loadSignals() {
   const d = await api('/signals');
   if(!d) return;
   const c = document.getElementById('sigCont');
-  if(!d.signals?.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
+  if(!d.signals && d.signals.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
   c.innerHTML = d.signals.map(s=>`<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;margin-bottom:8px">
       <b style="color:${s.opt_type==='CE'?'#00e676':'#ff5252'}">${s.symbol} ${s.opt_type}</b>
