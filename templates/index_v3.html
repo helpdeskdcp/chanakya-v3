@@ -73,25 +73,6 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 .live{display:inline-block;width:6px;height:6px;border-radius:50%;background:#00e676;animation:p 2s infinite}
 @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;background:#111827;border:1px solid #00e676;color:#00e676;font-size:12px;z-index:9999;display:none}
-
-@media(max-width:600px){
-  .sidebar{display:none!important}
-  .rp{display:none!important}
-  .main{width:100%!important;padding:8px!important;padding-bottom:8px!important}
-  .layout{display:block!important}
-  .krow{grid-template-columns:repeat(2,1fr)!important;gap:6px!important}
-  .g2{grid-template-columns:1fr!important}
-  .kv{font-size:16px!important}
-  .tickers .tk:nth-child(n+4){display:none!important}
-  /* Mobile menu button */
-  #mobileMenu{display:flex!important}
-}
-@media(min-width:601px) and (max-width:900px){
-  .rp{display:none!important}
-  .sidebar{width:140px!important}
-  .main{flex:1!important}
-  .krow{grid-template-columns:repeat(3,1fr)!important}
-}
 </style>
 </head>
 <body>
@@ -153,11 +134,6 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 <div class="app" id="APP">
   <div class="topbar">
     <div class="logo">⚡ CHANAKYA AI <span style="font-size:10px;color:#8090a8">v3.0</span></div>
-    <button id="mobileMenu" onclick="toggleMobileMenu()"
-      style="display:none;background:#1e3a5f;border:none;color:#00c8ff;
-             padding:6px 10px;border-radius:6px;cursor:pointer;font-size:16px">
-      ☰
-    </button>
     <div class="tickers">
       <div class="tk"><div class="tk-s">NIFTY</div><div class="tk-v" id="tNIFTY">—</div></div>
       <div class="tk"><div class="tk-s">BANKNIFTY</div><div class="tk-v" id="tBANK">—</div></div>
@@ -376,7 +352,6 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-sec">System</div>
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
       <div class="nav-it" id="navSystem" style="display:none" onclick="pg('system',this)">🖥️ System Monitor</div>
-      <div class="nav-it" id="navAdmin" style="display:none" onclick="pg('admin',this)">👑 Admin Panel</div>
       <div class="nav-it" onclick="logout()">⎋ Logout</div>
     </div>
     <div class="main">
@@ -587,83 +562,6 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
         </div>
       </div>
 
-
-      <!-- ADMIN PANEL -->
-      <div class="pg" id="pg-admin">
-        <div class="krow" style="grid-template-columns:repeat(4,1fr)">
-          <div class="kpi"><div class="kl">Total Users</div><div class="kv" id="adTU" style="color:#00c8ff">-</div></div>
-          <div class="kpi"><div class="kl">Premium</div><div class="kv" id="adPU" style="color:#00e676">-</div></div>
-          <div class="kpi"><div class="kl">Trial</div><div class="kv" id="adTR" style="color:#d4af37">-</div></div>
-          <div class="kpi"><div class="kl">Pending Pay</div><div class="kv" id="adPP" style="color:#ff5252">-</div></div>
-        </div>
-        <div class="g2">
-          <div class="card">
-            <div class="ch">Users
-              <button class="btn b-gold" onclick="showAddUser()">+ Add</button>
-            </div>
-            <div style="padding:8px;overflow-x:auto">
-              <table class="tbl">
-                <thead><tr><th>User</th><th>Role</th><th>Trades</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody id="adUsers"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="card">
-            <div class="ch">Pending Payments
-              <button class="btn b-blue" onclick="loadAdminData()">Refresh</button>
-            </div>
-            <div style="padding:8px;overflow-x:auto">
-              <table class="tbl">
-                <thead><tr><th>User</th><th>UTR</th><th>Amount</th><th>Action</th></tr></thead>
-                <tbody id="adPayments"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="ch">System Resources</div>
-          <div class="cb" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center">
-            <div><div style="font-size:9px;color:#8090a8">CPU</div><div style="font-size:28px;font-weight:800" id="adCPU">-</div></div>
-            <div><div style="font-size:9px;color:#8090a8">RAM</div><div style="font-size:28px;font-weight:800;color:#a855f7" id="adRAM">-</div></div>
-            <div><div style="font-size:9px;color:#8090a8">DISK</div><div style="font-size:28px;font-weight:800;color:#00c8ff" id="adDISK">-</div></div>
-            <div><div style="font-size:9px;color:#8090a8">ONLINE</div><div style="font-size:28px;font-weight:800;color:#d4af37" id="adONL">-</div><div style="font-size:9px;color:#8090a8" id="adUPT"></div></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="ch">Strategy Performance + Quick Actions</div>
-          <div class="g2" style="padding:12px;gap:12px">
-            <div>
-              <table class="tbl">
-                <thead><tr><th>Strategy</th><th>Trades</th><th>WR%</th><th>PnL</th></tr></thead>
-                <tbody id="adStrats"></tbody>
-              </table>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <button class="btn b-gold" style="width:100%" onclick="retrainML()">Retrain ML</button>
-              <button class="btn b-blue" style="width:100%" onclick="forceScan()">Force Scan</button>
-              <button class="btn b-red" style="width:100%" onclick="sqAll()">Square All</button>
-              <button class="btn" style="width:100%;background:rgba(168,85,247,.15);color:#a855f7;border:1px solid #a855f7" onclick="takeBackup()">Take Backup</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ADD USER MODAL -->
-      <div id="ADD_USER_MODAL" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center">
-        <div style="background:#111827;border:1px solid #d4af37;border-radius:16px;padding:24px;max-width:360px;width:90%">
-          <div style="color:#d4af37;font-size:16px;font-weight:800;margin-bottom:16px">Add New User</div>
-          <input id="auUser" class="inp" placeholder="Username" style="margin-bottom:8px">
-          <input id="auPass" class="inp" type="password" placeholder="Password" style="margin-bottom:8px">
-          <select id="auRole" style="width:100%;padding:10px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:8px;margin-bottom:12px">
-            <option value="viewer">Viewer (15-day trial)</option>
-            <option value="premium">Premium</option>
-            <option value="admin">Admin</option>
-          </select>
-          <button onclick="addUser()" class="btn b-gold" style="width:100%;padding:12px;margin-bottom:8px">Create User</button>
-          <div id="auMsg" style="font-size:11px;min-height:16px"></div>
-          <button onclick="document.getElementById('ADD_USER_MODAL').style.display='none'" style="background:none;border:none;color:#8090a8;cursor:pointer;width:100%;margin-top:8px">Close</button>
-        </div>
-      </div>
       <!-- SETTINGS -->
       <div class="pg" id="pg-settings">
         <div class="g2">
@@ -748,546 +646,10 @@ const API = '/api/v3';
 let TOKEN = localStorage.getItem('cv3t') || '';
 let _sym = 'NIFTY';
 
-
-async function api(path, opts={}) {
-  const headers = {'Content-Type':'application/json','X-Auth-Token':TOKEN};
-  try {
-    const r = await fetch(API+path, {...opts, headers});
-    if(r.status === 401) { logout(); return null; }
-    return await r.json();
-  } catch(e) { return null; }
-}
-
-// ── START ─────────────────────────────────────────────
-async function startApp() {
-  startClock();
-  toast('📡 Fetching data...', '#00c8ff');
-  await loadStatus();
-  // Show admin-only nav items
-  if(window._userRole === 'admin' || TOKEN) {
-    const ns = document.getElementById('navSystem');
-    if(ns) {
-      api('/admin/system').then(d=>{
-        if(d && d.success) ns.style.display='block';
-      });
-    }
-  }
-  await loadUserStatus();
-  toast('📊 Loading market...', '#00c8ff');
-  await loadMarket();
-  await loadDashboard();
-  await loadTickers();
-  toast('✅ Dashboard Ready!', '#00e676');
-  setInterval(loadAll, 15000);
-  setInterval(loadTickers, 15000);
-}
-
-async function loadAll() {
-  await loadStatus();
-  // Show admin-only nav items
-  if(window._userRole === 'admin' || TOKEN) {
-    const ns = document.getElementById('navSystem');
-    if(ns) {
-      api('/admin/system').then(d=>{
-        if(d && d.success) ns.style.display='block';
-      });
-    }
-  }
-  await loadMarket();
-  await loadDashboard();
-}
-
-// ── STATUS ────────────────────────────────────────────
-async function loadStatus() {
-  const d = await api('/status');
-  if(!d) return;
-  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
-  const conn = d.connected;
-  document.getElementById('tDOT').className = 'dot '+(conn?'dg':'dr');
-  document.getElementById('tMODE').textContent = d.mode||'PAPER';
-  updateModeBtn(d.mode||'PAPER');
-  // Show broker full name + username
-  const brokerDisplay = conn ?
-    `✅ ${d.user} (${d.login_user})` : '❌ Not connected';
-  s('sBROKER', brokerDisplay);
-  s('setBROK', brokerDisplay);
-  s('sUSER', d.login_user||'—');
-  // Full name from Angel One
-  const brokerFull = d.user ? `${d.user} (${d.login_user})` : (d.login_user||'—');
-  s('sBROKER', d.connected ? '✅ '+brokerFull : '❌ Offline');
-  s('setBROK', d.connected ? '✅ '+brokerFull : '❌ Offline');
-  // Capital from user's own account
-  if(d.capital > 0) {
-    s('kCAP', '₹'+d.capital.toLocaleString('en-IN',{maximumFractionDigits:2}));
-    s('setCAP', '₹'+d.capital.toLocaleString('en-IN',{maximumFractionDigits:2}));
-  }
-  s('sML', d.ml_ready ? '✅ Ready' : '⚠️ Not trained');
-  s('sACC', (d.ml_accuracy||0)+'%');
-  s('sSAMP', (d.ml_samples||0)+' samples');
-  s('rMODE', d.mode||'PAPER');
-  const sc = d.ml_accuracy||0;
-  s('rSCORE', sc+'%');
-  s('rVERD', sc>=70?'✅ Trading Mode':sc>=60?'⚠️ Caution':'🔴 Low Conf');
-  document.getElementById('rSCORE').style.color = sc>=70?'#00e676':sc>=60?'#d4af37':'#ff5252';
-  s('rML', sc+'%');
-  s('setBROK', conn?'✅ '+d.user:'❌ Offline');
-  s('kMODE', d.mode||'PAPER');
-  s('modeBTN', d.mode||'PAPER');
-}
-
-// ── MARKET ────────────────────────────────────────────
-async function loadMarket() {
-  const d = await api('/market');
-  if(!d) return;
-  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
-  const ms = d.market_status||{};
-  s('mNSE', ms.nse_open?'🟢 OPEN':'🔴 CLOSED', ms.nse_open?'#00e676':'#ff5252');
-  s('mMCX', ms.mcx_open?'🟢 OPEN':'🔴 CLOSED', ms.mcx_open?'#00e676':'#ff5252');
-  s('rNSE', ms.nse_open?'🟢 OPEN':'🔴 CLOSED', ms.nse_open?'#00e676':'#ff5252');
-  s('rMCX', ms.mcx_open?'🟢 OPEN':'🔴 CLOSED', ms.mcx_open?'#00e676':'#ff5252');
-  s('mVIX', (d.vix||0).toFixed(1));
-  s('mPCR', (d.pcr||0).toFixed(2));
-  s('mREG', d.regime||'—');
-  const fii = d.fii_net||0;
-  s('mFII', (fii>=0?'+':'')+'₹'+Math.abs(fii).toFixed(0)+'Cr', fii>=0?'#00e676':'#ff5252');
-  s('mBIAS', d.fii_bias||'NEUTRAL');
-  s('rFII', (fii>=0?'+':'')+'₹'+Math.abs(fii).toFixed(0)+'Cr', fii>=0?'#00e676':'#ff5252');
-  s('rPCR', (d.pcr||1).toFixed(2));
-  s('rVIX', (d.vix||0).toFixed(1));
-  s('rREG', d.regime||'—');
-}
-
-// ── TICKERS ───────────────────────────────────────────
-async function loadTickers() {
-  const r = await fetch(API+'/tickers', {headers:{'X-Auth-Token':TOKEN}});
-  const d = r.ok ? await r.json() : null;
-  if(!d) return;
-  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
-  if(d.NIFTY)     s('tNIFTY', '₹'+(d.NIFTY.ltp||0).toLocaleString('en-IN'));
-  if(d.BANKNIFTY) s('tBANK',  '₹'+(d.BANKNIFTY.ltp||0).toLocaleString('en-IN'));
-  if(d.FINNIFTY)  s('tFIN',   '₹'+(d.FINNIFTY.ltp||0).toLocaleString('en-IN'));
-  if(d.CRUDEOIL)  s('tCRUDE', '₹'+(d.CRUDEOIL.ltp||0).toLocaleString('en-IN'));
-  if(d.NATURALGAS)s('tNG',    '₹'+(d.NATURALGAS.ltp||0).toFixed(1));
-  if(d.VIX)       s('tVIX',   (d.VIX.ltp||0).toFixed(1));
-}
-
-// ── DASHBOARD ─────────────────────────────────────────
-async function loadDashboard() {
-  const d = await api('/dashboard');
-  // Per-user P&L
-  const pd = await api('/user/pnl');
-  if(pd && d.success) {
-    const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
-    const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
-    s('kPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
-    s('kTR',  pd.today_trades+' trades today');
-    s('kWR',  pd.win_rate+'%');
-    s('kAP',  fmt(pd.total_pnl), pd.total_pnl>=0?'#00e676':'#ff5252');
-    s('rPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
-    s('rTR',  pd.today_trades);
-    s('rWR',  pd.win_rate+'%');
-  }
-  if(!d) return;
-  const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
-  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
-  s('kPNL', fmt(d.today_pnl||0), (d.today_pnl||0)>=0?'#00e676':'#ff5252');
-  s('kTR',  (d.today_trades||0)+' trades today');
-  s('kWR',  (d.win_rate||0)+'%');
-  s('kOP',  d.open_trades||0);
-  s('kAP',  fmt(d.total_pnl||0), (d.total_pnl||0)>=0?'#00e676':'#ff5252');
-  // Capital + broker status
-  const capEl = document.getElementById('kCAP');
-  const setCapEl = document.getElementById('setCAP');
-  if(d.broker_status === 'connected') {
-    const capVal = '₹'+(d.capital||0).toLocaleString('en-IN',{maximumFractionDigits:2});
-    if(capEl) { capEl.textContent=capVal; capEl.style.color='#00c8ff'; }
-    if(setCapEl) setCapEl.textContent = capVal;
-  } else {
-    if(capEl) {
-      capEl.textContent='🔴 Broker Not Connected';
-      capEl.style.color='#ff5252';
-      capEl.style.fontSize='12px';
-    }
-    if(setCapEl) {
-      setCapEl.textContent='🔴 Not Connected';
-      setCapEl.style.color='#ff5252';
-    }
-  }
-  s('rPNL', fmt(d.today_pnl||0), (d.today_pnl||0)>=0?'#00e676':'#ff5252');
-  s('rTR',  d.today_trades||0);
-  s('rWR',  (d.win_rate||0)+'%');
-  s('setCAP', '₹'+(d.capital||0).toLocaleString('en-IN'));
-  loadPositionsData();
-  loadRecentTrades();
-}
-
-async function loadPositionsData() {
-  const d = await api('/positions');
-  if(!d) return;
-  const tb = document.getElementById('tbOP');
-  if(!d.positions && d.positions.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
-  tb.innerHTML = d.positions.map(p=>`<tr>
-    <td><b style="color:${p.opt_type==='CE'?'#00e676':'#ff5252'}">${p.symbol} ${p.opt_type}</b></td>
-    <td>₹${(p.entry_price||0).toFixed(2)}</td>
-    <td class="pos">₹${(p.target_price||0).toFixed(2)}</td>
-    <td class="neg">₹${(p.sl_price||0).toFixed(2)}</td>
-    <td class="${(p.pnl||0)>=0?'pos':'neg'}">₹${(p.pnl||0).toFixed(0)}</td>
-    <td>${p.lots||1}</td>
-    <td><button class="btn b-red" onclick="exitTrade(${p.id})">Exit</button></td>
-  </tr>`).join('');
-}
-
-async function loadRecentTrades() {
-  const d = await api('/trades?status=TODAY&limit=5');
-  if(!d) return;
-  const tb = document.getElementById('tbRT');
-  if(!d.trades && d.trades.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No recent trades</td></tr>'; return; }
-  tb.innerHTML = d.trades.map(t=>`<tr>
-    <td><b>${t.symbol}</b></td>
-    <td style="color:${t.opt_type==='CE'?'#00e676':'#ff5252'}">${t.opt_type}</td>
-    <td>₹${(t.entry_price||0).toFixed(2)}</td>
-    <td>${t.exit_price?'₹'+t.exit_price.toFixed(2):'—'}</td>
-    <td class="${(t.pnl||0)>=0?'pos':'neg'}"><b>₹${(t.pnl||0).toFixed(0)}</b></td>
-    <td style="color:#8090a8;font-size:10px">${t.strategy||'—'}</td>
-    <td style="color:#8090a8;font-size:10px">${ft(t.created_at)}</td>
-  </tr>`).join('');
-}
-
-// ── TRADES ────────────────────────────────────────────
-async function loadTrades() {
-  const f = document.getElementById('trFilter')?.value||'TODAY';
-  const d = await api(`/trades?status=${f}&limit=50`);
-  if(!d) return;
-  const tb = document.getElementById('tbTR');
-  if(!d.trades && d.trades.length) { tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:#8090a8">No trades</td></tr>'; return; }
-  tb.innerHTML = d.trades.map(t=>`<tr>
-    <td style="color:#8090a8">#${t.id}</td>
-    <td><b style="color:${t.opt_type==='CE'?'#00e676':'#ff5252'}">${t.symbol}</b></td>
-    <td>${t.opt_type}</td>
-    <td>₹${(t.entry_price||0).toFixed(2)}</td>
-    <td>${t.exit_price?'₹'+t.exit_price.toFixed(2):'—'}</td>
-    <td class="${(t.pnl||0)>=0?'pos':'neg'}">₹${(t.pnl||0).toFixed(0)}</td>
-    <td style="color:${t.status==='OPEN'?'#00c8ff':(t.pnl||0)>=0?'#00e676':'#ff5252'}">${t.status}</td>
-    <td style="color:#8090a8;font-size:10px">${ft(t.created_at)}</td>
-  </tr>`).join('');
-}
-
-// ── POSITIONS ─────────────────────────────────────────
-async function loadPositions() {
-  const d = await api('/positions');
-  if(!d) return;
-  const tb = document.getElementById('tbPOS');
-  if(!d.positions && d.positions.length) { tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
-  tb.innerHTML = d.positions.map(p=>`<tr>
-    <td><b>${p.symbol}</b></td>
-    <td>${p.strike||'—'}</td>
-    <td style="color:${p.opt_type==='CE'?'#00e676':'#ff5252'}">${p.opt_type}</td>
-    <td>₹${(p.entry_price||0).toFixed(2)}</td>
-    <td class="pos">₹${(p.target_price||0).toFixed(2)}</td>
-    <td class="neg">₹${(p.sl_price||0).toFixed(2)}</td>
-    <td class="${(p.pnl||0)>=0?'pos':'neg'}"><b>₹${(p.pnl||0).toFixed(0)}</b></td>
-    <td>${p.lots||1}</td>
-    <td><button class="btn b-red" onclick="exitTrade(${p.id})">Exit</button></td>
-  </tr>`).join('');
-}
-
-// ── SIGNALS ───────────────────────────────────────────
-async function loadSignals() {
-  const d = await api('/signals');
-  if(!d) return;
-  const c = document.getElementById('sigCont');
-  if(!d.signals && d.signals.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
-  c.innerHTML = d.signals.map(s=>`<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <b style="color:${s.opt_type==='CE'?'#00e676':'#ff5252'}">${s.symbol} ${s.opt_type}</b>
-      <span style="font-size:10px;color:#8090a8">${ft(s.created_at)}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px">
-      <div><div style="color:#8090a8;font-size:9px">ENTRY</div><b>₹${(s.entry_price||0).toFixed(2)}</b></div>
-      <div><div style="color:#8090a8;font-size:9px">TARGET</div><b class="pos">₹${(s.target_price||0).toFixed(2)}</b></div>
-      <div><div style="color:#8090a8;font-size:9px">SL</div><b class="neg">₹${(s.sl_price||0).toFixed(2)}</b></div>
-      <div><div style="color:#8090a8;font-size:9px">ML CONF</div><b style="color:#d4af37">${s.ml_conf||0}%</b></div>
-    </div>
-  </div>`).join('');
-}
-
-// ── CHAIN ─────────────────────────────────────────────
-async function selSym(sym, btn) {
-  _sym = sym;
-  document.querySelectorAll('.pg#pg-chain .btn').forEach(b=>b.style.background='#1e3a5f');
-  if(btn) btn.style.background = '#00c8ff';
-  document.getElementById('cSYM').textContent = sym;
-  const d = await api('/chain-signal', {
-    method:'POST',
-    body: JSON.stringify({symbol:sym, strike:0, opt_type:'CE', timeframe:'5min'})
-  });
-  if(!d || d.error) { document.getElementById('chainInfo').innerHTML='<div style="color:#ff5252">'+((d&&d.error)||'Error')+'</div>'; return; }
-  document.getElementById('cSPOT').textContent = ' ₹'+(d.spot||0).toFixed(2);
-  document.getElementById('cATM').textContent  = ' '+(d.atm||'—');
-  document.getElementById('cEXP').textContent  = ' '+(d.expiry||'—');
-  const rec = d.recommendation||'—';
-  const rc  = rec && rec.includes('CE')?'#00e676':rec && rec.includes('PE')?'#ff5252':'#d4af37';
-  document.getElementById('chainInfo').innerHTML = `
-    <div style="text-align:center;padding:10px;border:2px solid ${rc};border-radius:8px;margin-bottom:10px">
-      <div style="font-size:18px;font-weight:800;color:${rc}">${rec}</div>
-      <div style="font-size:10px;color:#8090a8">${d.rec_reason||''}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <div style="text-align:center;padding:8px;background:#0d1b2a;border-radius:6px">
-        <div style="font-size:9px;color:#8090a8">CE SCORE</div>
-        <div style="font-size:22px;font-weight:800;color:#00e676">${d.ce_score||0}%</div>
-      </div>
-      <div style="text-align:center;padding:8px;background:#0d1b2a;border-radius:6px">
-        <div style="font-size:9px;color:#8090a8">PE SCORE</div>
-        <div style="font-size:22px;font-weight:800;color:#ff5252">${d.pe_score||0}%</div>
-      </div>
-    </div>
-    <div style="font-size:10px;color:#8090a8">Smart Entry: <b style="color:#00c8ff">₹${(d.smart_entry||d.ltp||0).toFixed(2)}</b></div>
-  `;
-  const sig = d.signals?.['5min']||{};
-  document.getElementById('chainSig').innerHTML = `
-    <div style="background:#0d1b2a;border-radius:8px;padding:12px;border-left:3px solid #00c8ff">
-      <div style="font-size:10px;color:#8090a8;margin-bottom:8px">5 MIN SCALP</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:8px">
-        <div><div style="font-size:9px;color:#8090a8">ENTRY</div><div style="font-size:18px;font-weight:800;color:#00c8ff">₹${(sig.entry||0).toFixed(2)}</div></div>
-        <div><div style="font-size:9px;color:#8090a8">TARGET</div><div style="font-size:18px;font-weight:800;color:#00e676">₹${(sig.target||0).toFixed(2)}</div></div>
-        <div><div style="font-size:9px;color:#8090a8">SL</div><div style="font-size:18px;font-weight:800;color:#ff5252">₹${(sig.sl||0).toFixed(2)}</div></div>
-      </div>
-      <div style="text-align:center;font-size:11px">R:R <b style="color:#d4af37">${sig.rr||0}:1</b></div>
-    </div>
-    ${d.greeks?`<div style="margin-top:10px;background:#0d1b2a;border-radius:6px;padding:8px">
-      <div style="font-size:9px;color:#d4af37;font-weight:700;margin-bottom:6px">OPTIONS GREEKS</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;font-size:11px">
-        <div><div style="color:#8090a8;font-size:9px">IV</div><b style="color:#00c8ff">${d.greeks.iv||0}%</b></div>
-        <div><div style="color:#8090a8;font-size:9px">DELTA</div><b>${d.greeks.delta||0}</b></div>
-        <div><div style="color:#8090a8;font-size:9px">THETA</div><b class="neg">${d.greeks.theta||0}</b></div>
-      </div>
-    </div>`:''}
-  `;
-}
-
-// ── ANALYTICS ─────────────────────────────────────────
-async function loadAnalytics() {
-  const d = await api('/analytics');
-  if(!d) return;
-  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
-  const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
-  s('aTOT', fmt(d.total_pnl||0), (d.total_pnl||0)>=0?'#00e676':'#ff5252');
-  s('aWR',  (d.win_rate||0)+'%');
-  s('aTR',  d.total_trades||0);
-  s('aAW',  '₹'+(d.avg_win||0).toFixed(0));
-  s('aPF',  (d.profit_factor||0).toFixed(2));
-  const tb = document.getElementById('tbSTRAT');
-  if(d.strategies) tb.innerHTML = d.strategies.map(s=>`<tr>
-    <td>${s.name||'—'}</td><td>${s.trades}</td>
-    <td style="color:${s.win_rate>=55?'#00e676':'#ff5252'}">${s.win_rate}%</td>
-    <td class="${(s.pnl||0)>=0?'pos':'neg'}">₹${(s.pnl||0).toFixed(0)}</td>
-  </tr>`).join('');
-  const dp = document.getElementById('dailyPnl');
-  if(d.daily_pnl) dp.innerHTML = d.daily_pnl.slice(-14).reverse().map(x=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px">
-      <span style="color:#8090a8;min-width:70px">${x.date}</span>
-      <div style="flex:1;background:#1e3a5f;border-radius:3px;height:6px">
-        <div style="width:${Math.min(100,Math.abs(x.pnl)/500*100)}%;height:6px;border-radius:3px;background:${(x.pnl||0)>=0?'#00e676':'#ff5252'}"></div>
-      </div>
-      <span class="${(x.pnl||0)>=0?'pos':'neg'}" style="min-width:60px;text-align:right">₹${(x.pnl||0).toFixed(0)}</span>
-    </div>`).join('');
-}
-
-// ── AI BRAIN ──────────────────────────────────────────
-async function loadBrain() {
-  const d = await api('/status');
-  if(!d) return;
-  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
-  s('bACC', (d.ml_accuracy||0)+'%');
-  s('bSAMP', d.ml_samples||0);
-  s('bST', d.ml_ready?'✅ Ready':'⚠️ Not trained');
-}
-
-async function retrainML() {
-  toast('🔄 Retraining...', '#d4af37');
-  const d = await api('/ml/retrain', {method:'POST'});
-  if(d && d.success) toast(`✅ ML: ${d.accuracy}%`, '#00e676');
-  else toast('❌ Failed', '#ff5252');
-  loadBrain();
-}
-
-async function testScan() {
-  const sym = document.getElementById('tSYM').value;
-  const typ = document.getElementById('tTYP').value;
-  document.getElementById('tRES').innerHTML = '⏳ Scanning...';
-  const d = await api('/chain-signal', {
-    method:'POST',
-    body: JSON.stringify({symbol:sym, strike:0, opt_type:typ, timeframe:'5min'})
-  });
-  if(d && d.success) {
-    document.getElementById('tRES').innerHTML = `
-      <div style="padding:8px;background:#0d1b2a;border-radius:6px;margin-top:8px">
-        <div style="font-weight:700;color:${d.recommendation && d.recommendation.includes('CE')?'#00e676':'#ff5252'}">${d.recommendation||'—'}</div>
-        <div style="color:#8090a8;font-size:10px;margin-top:4px">CE:${d.ce_score}% | PE:${d.pe_score}% | ML:${(d.ml ? d.ml.confidence : 0)||0}%</div>
-      </div>`;
-  } else {
-    document.getElementById('tRES').innerHTML = `<div style="color:#ff5252">${(d ? d.error : '')||'No data'}</div>`;
-  }
-}
-
-// ── ACTIONS ───────────────────────────────────────────
-async function forceScan() {
-  toast('🔍 Scanning...', '#00c8ff');
-  const d = await api('/scan', {method:'POST'});
-  toast(`⚡ ${(d ? d.signals : null)||0} signals`, '#00e676');
-  loadSignals();
-}
-
-async function exitTrade(id) {
-  if(!confirm('Exit this trade?')) return;
-  const d = await api('/squareoff', {method:'POST', body: JSON.stringify({trade_id:id})});
-  if(d && d.success) { toast('✅ Exited', '#00e676'); loadAll(); }
-  else toast('❌ '+(d ? d.error : ''), '#ff5252');
-}
-
-async function sqAll() {
-  if(!confirm('Square off ALL open positions?')) return;
-  const d = await api('/squareoff', {method:'POST', body: JSON.stringify({all:true})});
-  if(d && d.success) { toast(`✅ Closed ${d.closed}`, '#00e676'); loadAll(); }
-}
-
-async function toggleMode() {
-  // Read ACTUAL current mode from server — not button text
-  const statusD = await api('/status');
-  if(!statusD) return;
-  const currMode = statusD.mode || 'PAPER';
-  const newMode  = currMode === 'PAPER' ? 'LIVE' : 'PAPER';
-
-  if(newMode === 'LIVE') {
-    // Ask server for confirmation
-    const d1 = await api('/switch-mode', {
-      method:'POST',
-      body: JSON.stringify({mode:'LIVE', confirmed:false})
-    });
-    if((d1 ? d1.error : '') && !(d1 ? d1.confirm : false)) {
-      toast('❌ '+d1.error, '#ff5252');
-      return;
-    }
-    if((d1 ? d1.confirm : false)) {
-      if(!confirm(d1.message)) return;
-      const d2 = await api('/switch-mode', {
-        method:'POST',
-        body: JSON.stringify({mode:'LIVE', confirmed:true})
-      });
-      if((d2 && d2.success)) {
-        updateModeBtn('LIVE');
-        toast('🔴 LIVE MODE — Real money trading!', '#ff5252');
-      } else {
-        toast('❌ '+((d2 ? d2.error : '')||'Failed'), '#ff5252');
-      }
-    }
-  } else {
-    // Switch to PAPER
-    const d = await api('/switch-mode', {
-      method:'POST',
-      body: JSON.stringify({mode:'PAPER', confirmed:true})
-    });
-    if(d && d.success) {
-      updateModeBtn('PAPER');
-      toast('📝 Paper mode activated', '#00e676');
-    } else {
-      toast('❌ '+((d ? d.error : '')||'Failed'), '#ff5252');
-    }
-  }
-}
-
-function updateModeBtn(mode) {
-  const btn  = document.getElementById('modeBTN');
-  const chip = document.getElementById('tMODE');
-  const isLive = mode === 'LIVE';
-  if(btn) {
-    btn.textContent = isLive ? '🔴 LIVE' : '📝 PAPER';
-    btn.style.background = isLive ?
-      'linear-gradient(135deg,#ff5252,#ff1744)' :
-      'linear-gradient(135deg,#d4af37,#f0d060)';
-  }
-  if(chip) {
-    chip.textContent = mode;
-    chip.className = isLive ? 'chip live-mode' : 'chip';
-  }
-  // Settings page mode button
-  const mb = document.getElementById('modeBTN');
-  if(mb) mb.textContent = isLive ? '🔴 LIVE' : '📝 PAPER';
-}
-
-async function loadSqTimes() {
-  const d = await api('/squareoff/times');
-  if(!d) return;
-  const fmt = s => { if(s<=0) return '⏰ Done'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}m`:`${m}m`; };
-  const t = d.times||{};
-  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
-  s('sqNSE', fmt((t.NFO ? t.NFO.remaining : 0)||(t.NSE ? t.NSE.remaining : 0)||0));
-  s('sqMCX', fmt((t.MCX ? t.MCX.remaining : 0)||0));
-}
-
-// ── NAVIGATION ────────────────────────────────────────
-function pg(id, el) {
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.nav-it').forEach(n=>n.classList.remove('on'));
-  const p = document.getElementById('pg-'+id);
-  if(p) p.classList.add('on');
-  if(el) el.classList.add('on');
-  if(id==='trades')    loadTrades();
-  if(id==='positions') loadPositions();
-  if(id==='signals')   loadSignals();
-  if(id==='analytics') loadAnalytics();
-  if(id==='brain')     loadBrain();
-  if(id==='settings')  loadSqTimes();
-  if(id==='admin')     { loadAdminData(); }
-  if(id==='system')    { loadSystemData(); loadAdminUsers(); }
-}
-
-// ── CLOCK ─────────────────────────────────────────────
-function startClock() {
-  setInterval(() => {
-    const now = new Date(Date.now() + 19800000); // +5:30
-    const t = now.toISOString();
-    document.getElementById('rTIME').textContent = t.substr(11,8);
-    document.getElementById('rDATE').textContent = now.toDateString();
-    document.getElementById('tTIME').textContent = t.substr(11,5)+' IST';
-  }, 1000);
-}
-
-// ── HELPERS ───────────────────────────────────────────
-function ft(s) {
-  try { return new Date(s).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}); }
-  catch { return (s ? s.slice : function(){return '';})(11,16)||'—'; }
-}
-
-function toast(msg, color='#00e676') {
-  const t = document.getElementById('TOAST');
-  t.textContent = msg; t.style.borderColor = color; t.style.color = color;
-  t.style.display = 'block';
-  setTimeout(()=>t.style.display='none', 3000);
-}
-
-// ── AUTO LOGIN CHECK ──────────────────────────────────
-document.getElementById('P').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-
-(async () => {
-  const t = localStorage.getItem('cv3t');
-  if(t) {
-    TOKEN = t;
-    const d = await api('/status');
-    if(d && d.success) { showApp(); return; }
-    localStorage.removeItem('cv3t');
-    TOKEN = '';
-  }
-})();
-</script>
-</body>
-</html>
-
 // ── SYSTEM MONITOR ────────────────────────────────────
 async function loadSystemData() {
   const d = await api('/admin/system');
-  if(!d || !d.success) return;
+  if(!d?.success) return;
   const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
   const cpuColor = d.cpu>80?'#ff5252':d.cpu>60?'#f97316':'#00e676';
   const ramColor = d.ram_pct>80?'#ff5252':d.ram_pct>60?'#f97316':'#a855f7';
@@ -1309,7 +671,7 @@ async function loadSystemData() {
 // Load system data when admin
 async function loadAdminUsers() {
   const d = await api('/admin/users');
-  if(!d || !d.success) return;
+  if(!d?.success) return;
   const tb = document.getElementById('sysUsers');
   if(!tb) return;
   tb.innerHTML = d.users.map(u=>`<tr>
@@ -1396,7 +758,7 @@ async function saveBroker() {
     method:'POST', body: JSON.stringify(body)
   });
 
-  if(d && d.success) {
+  if(d?.success) {
     msg.style.color='#00e676';
     msg.textContent = d.message;
     setTimeout(()=>{
@@ -1406,7 +768,7 @@ async function saveBroker() {
     }, 2000);
   } else {
     msg.style.color='#ff5252';
-    msg.textContent = '❌ '+((d ? d.error : '')||'Connection failed');
+    msg.textContent = '❌ '+(d?.error||'Connection failed');
   }
 }
 
@@ -1414,7 +776,7 @@ async function connectPaper() {
   const d = await api('/user/broker/save', {
     method:'POST', body: JSON.stringify({broker:'paper'})
   });
-  if(d && d.success) {
+  if(d?.success) {
     document.getElementById('BROKER_MODAL').style.display='none';
     toast('📝 Paper trading enabled', '#d4af37');
     loadStatus();
@@ -1569,18 +931,18 @@ async function submitPlanPayment() {
   const d = await api('/user/payment/plan', {
     method:'POST', body: JSON.stringify({utr, plan})
   });
-  if(d && d.success) {
+  if(d?.success) {
     document.getElementById('PLANS_MODAL').style.display='none';
     toast('✅ Payment submitted! Admin will verify within 2 hours.', '#00e676');
   } else {
-    toast('❌ '+((d ? d.error : '')||'Failed'), '#ff5252');
+    toast('❌ '+(d?.error||'Failed'), '#ff5252');
   }
 }
 
 // ── SUBSCRIPTION ─────────────────────────────────────
 async function loadUserStatus() {
   const d = await api('/user/status');
-  if(!d || !d.success) return;
+  if(!d?.success) return;
   const banner = document.getElementById('SUB_BANNER');
   if(d.sub_message && banner) {
     banner.style.display = 'block';
@@ -1623,101 +985,13 @@ async function submitPayment() {
     method:'POST',
     body: JSON.stringify({utr})
   });
-  if(d && d.success) {
+  if(d?.success) {
     document.getElementById('PAY_MODAL').style.display = 'none';
     toast('✅ Payment submitted! Admin will verify soon.', '#00e676');
   } else {
-    toast('❌ '+(d ? d.error : ''), '#ff5252');
+    toast('❌ '+d?.error, '#ff5252');
   }
 }
-
-// ── MOBILE MENU ───────────────────────────────────────
-function toggleMobileMenu() {
-  const sb = document.querySelector('.sidebar');
-  if(!sb) return;
-  const vis = sb.style.display === 'block';
-  sb.style.cssText = vis ?
-    'display:none!important' :
-    'display:block!important;position:fixed;top:44px;left:0;bottom:0;z-index:999;width:200px;overflow-y:auto';
-}
-// Close menu on nav click
-document.addEventListener('click', e => {
-  if(e.target.closest('.nav-it') && window.innerWidth <= 600) {
-    const sb = document.querySelector('.sidebar');
-    if(sb) sb.style.display='none';
-  }
-});
-// Admin Panel
-async function loadAdminData() {
-  const ud = await api('/admin/users');
-  if (ud && ud.success) {
-    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
-    s('adTU', ud.users.length);
-    s('adPU', ud.users.filter(u=>u.effective_role==='premium'||u.effective_role==='admin').length, '#00e676');
-    s('adTR', ud.users.filter(u=>u.effective_role==='viewer').length, '#d4af37');
-    const tb = document.getElementById('adUsers');
-    if (tb) tb.innerHTML = ud.users.map(u => {
-      const rc = u.effective_role==='admin'?'#d4af37':u.effective_role==='premium'?'#00e676':u.effective_role==='expired'?'#ff5252':'#00c8ff';
-      return '<tr><td><b>'+u.username+'</b></td><td style="color:'+rc+'">'+u.effective_role+'</td><td>'+(u.trades_today||0)+'</td><td>'+(u.trial_days_left!=null?u.trial_days_left+'d':'OK')+'</td><td><button class="btn b-blue" style="padding:3px 6px;font-size:9px" onclick="approvePayment(0,''+u.username+'')">Upgrade</button></td></tr>';
-    }).join('');
-  }
-  const pd = await api('/admin/payments');
-  if (pd && pd.success) {
-    document.getElementById('adPP').textContent = pd.payments.length;
-    const tb = document.getElementById('adPayments');
-    if (tb) {
-      if (!pd.payments.length) {
-        tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8090a8;padding:12px">No pending</td></tr>';
-      } else {
-        tb.innerHTML = pd.payments.map(p => '<tr><td><b>'+p.username+'</b></td><td style="color:#d4af37;font-family:monospace">'+p.utr_number+'</td><td class="pos">Rs.3000</td><td><button class="btn b-gold" style="padding:4px 8px;font-size:10px" onclick="approvePayment('+p.id+','')">Approve</button></td></tr>').join('');
-      }
-    }
-  }
-  const sys = await api('/admin/system');
-  if (sys && sys.success) {
-    const s = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
-    s('adCPU', sys.cpu+'%', sys.cpu>80?'#ff5252':sys.cpu>60?'#f97316':'#00e676');
-    s('adRAM', sys.ram_pct+'%', sys.ram_pct>80?'#ff5252':'#a855f7');
-    s('adDISK', sys.disk_pct+'%', sys.disk_pct>85?'#ff5252':'#00c8ff');
-    s('adONL', sys.online_users, '#d4af37');
-    s('adUPT', sys.uptime||'');
-  }
-  const st = await api('/strategies');
-  if (st && st.success) {
-    const tb = document.getElementById('adStrats');
-    if (tb) tb.innerHTML = st.strategies.map(s => '<tr><td style="color:'+(s.win_rate>60?'#00e676':s.win_rate>40?'#d4af37':'#8090a8')+'">'+s.name+'</td><td>'+s.trades+'</td><td style="color:'+(s.win_rate>60?'#00e676':'#ff5252')+'">'+s.win_rate+'%</td><td class="'+(s.total_pnl>=0?'pos':'neg')+'">Rs.'+(s.total_pnl||0).toFixed(0)+'</td></tr>').join('');
-  }
-}
-
-async function approvePayment(paymentId, username) {
-  const plan = prompt('Plan? (monthly/quarterly/half_year/biannual/annual)', 'monthly');
-  if (!plan) return;
-  const body = paymentId > 0 ? {payment_id: paymentId, plan: plan} : {payment_id: 0, username: username, plan: plan};
-  const d = await api('/admin/verify-payment', {method:'POST', body: JSON.stringify(body)});
-  if (d && d.success) { toast('Upgraded! '+d.message, '#00e676'); loadAdminData(); }
-  else toast('Failed: '+(d?d.error:''), '#ff5252');
-}
-
-function showAddUser() { document.getElementById('ADD_USER_MODAL').style.display='flex'; }
-
-async function addUser() {
-  const u = document.getElementById('auUser').value.trim();
-  const p = document.getElementById('auPass').value.trim();
-  const r = document.getElementById('auRole').value;
-  const msg = document.getElementById('auMsg');
-  if (!u || !p) { msg.textContent='All fields required'; return; }
-  const d = await api('/user/register', {method:'POST', body: JSON.stringify({username:u, password:p, role:r})});
-  if (d && d.success) {
-    msg.style.color='#00e676'; msg.textContent='User created!';
-    setTimeout(function(){ document.getElementById('ADD_USER_MODAL').style.display='none'; loadAdminData(); }, 1500);
-  } else { msg.style.color='#ff5252'; msg.textContent='Error: '+(d?d.error:''); }
-}
-
-async function takeBackup() {
-  const d = await api('/backup', {method:'POST'});
-  toast(d && d.success ? 'Backup done!' : 'Backup failed', d && d.success ? '#a855f7' : '#ff5252');
-}
-
 
 // ── AUTH ──────────────────────────────────────────────
 async function doLogin() {
@@ -1761,4 +1035,536 @@ function logout() {
 }
 
 // ── API HELPER ────────────────────────────────────────
+async function api(path, opts={}) {
+  const headers = {'Content-Type':'application/json','X-Auth-Token':TOKEN};
+  try {
+    const r = await fetch(API+path, {...opts, headers});
+    if(r.status === 401) { logout(); return null; }
+    return await r.json();
+  } catch(e) { return null; }
+}
 
+// ── START ─────────────────────────────────────────────
+async function startApp() {
+  startClock();
+  toast('📡 Fetching data...', '#00c8ff');
+  await loadStatus();
+  // Show admin-only nav items
+  if(window._userRole === 'admin' || TOKEN) {
+    const ns = document.getElementById('navSystem');
+    if(ns) {
+      api('/admin/system').then(d=>{
+        if(d?.success) ns.style.display='block';
+      });
+    }
+  }
+  await loadUserStatus();
+  toast('📊 Loading market...', '#00c8ff');
+  await loadMarket();
+  await loadDashboard();
+  await loadTickers();
+  toast('✅ Dashboard Ready!', '#00e676');
+  setInterval(loadAll, 15000);
+  setInterval(loadTickers, 15000);
+}
+
+async function loadAll() {
+  await loadStatus();
+  // Show admin-only nav items
+  if(window._userRole === 'admin' || TOKEN) {
+    const ns = document.getElementById('navSystem');
+    if(ns) {
+      api('/admin/system').then(d=>{
+        if(d?.success) ns.style.display='block';
+      });
+    }
+  }
+  await loadMarket();
+  await loadDashboard();
+}
+
+// ── STATUS ────────────────────────────────────────────
+async function loadStatus() {
+  const d = await api('/status');
+  if(!d) return;
+  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
+  const conn = d.connected;
+  document.getElementById('tDOT').className = 'dot '+(conn?'dg':'dr');
+  document.getElementById('tMODE').textContent = d.mode||'PAPER';
+  updateModeBtn(d.mode||'PAPER');
+  // Show broker full name + username
+  const brokerDisplay = conn ?
+    `✅ ${d.user} (${d.login_user})` : '❌ Not connected';
+  s('sBROKER', brokerDisplay);
+  s('setBROK', brokerDisplay);
+  s('sUSER', d.login_user||'—');
+  // Full name from Angel One
+  const brokerFull = d.user ? `${d.user} (${d.login_user})` : (d.login_user||'—');
+  s('sBROKER', d.connected ? '✅ '+brokerFull : '❌ Offline');
+  s('setBROK', d.connected ? '✅ '+brokerFull : '❌ Offline');
+  // Capital from user's own account
+  if(d.capital > 0) {
+    s('kCAP', '₹'+d.capital.toLocaleString('en-IN',{maximumFractionDigits:2}));
+    s('setCAP', '₹'+d.capital.toLocaleString('en-IN',{maximumFractionDigits:2}));
+  }
+  s('sML', d.ml_ready ? '✅ Ready' : '⚠️ Not trained');
+  s('sACC', (d.ml_accuracy||0)+'%');
+  s('sSAMP', (d.ml_samples||0)+' samples');
+  s('rMODE', d.mode||'PAPER');
+  const sc = d.ml_accuracy||0;
+  s('rSCORE', sc+'%');
+  s('rVERD', sc>=70?'✅ Trading Mode':sc>=60?'⚠️ Caution':'🔴 Low Conf');
+  document.getElementById('rSCORE').style.color = sc>=70?'#00e676':sc>=60?'#d4af37':'#ff5252';
+  s('rML', sc+'%');
+  s('setBROK', conn?'✅ '+d.user:'❌ Offline');
+  s('kMODE', d.mode||'PAPER');
+  s('modeBTN', d.mode||'PAPER');
+}
+
+// ── MARKET ────────────────────────────────────────────
+async function loadMarket() {
+  const d = await api('/market');
+  if(!d) return;
+  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+  const ms = d.market_status||{};
+  s('mNSE', ms.nse_open?'🟢 OPEN':'🔴 CLOSED', ms.nse_open?'#00e676':'#ff5252');
+  s('mMCX', ms.mcx_open?'🟢 OPEN':'🔴 CLOSED', ms.mcx_open?'#00e676':'#ff5252');
+  s('rNSE', ms.nse_open?'🟢 OPEN':'🔴 CLOSED', ms.nse_open?'#00e676':'#ff5252');
+  s('rMCX', ms.mcx_open?'🟢 OPEN':'🔴 CLOSED', ms.mcx_open?'#00e676':'#ff5252');
+  s('mVIX', (d.vix||0).toFixed(1));
+  s('mPCR', (d.pcr||0).toFixed(2));
+  s('mREG', d.regime||'—');
+  const fii = d.fii_net||0;
+  s('mFII', (fii>=0?'+':'')+'₹'+Math.abs(fii).toFixed(0)+'Cr', fii>=0?'#00e676':'#ff5252');
+  s('mBIAS', d.fii_bias||'NEUTRAL');
+  s('rFII', (fii>=0?'+':'')+'₹'+Math.abs(fii).toFixed(0)+'Cr', fii>=0?'#00e676':'#ff5252');
+  s('rPCR', (d.pcr||1).toFixed(2));
+  s('rVIX', (d.vix||0).toFixed(1));
+  s('rREG', d.regime||'—');
+}
+
+// ── TICKERS ───────────────────────────────────────────
+async function loadTickers() {
+  const r = await fetch(API+'/tickers', {headers:{'X-Auth-Token':TOKEN}});
+  const d = r.ok ? await r.json() : null;
+  if(!d) return;
+  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
+  if(d.NIFTY)     s('tNIFTY', '₹'+(d.NIFTY.ltp||0).toLocaleString('en-IN'));
+  if(d.BANKNIFTY) s('tBANK',  '₹'+(d.BANKNIFTY.ltp||0).toLocaleString('en-IN'));
+  if(d.FINNIFTY)  s('tFIN',   '₹'+(d.FINNIFTY.ltp||0).toLocaleString('en-IN'));
+  if(d.CRUDEOIL)  s('tCRUDE', '₹'+(d.CRUDEOIL.ltp||0).toLocaleString('en-IN'));
+  if(d.NATURALGAS)s('tNG',    '₹'+(d.NATURALGAS.ltp||0).toFixed(1));
+  if(d.VIX)       s('tVIX',   (d.VIX.ltp||0).toFixed(1));
+}
+
+// ── DASHBOARD ─────────────────────────────────────────
+async function loadDashboard() {
+  const d = await api('/dashboard');
+  // Per-user P&L
+  const pd = await api('/user/pnl');
+  if(pd?.success) {
+    const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
+    const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+    s('kPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
+    s('kTR',  pd.today_trades+' trades today');
+    s('kWR',  pd.win_rate+'%');
+    s('kAP',  fmt(pd.total_pnl), pd.total_pnl>=0?'#00e676':'#ff5252');
+    s('rPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
+    s('rTR',  pd.today_trades);
+    s('rWR',  pd.win_rate+'%');
+  }
+  if(!d) return;
+  const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
+  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+  s('kPNL', fmt(d.today_pnl||0), (d.today_pnl||0)>=0?'#00e676':'#ff5252');
+  s('kTR',  (d.today_trades||0)+' trades today');
+  s('kWR',  (d.win_rate||0)+'%');
+  s('kOP',  d.open_trades||0);
+  s('kAP',  fmt(d.total_pnl||0), (d.total_pnl||0)>=0?'#00e676':'#ff5252');
+  // Capital + broker status
+  const capEl = document.getElementById('kCAP');
+  const setCapEl = document.getElementById('setCAP');
+  if(d.broker_status === 'connected') {
+    const capVal = '₹'+(d.capital||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+    if(capEl) { capEl.textContent=capVal; capEl.style.color='#00c8ff'; }
+    if(setCapEl) setCapEl.textContent = capVal;
+  } else {
+    if(capEl) {
+      capEl.textContent='🔴 Broker Not Connected';
+      capEl.style.color='#ff5252';
+      capEl.style.fontSize='12px';
+    }
+    if(setCapEl) {
+      setCapEl.textContent='🔴 Not Connected';
+      setCapEl.style.color='#ff5252';
+    }
+  }
+  s('rPNL', fmt(d.today_pnl||0), (d.today_pnl||0)>=0?'#00e676':'#ff5252');
+  s('rTR',  d.today_trades||0);
+  s('rWR',  (d.win_rate||0)+'%');
+  s('setCAP', '₹'+(d.capital||0).toLocaleString('en-IN'));
+  loadPositionsData();
+  loadRecentTrades();
+}
+
+async function loadPositionsData() {
+  const d = await api('/positions');
+  if(!d) return;
+  const tb = document.getElementById('tbOP');
+  if(!d.positions?.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
+  tb.innerHTML = d.positions.map(p=>`<tr>
+    <td><b style="color:${p.opt_type==='CE'?'#00e676':'#ff5252'}">${p.symbol} ${p.opt_type}</b></td>
+    <td>₹${(p.entry_price||0).toFixed(2)}</td>
+    <td class="pos">₹${(p.target_price||0).toFixed(2)}</td>
+    <td class="neg">₹${(p.sl_price||0).toFixed(2)}</td>
+    <td class="${(p.pnl||0)>=0?'pos':'neg'}">₹${(p.pnl||0).toFixed(0)}</td>
+    <td>${p.lots||1}</td>
+    <td><button class="btn b-red" onclick="exitTrade(${p.id})">Exit</button></td>
+  </tr>`).join('');
+}
+
+async function loadRecentTrades() {
+  const d = await api('/trades?status=TODAY&limit=5');
+  if(!d) return;
+  const tb = document.getElementById('tbRT');
+  if(!d.trades?.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#8090a8">No recent trades</td></tr>'; return; }
+  tb.innerHTML = d.trades.map(t=>`<tr>
+    <td><b>${t.symbol}</b></td>
+    <td style="color:${t.opt_type==='CE'?'#00e676':'#ff5252'}">${t.opt_type}</td>
+    <td>₹${(t.entry_price||0).toFixed(2)}</td>
+    <td>${t.exit_price?'₹'+t.exit_price.toFixed(2):'—'}</td>
+    <td class="${(t.pnl||0)>=0?'pos':'neg'}"><b>₹${(t.pnl||0).toFixed(0)}</b></td>
+    <td style="color:#8090a8;font-size:10px">${t.strategy||'—'}</td>
+    <td style="color:#8090a8;font-size:10px">${ft(t.created_at)}</td>
+  </tr>`).join('');
+}
+
+// ── TRADES ────────────────────────────────────────────
+async function loadTrades() {
+  const f = document.getElementById('trFilter')?.value||'TODAY';
+  const d = await api(`/trades?status=${f}&limit=50`);
+  if(!d) return;
+  const tb = document.getElementById('tbTR');
+  if(!d.trades?.length) { tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:#8090a8">No trades</td></tr>'; return; }
+  tb.innerHTML = d.trades.map(t=>`<tr>
+    <td style="color:#8090a8">#${t.id}</td>
+    <td><b style="color:${t.opt_type==='CE'?'#00e676':'#ff5252'}">${t.symbol}</b></td>
+    <td>${t.opt_type}</td>
+    <td>₹${(t.entry_price||0).toFixed(2)}</td>
+    <td>${t.exit_price?'₹'+t.exit_price.toFixed(2):'—'}</td>
+    <td class="${(t.pnl||0)>=0?'pos':'neg'}">₹${(t.pnl||0).toFixed(0)}</td>
+    <td style="color:${t.status==='OPEN'?'#00c8ff':(t.pnl||0)>=0?'#00e676':'#ff5252'}">${t.status}</td>
+    <td style="color:#8090a8;font-size:10px">${ft(t.created_at)}</td>
+  </tr>`).join('');
+}
+
+// ── POSITIONS ─────────────────────────────────────────
+async function loadPositions() {
+  const d = await api('/positions');
+  if(!d) return;
+  const tb = document.getElementById('tbPOS');
+  if(!d.positions?.length) { tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
+  tb.innerHTML = d.positions.map(p=>`<tr>
+    <td><b>${p.symbol}</b></td>
+    <td>${p.strike||'—'}</td>
+    <td style="color:${p.opt_type==='CE'?'#00e676':'#ff5252'}">${p.opt_type}</td>
+    <td>₹${(p.entry_price||0).toFixed(2)}</td>
+    <td class="pos">₹${(p.target_price||0).toFixed(2)}</td>
+    <td class="neg">₹${(p.sl_price||0).toFixed(2)}</td>
+    <td class="${(p.pnl||0)>=0?'pos':'neg'}"><b>₹${(p.pnl||0).toFixed(0)}</b></td>
+    <td>${p.lots||1}</td>
+    <td><button class="btn b-red" onclick="exitTrade(${p.id})">Exit</button></td>
+  </tr>`).join('');
+}
+
+// ── SIGNALS ───────────────────────────────────────────
+async function loadSignals() {
+  const d = await api('/signals');
+  if(!d) return;
+  const c = document.getElementById('sigCont');
+  if(!d.signals?.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
+  c.innerHTML = d.signals.map(s=>`<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <b style="color:${s.opt_type==='CE'?'#00e676':'#ff5252'}">${s.symbol} ${s.opt_type}</b>
+      <span style="font-size:10px;color:#8090a8">${ft(s.created_at)}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px">
+      <div><div style="color:#8090a8;font-size:9px">ENTRY</div><b>₹${(s.entry_price||0).toFixed(2)}</b></div>
+      <div><div style="color:#8090a8;font-size:9px">TARGET</div><b class="pos">₹${(s.target_price||0).toFixed(2)}</b></div>
+      <div><div style="color:#8090a8;font-size:9px">SL</div><b class="neg">₹${(s.sl_price||0).toFixed(2)}</b></div>
+      <div><div style="color:#8090a8;font-size:9px">ML CONF</div><b style="color:#d4af37">${s.ml_conf||0}%</b></div>
+    </div>
+  </div>`).join('');
+}
+
+// ── CHAIN ─────────────────────────────────────────────
+async function selSym(sym, btn) {
+  _sym = sym;
+  document.querySelectorAll('.pg#pg-chain .btn').forEach(b=>b.style.background='#1e3a5f');
+  if(btn) btn.style.background = '#00c8ff';
+  document.getElementById('cSYM').textContent = sym;
+  const d = await api('/chain-signal', {
+    method:'POST',
+    body: JSON.stringify({symbol:sym, strike:0, opt_type:'CE', timeframe:'5min'})
+  });
+  if(!d || d.error) { document.getElementById('chainInfo').innerHTML='<div style="color:#ff5252">'+((d&&d.error)||'Error')+'</div>'; return; }
+  document.getElementById('cSPOT').textContent = ' ₹'+(d.spot||0).toFixed(2);
+  document.getElementById('cATM').textContent  = ' '+(d.atm||'—');
+  document.getElementById('cEXP').textContent  = ' '+(d.expiry||'—');
+  const rec = d.recommendation||'—';
+  const rc  = rec.includes('CE')?'#00e676':rec.includes('PE')?'#ff5252':'#d4af37';
+  document.getElementById('chainInfo').innerHTML = `
+    <div style="text-align:center;padding:10px;border:2px solid ${rc};border-radius:8px;margin-bottom:10px">
+      <div style="font-size:18px;font-weight:800;color:${rc}">${rec}</div>
+      <div style="font-size:10px;color:#8090a8">${d.rec_reason||''}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="text-align:center;padding:8px;background:#0d1b2a;border-radius:6px">
+        <div style="font-size:9px;color:#8090a8">CE SCORE</div>
+        <div style="font-size:22px;font-weight:800;color:#00e676">${d.ce_score||0}%</div>
+      </div>
+      <div style="text-align:center;padding:8px;background:#0d1b2a;border-radius:6px">
+        <div style="font-size:9px;color:#8090a8">PE SCORE</div>
+        <div style="font-size:22px;font-weight:800;color:#ff5252">${d.pe_score||0}%</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#8090a8">Smart Entry: <b style="color:#00c8ff">₹${(d.smart_entry||d.ltp||0).toFixed(2)}</b></div>
+  `;
+  const sig = d.signals?.['5min']||{};
+  document.getElementById('chainSig').innerHTML = `
+    <div style="background:#0d1b2a;border-radius:8px;padding:12px;border-left:3px solid #00c8ff">
+      <div style="font-size:10px;color:#8090a8;margin-bottom:8px">5 MIN SCALP</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:8px">
+        <div><div style="font-size:9px;color:#8090a8">ENTRY</div><div style="font-size:18px;font-weight:800;color:#00c8ff">₹${(sig.entry||0).toFixed(2)}</div></div>
+        <div><div style="font-size:9px;color:#8090a8">TARGET</div><div style="font-size:18px;font-weight:800;color:#00e676">₹${(sig.target||0).toFixed(2)}</div></div>
+        <div><div style="font-size:9px;color:#8090a8">SL</div><div style="font-size:18px;font-weight:800;color:#ff5252">₹${(sig.sl||0).toFixed(2)}</div></div>
+      </div>
+      <div style="text-align:center;font-size:11px">R:R <b style="color:#d4af37">${sig.rr||0}:1</b></div>
+    </div>
+    ${d.greeks?`<div style="margin-top:10px;background:#0d1b2a;border-radius:6px;padding:8px">
+      <div style="font-size:9px;color:#d4af37;font-weight:700;margin-bottom:6px">OPTIONS GREEKS</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;font-size:11px">
+        <div><div style="color:#8090a8;font-size:9px">IV</div><b style="color:#00c8ff">${d.greeks.iv||0}%</b></div>
+        <div><div style="color:#8090a8;font-size:9px">DELTA</div><b>${d.greeks.delta||0}</b></div>
+        <div><div style="color:#8090a8;font-size:9px">THETA</div><b class="neg">${d.greeks.theta||0}</b></div>
+      </div>
+    </div>`:''}
+  `;
+}
+
+// ── ANALYTICS ─────────────────────────────────────────
+async function loadAnalytics() {
+  const d = await api('/analytics');
+  if(!d) return;
+  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+  const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
+  s('aTOT', fmt(d.total_pnl||0), (d.total_pnl||0)>=0?'#00e676':'#ff5252');
+  s('aWR',  (d.win_rate||0)+'%');
+  s('aTR',  d.total_trades||0);
+  s('aAW',  '₹'+(d.avg_win||0).toFixed(0));
+  s('aPF',  (d.profit_factor||0).toFixed(2));
+  const tb = document.getElementById('tbSTRAT');
+  if(d.strategies) tb.innerHTML = d.strategies.map(s=>`<tr>
+    <td>${s.name||'—'}</td><td>${s.trades}</td>
+    <td style="color:${s.win_rate>=55?'#00e676':'#ff5252'}">${s.win_rate}%</td>
+    <td class="${(s.pnl||0)>=0?'pos':'neg'}">₹${(s.pnl||0).toFixed(0)}</td>
+  </tr>`).join('');
+  const dp = document.getElementById('dailyPnl');
+  if(d.daily_pnl) dp.innerHTML = d.daily_pnl.slice(-14).reverse().map(x=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px">
+      <span style="color:#8090a8;min-width:70px">${x.date}</span>
+      <div style="flex:1;background:#1e3a5f;border-radius:3px;height:6px">
+        <div style="width:${Math.min(100,Math.abs(x.pnl)/500*100)}%;height:6px;border-radius:3px;background:${(x.pnl||0)>=0?'#00e676':'#ff5252'}"></div>
+      </div>
+      <span class="${(x.pnl||0)>=0?'pos':'neg'}" style="min-width:60px;text-align:right">₹${(x.pnl||0).toFixed(0)}</span>
+    </div>`).join('');
+}
+
+// ── AI BRAIN ──────────────────────────────────────────
+async function loadBrain() {
+  const d = await api('/status');
+  if(!d) return;
+  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('bACC', (d.ml_accuracy||0)+'%');
+  s('bSAMP', d.ml_samples||0);
+  s('bST', d.ml_ready?'✅ Ready':'⚠️ Not trained');
+}
+
+async function retrainML() {
+  toast('🔄 Retraining...', '#d4af37');
+  const d = await api('/ml/retrain', {method:'POST'});
+  if(d?.success) toast(`✅ ML: ${d.accuracy}%`, '#00e676');
+  else toast('❌ Failed', '#ff5252');
+  loadBrain();
+}
+
+async function testScan() {
+  const sym = document.getElementById('tSYM').value;
+  const typ = document.getElementById('tTYP').value;
+  document.getElementById('tRES').innerHTML = '⏳ Scanning...';
+  const d = await api('/chain-signal', {
+    method:'POST',
+    body: JSON.stringify({symbol:sym, strike:0, opt_type:typ, timeframe:'5min'})
+  });
+  if(d?.success) {
+    document.getElementById('tRES').innerHTML = `
+      <div style="padding:8px;background:#0d1b2a;border-radius:6px;margin-top:8px">
+        <div style="font-weight:700;color:${d.recommendation?.includes('CE')?'#00e676':'#ff5252'}">${d.recommendation||'—'}</div>
+        <div style="color:#8090a8;font-size:10px;margin-top:4px">CE:${d.ce_score}% | PE:${d.pe_score}% | ML:${d.ml?.confidence||0}%</div>
+      </div>`;
+  } else {
+    document.getElementById('tRES').innerHTML = `<div style="color:#ff5252">${d?.error||'No data'}</div>`;
+  }
+}
+
+// ── ACTIONS ───────────────────────────────────────────
+async function forceScan() {
+  toast('🔍 Scanning...', '#00c8ff');
+  const d = await api('/scan', {method:'POST'});
+  toast(`⚡ ${d?.signals||0} signals`, '#00e676');
+  loadSignals();
+}
+
+async function exitTrade(id) {
+  if(!confirm('Exit this trade?')) return;
+  const d = await api('/squareoff', {method:'POST', body: JSON.stringify({trade_id:id})});
+  if(d?.success) { toast('✅ Exited', '#00e676'); loadAll(); }
+  else toast('❌ '+d?.error, '#ff5252');
+}
+
+async function sqAll() {
+  if(!confirm('Square off ALL open positions?')) return;
+  const d = await api('/squareoff', {method:'POST', body: JSON.stringify({all:true})});
+  if(d?.success) { toast(`✅ Closed ${d.closed}`, '#00e676'); loadAll(); }
+}
+
+async function toggleMode() {
+  // Read ACTUAL current mode from server — not button text
+  const statusD = await api('/status');
+  if(!statusD) return;
+  const currMode = statusD.mode || 'PAPER';
+  const newMode  = currMode === 'PAPER' ? 'LIVE' : 'PAPER';
+
+  if(newMode === 'LIVE') {
+    // Ask server for confirmation
+    const d1 = await api('/switch-mode', {
+      method:'POST',
+      body: JSON.stringify({mode:'LIVE', confirmed:false})
+    });
+    if(d1?.error && !d1?.confirm) {
+      toast('❌ '+d1.error, '#ff5252');
+      return;
+    }
+    if(d1?.confirm) {
+      if(!confirm(d1.message)) return;
+      const d2 = await api('/switch-mode', {
+        method:'POST',
+        body: JSON.stringify({mode:'LIVE', confirmed:true})
+      });
+      if(d2?.success) {
+        updateModeBtn('LIVE');
+        toast('🔴 LIVE MODE — Real money trading!', '#ff5252');
+      } else {
+        toast('❌ '+(d2?.error||'Failed'), '#ff5252');
+      }
+    }
+  } else {
+    // Switch to PAPER
+    const d = await api('/switch-mode', {
+      method:'POST',
+      body: JSON.stringify({mode:'PAPER', confirmed:true})
+    });
+    if(d?.success) {
+      updateModeBtn('PAPER');
+      toast('📝 Paper mode activated', '#00e676');
+    } else {
+      toast('❌ '+(d?.error||'Failed'), '#ff5252');
+    }
+  }
+}
+
+function updateModeBtn(mode) {
+  const btn  = document.getElementById('modeBTN');
+  const chip = document.getElementById('tMODE');
+  const isLive = mode === 'LIVE';
+  if(btn) {
+    btn.textContent = isLive ? '🔴 LIVE' : '📝 PAPER';
+    btn.style.background = isLive ?
+      'linear-gradient(135deg,#ff5252,#ff1744)' :
+      'linear-gradient(135deg,#d4af37,#f0d060)';
+  }
+  if(chip) {
+    chip.textContent = mode;
+    chip.className = isLive ? 'chip live-mode' : 'chip';
+  }
+  // Settings page mode button
+  const mb = document.getElementById('modeBTN');
+  if(mb) mb.textContent = isLive ? '🔴 LIVE' : '📝 PAPER';
+}
+
+async function loadSqTimes() {
+  const d = await api('/squareoff/times');
+  if(!d) return;
+  const fmt = s => { if(s<=0) return '⏰ Done'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}m`:`${m}m`; };
+  const t = d.times||{};
+  const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('sqNSE', fmt(t.NFO?.remaining||t.NSE?.remaining||0));
+  s('sqMCX', fmt(t.MCX?.remaining||0));
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+function pg(id, el) {
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-it').forEach(n=>n.classList.remove('on'));
+  const p = document.getElementById('pg-'+id);
+  if(p) p.classList.add('on');
+  if(el) el.classList.add('on');
+  if(id==='trades')    loadTrades();
+  if(id==='positions') loadPositions();
+  if(id==='signals')   loadSignals();
+  if(id==='analytics') loadAnalytics();
+  if(id==='brain')     loadBrain();
+  if(id==='settings')  loadSqTimes();
+  if(id==='system')    { loadSystemData(); loadAdminUsers(); }
+}
+
+// ── CLOCK ─────────────────────────────────────────────
+function startClock() {
+  setInterval(() => {
+    const now = new Date(Date.now() + 19800000); // +5:30
+    const t = now.toISOString();
+    document.getElementById('rTIME').textContent = t.substr(11,8);
+    document.getElementById('rDATE').textContent = now.toDateString();
+    document.getElementById('tTIME').textContent = t.substr(11,5)+' IST';
+  }, 1000);
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function ft(s) {
+  try { return new Date(s).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}); }
+  catch { return s?.slice(11,16)||'—'; }
+}
+
+function toast(msg, color='#00e676') {
+  const t = document.getElementById('TOAST');
+  t.textContent = msg; t.style.borderColor = color; t.style.color = color;
+  t.style.display = 'block';
+  setTimeout(()=>t.style.display='none', 3000);
+}
+
+// ── AUTO LOGIN CHECK ──────────────────────────────────
+document.getElementById('P').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+(async () => {
+  const t = localStorage.getItem('cv3t');
+  if(t) {
+    TOKEN = t;
+    const d = await api('/status');
+    if(d?.success) { showApp(); return; }
+    localStorage.removeItem('cv3t');
+    TOKEN = '';
+  }
+})();
+</script>
+</body>
+</html>
