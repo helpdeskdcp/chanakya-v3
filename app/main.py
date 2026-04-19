@@ -188,6 +188,7 @@ def status():
         "connected":     broker_connected,
         "user":          broker_user_name,
         "login_user":    curr_username,
+        "mode":          _get_user_mode(curr_username) if curr_username else "PAPER",
         "capital":       broker_capital,
         "market_open":   signal_engine.is_market_open(),
         "mcx_open":      signal_engine.is_market_open("MCX"),
