@@ -388,48 +388,123 @@ class MCXAutoStrategy(Strategy):
 
 
 class SMCScalpStrategy(Strategy):
-    """Smart Money Concepts scalp"""
+    """Smart Money Concepts — Order Blocks + FVG + Liquidity Sweep"""
     name = "SMC_SCALP"
     min_candles = 25
 
     def analyze(self, candles, opt_type, vix=18, pcr=1.0):
+        try:
+            from engine.signals import SmartMoneySMC, smc_engine
+            smc = smc_engine
+        except Exception:
+            smc = None
+
         closes = [c["close"] for c in candles]
         highs  = [c["high"]  for c in candles]
         lows   = [c["low"]   for c in candles]
-        last = closes[-1]
+        last   = closes[-1]
+        atr_v  = _atr(candles)
+        rsi14  = _rsi(closes)
+        e21    = _ema(closes, 21)
 
-        # Order block detection
-        lookback = min(20, len(candles)-3)
-        ob_bull = ob_bear = 0
-        for i in range(-lookback, -2):
-            if (closes[i] < closes[i-1] and  # Down candle
-                closes[i+1] > closes[i] and closes[i+1] > closes[i-1]):
-                ob_bull = closes[i]  # Bullish OB
-            if (closes[i] > closes[i-1] and  # Up candle
-                closes[i+1] < closes[i] and closes[i+1] < closes[i-1]):
-                ob_bear = closes[i]  # Bearish OB
+        if atr_v == 0: return None
+        score = 0.0
+        reasons = []
 
-        atr_v = _atr(candles)
-        rsi14 = _rsi(closes)
+        if smc:
+            # 1. Order Blocks
+            try:
+                obs = smc.detect_order_blocks(candles)
+                for ob in obs:
+                    if opt_type == "CE" and ob.get("type") == "BULLISH":
+                        ob_price = ob.get("price", ob.get("low", 0))
+                        dist = abs(last - ob_price) / atr_v
+                        if dist < 2.0:
+                            score += 0.25
+                            reasons.append(f"BullOB@{ob_price:.1f}")
+                    elif opt_type == "PE" and ob.get("type") == "BEARISH":
+                        ob_price = ob.get("price", ob.get("high", 0))
+                        dist = abs(last - ob_price) / atr_v
+                        if dist < 2.0:
+                            score += 0.25
+                            reasons.append(f"BearOB@{ob_price:.1f}")
+            except Exception:
+                pass
 
-        if opt_type == "CE" and ob_bull > 0:
-            dist = abs(last - ob_bull) / atr_v if atr_v > 0 else 99
-            if dist < 1.5:
-                score = 0.68
-                ts = 0.6
-                if rsi14 > 45: score += 0.05
-                return self._result(candles, "CE", vix, score,
-                    f"SMC OB Bull at {ob_bull:.1f} dist:{dist:.1f}ATR", ts)
+            # 2. Fair Value Gap (FVG)
+            try:
+                fvgs = smc.detect_fvg(candles)
+                for fvg in fvgs:
+                    if opt_type == "CE" and fvg.get("type") == "BULLISH_FVG":
+                        score += 0.15
+                        reasons.append("BullFVG")
+                    elif opt_type == "PE" and fvg.get("type") == "BEARISH_FVG":
+                        score += 0.15
+                        reasons.append("BearFVG")
+            except Exception:
+                pass
 
-        elif opt_type == "PE" and ob_bear > 0:
-            dist = abs(last - ob_bear) / atr_v if atr_v > 0 else 99
-            if dist < 1.5:
-                score = 0.68
-                ts = 0.6
-                if rsi14 < 55: score += 0.05
-                return self._result(candles, "PE", vix, score,
-                    f"SMC OB Bear at {ob_bear:.1f} dist:{dist:.1f}ATR", ts)
-        return None
+            # 3. Liquidity Sweep
+            try:
+                sweep = smc.detect_liquidity_sweep(candles)
+                if sweep:
+                    sw_type = sweep.get("type","")
+                    if opt_type == "CE" and "BEAR" in sw_type:
+                        score += 0.20
+                        reasons.append("LiqSweep↑")
+                    elif opt_type == "PE" and "BULL" in sw_type:
+                        score += 0.20
+                        reasons.append("LiqSweep↓")
+            except Exception:
+                pass
+
+            # 4. Market Structure
+            try:
+                ms = smc.market_structure(candles)
+                if opt_type == "CE" and ms.get("trend") == "BULLISH":
+                    score += 0.10
+                    reasons.append("BullMS")
+                elif opt_type == "PE" and ms.get("trend") == "BEARISH":
+                    score += 0.10
+                    reasons.append("BearMS")
+            except Exception:
+                pass
+
+        else:
+            # Fallback — basic OB detection
+            lookback = min(20, len(candles)-3)
+            ob_bull = ob_bear = 0
+            for i in range(-lookback, -2):
+                if closes[i] < closes[i-1] and closes[i+1] > closes[i]:
+                    ob_bull = closes[i]
+                if closes[i] > closes[i-1] and closes[i+1] < closes[i]:
+                    ob_bear = closes[i]
+
+            if opt_type == "CE" and ob_bull > 0:
+                dist = abs(last - ob_bull) / atr_v
+                if dist < 1.5: score += 0.35; reasons.append(f"OB@{ob_bull:.1f}")
+            elif opt_type == "PE" and ob_bear > 0:
+                dist = abs(last - ob_bear) / atr_v
+                if dist < 1.5: score += 0.35; reasons.append(f"OB@{ob_bear:.1f}")
+
+        # RSI confluence
+        if opt_type == "CE" and 40 < rsi14 < 65: score += 0.08
+        if opt_type == "PE" and 35 < rsi14 < 60: score += 0.08
+
+        # Trend confluence
+        if opt_type == "CE" and last > e21: score += 0.07
+        if opt_type == "PE" and last < e21: score += 0.07
+
+        # Base score
+        score += 0.40
+
+        if score < 0.55 or not reasons:
+            return None
+
+        score = min(0.95, score)
+        ts = min(1.0, score - 0.4)
+        reason_str = "SMC: " + " + ".join(reasons) + f" RSI:{rsi14:.0f}"
+        return self._result(candles, opt_type, vix, score, reason_str, ts)
 
 
 # ── STRATEGY REGISTRY ──────────────────────────────────
