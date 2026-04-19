@@ -413,3 +413,34 @@ class SignalReplay:
             "trades":        trades,
             "equity_curve":  equity,
         }
+
+def strategy_performance_summary(db_path="data/chanakya_v3.db"):
+    """Per-strategy win rate, avg P&L"""
+    import sqlite3
+    from collections import defaultdict
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trades = conn.execute("""
+        SELECT strategy, pnl FROM trades
+        WHERE status='CLOSED' AND ABS(pnl)<50000
+    """).fetchall()
+    conn.close()
+    stats = defaultdict(lambda: {"wins":0,"losses":0,"pnl":0})
+    for t in trades:
+        s = t["strategy"] or "UNKNOWN"
+        p = t["pnl"] or 0
+        stats[s]["pnl"] += p
+        if p>0: stats[s]["wins"] += 1
+        else:   stats[s]["losses"] += 1
+    result = []
+    for name, d in stats.items():
+        total = d["wins"]+d["losses"]
+        if total < 2: continue
+        result.append({
+            "strategy": name, "trades": total,
+            "wins": d["wins"],
+            "win_rate": round(d["wins"]/total*100,1),
+            "total_pnl": round(d["pnl"],2),
+            "avg_pnl": round(d["pnl"]/total,2),
+        })
+    return sorted(result, key=lambda x: x["win_rate"], reverse=True)
