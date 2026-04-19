@@ -352,6 +352,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-sec">System</div>
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
       <div class="nav-it" id="navSystem" style="display:none" onclick="pg('system',this)">🖥️ System Monitor</div>
+      <div class="nav-it" id="navAdmin" style="display:none" onclick="window.location.href='/v3/admin'">👑 Admin</div>
       <div class="nav-it" onclick="logout()">⎋ Logout</div>
     </div>
     <div class="main">
@@ -1054,6 +1055,8 @@ async function startApp() {
     const ns = document.getElementById('navSystem');
     if(ns) {
       api('/admin/system').then(d=>{
+      const na=document.getElementById('navAdmin');
+      if(na) na.style.display='block';
         if(d?.success) ns.style.display='block';
       });
     }
@@ -1075,6 +1078,8 @@ async function loadAll() {
     const ns = document.getElementById('navSystem');
     if(ns) {
       api('/admin/system').then(d=>{
+      const na=document.getElementById('navAdmin');
+      if(na) na.style.display='block';
         if(d?.success) ns.style.display='block';
       });
     }
