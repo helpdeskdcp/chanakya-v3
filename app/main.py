@@ -1488,3 +1488,91 @@ def disconnect_broker():
     conn.commit()
     conn.close()
     return jsonify({"success":True,"message":"Broker disconnected"})
+
+# ── Admin System Monitor ────────────────────────────────
+@app.route("/api/v3/admin/system")
+@require_auth
+def system_monitor():
+    user = get_current_user()
+    if user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+    import psutil, os
+    cpu    = psutil.cpu_percent(interval=1)
+    mem    = psutil.virtual_memory()
+    disk   = psutil.disk_usage('/')
+    proc   = []
+    for p in psutil.process_iter(['pid','name','cpu_percent','memory_percent','cmdline']):
+        try:
+            cmd = " ".join(p.info['cmdline'] or [])
+            if 'python' in cmd:
+                proc.append({
+                    "pid":   p.info['pid'],
+                    "cpu":   round(p.info['cpu_percent'],1),
+                    "ram":   round(p.info['memory_percent'],1),
+                    "cmd":   cmd[:60],
+                })
+        except Exception:
+            pass
+    proc.sort(key=lambda x: x['cpu'], reverse=True)
+    # Online users
+    online = len(_tokens)
+    return jsonify({
+        "success":   True,
+        "cpu":       round(cpu, 1),
+        "ram_used":  round(mem.used/1024**3, 2),
+        "ram_total": round(mem.total/1024**3, 2),
+        "ram_pct":   round(mem.percent, 1),
+        "disk_used": round(disk.used/1024**3, 2),
+        "disk_total":round(disk.total/1024**3, 2),
+        "disk_pct":  round(disk.percent, 1),
+        "processes": proc[:8],
+        "online_users": online,
+        "uptime":    os.popen("uptime -p").read().strip(),
+    })
+
+# ── Per-User P&L (starts from 0 for each user) ─────────
+@app.route("/api/v3/user/pnl")
+@require_auth
+def user_pnl():
+    user     = get_current_user()
+    username = user.get("username","")
+    import sqlite3 as sq
+    conn = sq.connect(config.DB_PATH)
+    conn.row_factory = sq.Row
+    today = datetime.now(IST).strftime("%Y-%m-%d")
+    # Today P&L for this user
+    t = conn.execute("""
+        SELECT COUNT(*) tc,
+               SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) wins,
+               SUM(pnl) pnl
+        FROM trades
+        WHERE DATE(created_at)=? AND status='CLOSED'
+        AND (username=? OR username IS NULL)
+    """, (today, username)).fetchone()
+    # All time P&L for this user
+    a = conn.execute("""
+        SELECT COUNT(*) tc, SUM(pnl) pnl,
+               SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) wins
+        FROM trades WHERE status='CLOSED'
+        AND (username=? OR username IS NULL)
+    """, (username,)).fetchone()
+    conn.close()
+    today_pnl   = round(t["pnl"] or 0, 2)
+    today_tc    = t["tc"] or 0
+    today_wins  = t["wins"] or 0
+    all_pnl     = round(a["pnl"] or 0, 2)
+    all_tc      = a["tc"] or 0
+    all_wins    = a["wins"] or 0
+    win_rate    = round(today_wins/today_tc*100,1) if today_tc>0 else 0
+    all_wr      = round(all_wins/all_tc*100,1) if all_tc>0 else 0
+    return jsonify({
+        "success":      True,
+        "username":     username,
+        "today_pnl":    today_pnl,
+        "today_trades": today_tc,
+        "today_wins":   today_wins,
+        "win_rate":     win_rate,
+        "total_pnl":    all_pnl,
+        "total_trades": all_tc,
+        "all_win_rate": all_wr,
+    })

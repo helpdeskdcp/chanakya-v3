@@ -27,6 +27,8 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 .tk-v{font-weight:700;color:#00c8ff}
 .topbar-r{margin-left:auto;display:flex;align-items:center;gap:8px}
 .chip{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(212,175,55,.2);color:#d4af37}
+.chip.live-mode{background:rgba(255,82,82,.2);color:#ff5252;border:1px solid #ff5252;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .dg{background:#00e676;box-shadow:0 0 6px #00e676} .dr{background:#ff5252}
 .layout{display:flex;height:calc(100vh - 44px)}
@@ -349,6 +351,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-it" onclick="pg('brain',this)">🧠 AI Brain</div>
       <div class="nav-sec">System</div>
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
+      <div class="nav-it" id="navSystem" style="display:none" onclick="pg('system',this)">🖥️ System Monitor</div>
       <div class="nav-it" onclick="logout()">⎋ Logout</div>
     </div>
     <div class="main">
@@ -523,6 +526,42 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
         </div>
       </div>
 
+      <!-- SYSTEM MONITOR (Admin only) -->
+      <div class="pg" id="pg-system">
+        <div class="krow">
+          <div class="kpi"><div class="kl">CPU</div><div class="kv" id="sysCPU" style="color:#f97316">—%</div></div>
+          <div class="kpi"><div class="kl">RAM Used</div><div class="kv" id="sysRAM" style="color:#a855f7">—GB</div></div>
+          <div class="kpi"><div class="kl">RAM Free</div><div class="kv" id="sysRAMF" style="color:#00e676">—GB</div></div>
+          <div class="kpi"><div class="kl">Disk Used</div><div class="kv" id="sysDISK" style="color:#00c8ff">—GB</div></div>
+          <div class="kpi"><div class="kl">Online Users</div><div class="kv" id="sysUSERS" style="color:#d4af37">—</div></div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="ch">🖥️ Processes <span class="live"></span></div>
+            <div style="padding:8px"><table class="tbl">
+              <thead><tr><th>PID</th><th>CPU%</th><th>RAM%</th><th>Process</th></tr></thead>
+              <tbody id="sysProc"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="ch">👥 Active Users</div>
+            <div style="padding:8px"><table class="tbl">
+              <thead><tr><th>User</th><th>Role</th><th>Trial</th><th>Status</th></tr></thead>
+              <tbody id="sysUsers"></tbody>
+            </table></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch">⚙️ Admin Controls</div>
+          <div class="cb" style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn b-blue" onclick="retrainML()">🔄 Retrain ML</button>
+            <button class="btn b-red" onclick="sqAll()">⏹ Square All</button>
+            <button class="btn" style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid #f97316"
+                    onclick="loadSystemData()">🔄 Refresh Stats</button>
+          </div>
+        </div>
+      </div>
+
       <!-- SETTINGS -->
       <div class="pg" id="pg-settings">
         <div class="g2">
@@ -606,6 +645,44 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 const API = '/api/v3';
 let TOKEN = localStorage.getItem('cv3t') || '';
 let _sym = 'NIFTY';
+
+// ── SYSTEM MONITOR ────────────────────────────────────
+async function loadSystemData() {
+  const d = await api('/admin/system');
+  if(!d?.success) return;
+  const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+  const cpuColor = d.cpu>80?'#ff5252':d.cpu>60?'#f97316':'#00e676';
+  const ramColor = d.ram_pct>80?'#ff5252':d.ram_pct>60?'#f97316':'#a855f7';
+  s('sysCPU', d.cpu+'%', cpuColor);
+  s('sysRAM', d.ram_used+'GB', ramColor);
+  s('sysRAMF', (d.ram_total-d.ram_used).toFixed(1)+'GB', '#00e676');
+  s('sysDISK', d.disk_used+'GB / '+d.disk_total+'GB', '#00c8ff');
+  s('sysUSERS', d.online_users, '#d4af37');
+  // Processes
+  const pb = document.getElementById('sysProc');
+  if(pb && d.processes) pb.innerHTML = d.processes.map(p=>`<tr>
+    <td style="color:#8090a8">${p.pid}</td>
+    <td style="color:${p.cpu>50?'#ff5252':'#00e676'}">${p.cpu}%</td>
+    <td style="color:#a855f7">${p.ram}%</td>
+    <td style="font-size:10px;color:#8090a8">${p.cmd.slice(-40)}</td>
+  </tr>`).join('');
+}
+
+// Load system data when admin
+async function loadAdminUsers() {
+  const d = await api('/admin/users');
+  if(!d?.success) return;
+  const tb = document.getElementById('sysUsers');
+  if(!tb) return;
+  tb.innerHTML = d.users.map(u=>`<tr>
+    <td><b>${u.username}</b></td>
+    <td style="color:${u.role==='admin'?'#d4af37':u.role==='premium'?'#00e676':'#00c8ff'}">${u.role}</td>
+    <td style="color:#8090a8">${u.trial_days_left!=null?u.trial_days_left+'d':'—'}</td>
+    <td style="color:${u.effective_role==='expired'?'#ff5252':'#00e676'}">${u.effective_role}</td>
+  </tr>`).join('');
+}
+
+// ── SYSTEM MONITOR END ─────────────────────────────────
 
 // ── BROKER CONNECT ────────────────────────────────────
 let _selBroker = 'angelone';
@@ -972,6 +1049,15 @@ async function startApp() {
   startClock();
   toast('📡 Fetching data...', '#00c8ff');
   await loadStatus();
+  // Show admin-only nav items
+  if(window._userRole === 'admin' || TOKEN) {
+    const ns = document.getElementById('navSystem');
+    if(ns) {
+      api('/admin/system').then(d=>{
+        if(d?.success) ns.style.display='block';
+      });
+    }
+  }
   await loadUserStatus();
   toast('📊 Loading market...', '#00c8ff');
   await loadMarket();
@@ -984,6 +1070,15 @@ async function startApp() {
 
 async function loadAll() {
   await loadStatus();
+  // Show admin-only nav items
+  if(window._userRole === 'admin' || TOKEN) {
+    const ns = document.getElementById('navSystem');
+    if(ns) {
+      api('/admin/system').then(d=>{
+        if(d?.success) ns.style.display='block';
+      });
+    }
+  }
   await loadMarket();
   await loadDashboard();
 }
@@ -1065,6 +1160,19 @@ async function loadTickers() {
 // ── DASHBOARD ─────────────────────────────────────────
 async function loadDashboard() {
   const d = await api('/dashboard');
+  // Per-user P&L
+  const pd = await api('/user/pnl');
+  if(pd?.success) {
+    const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
+    const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+    s('kPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
+    s('kTR',  pd.today_trades+' trades today');
+    s('kWR',  pd.win_rate+'%');
+    s('kAP',  fmt(pd.total_pnl), pd.total_pnl>=0?'#00e676':'#ff5252');
+    s('rPNL', fmt(pd.today_pnl), pd.today_pnl>=0?'#00e676':'#ff5252');
+    s('rTR',  pd.today_trades);
+    s('rWR',  pd.win_rate+'%');
+  }
   if(!d) return;
   const fmt = v => (v>=0?'₹':'-₹')+Math.abs(v).toLocaleString('en-IN');
   const s = (id,v,c) => {const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
@@ -1378,12 +1486,20 @@ async function toggleMode() {
 function updateModeBtn(mode) {
   const btn  = document.getElementById('modeBTN');
   const chip = document.getElementById('tMODE');
-  if(btn)  { btn.textContent = mode; }
+  const isLive = mode === 'LIVE';
+  if(btn) {
+    btn.textContent = isLive ? '🔴 LIVE' : '📝 PAPER';
+    btn.style.background = isLive ?
+      'linear-gradient(135deg,#ff5252,#ff1744)' :
+      'linear-gradient(135deg,#d4af37,#f0d060)';
+  }
   if(chip) {
     chip.textContent = mode;
-    chip.style.color = mode==='LIVE' ? '#ff5252' : '#d4af37';
-    chip.style.borderColor = mode==='LIVE' ? '#ff5252' : '#d4af37';
+    chip.className = isLive ? 'chip live-mode' : 'chip';
   }
+  // Settings page mode button
+  const mb = document.getElementById('modeBTN');
+  if(mb) mb.textContent = isLive ? '🔴 LIVE' : '📝 PAPER';
 }
 
 async function loadSqTimes() {
@@ -1409,6 +1525,7 @@ function pg(id, el) {
   if(id==='analytics') loadAnalytics();
   if(id==='brain')     loadBrain();
   if(id==='settings')  loadSqTimes();
+  if(id==='system')    { loadSystemData(); loadAdminUsers(); }
 }
 
 // ── CLOCK ─────────────────────────────────────────────
