@@ -44,7 +44,7 @@ def main():
         try:
             if broker.connect():
                 logger.info(f"✅ Connected: {broker.user_name}")
-    broker.start_session_refresh()  # Daily 8:15 AM refresh
+                broker.start_session_refresh()  # Daily 8:15 AM refresh
                 funds = broker.get_funds()
                 logger.info(f"💰 Funds: ₹{funds:,.2f}")
             else:

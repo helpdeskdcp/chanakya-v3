@@ -1145,6 +1145,16 @@ async function loadStatus() {
   const s = (id,v) => {const e=document.getElementById(id);if(e)e.textContent=v;};
   const conn = d.connected;
   document.getElementById('tDOT').className = 'dot '+(conn?'dg':'dr');
+  // Retry if not connected — broker pool warming up
+  if(!conn && TOKEN) {
+    setTimeout(async function() {
+      const rd = await api('/status');
+      if(rd && rd.connected) {
+        document.getElementById('tDOT').className = 'dot dg';
+        loadDashboard();
+      }
+    }, 8000);
+  }
   const serverMode = d.mode || 'PAPER';
   document.getElementById('tMODE').textContent = serverMode;
   updateModeBtn(serverMode);
