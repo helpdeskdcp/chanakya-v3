@@ -171,14 +171,24 @@ class SignalEngine:
             return 540 <= t <= 1410   # 9:00 - 23:30
 
     def get_strategy_signal(self, candles, symbol, opt_type, vix=18, pcr=1.0, ml_conf=0):
-        """Get best strategy signal with confluence"""
+        """AI auto-select best strategy based on market regime"""
         try:
-            conf, strats = confluence_score(candles, opt_type, vix, pcr, symbol)
-            best = get_best_signal(candles, opt_type, vix, pcr, symbol, ml_boost=ml_conf)
-            return best, conf, strats
-        except Exception as e:
-            logger.debug(f"Strategy error: {e}")
+            from engine.ai_selector import ai_select_strategy
+            sig = ai_select_strategy(candles, opt_type, symbol, vix, pcr, ml_conf)
+            if sig:
+                conf = sig.get("score", 0)
+                strats = sig.get("strategies_tried", [sig.get("strategy","")])
+                return sig, conf, strats
             return None, 0, []
+        except Exception as e:
+            logger.debug(f"AI selector error: {e}")
+            # Fallback
+            try:
+                conf, strats = confluence_score(candles, opt_type, vix, pcr, symbol)
+                best = get_best_signal(candles, opt_type, vix, pcr, symbol, ml_boost=ml_conf)
+                return best, conf, strats
+            except Exception:
+                return None, 0, []
 
     def analyze(self, candles, symbol, opt_type, spot=0, vix=18, pcr=1.0, fii_bias="NEUTRAL"):
         """
