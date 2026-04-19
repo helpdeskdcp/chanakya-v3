@@ -175,6 +175,29 @@ def status():
     })
 
 # ── Dashboard API ──────────────────────────────────────
+
+# ── Per-User Capital Helpers ───────────────────────────
+def _get_user_broker_info(username):
+    try:
+        from engine.broker_pool import get_broker_info
+        return get_broker_info(username) or {}
+    except Exception:
+        return {}
+
+def _get_user_capital(username):
+    info = _get_user_broker_info(username)
+    if info.get("connected"):
+        return float(info.get("capital") or 0)
+    return 0.0
+
+def _get_user_broker_status(username):
+    info = _get_user_broker_info(username)
+    return "connected" if info.get("connected") else "not_connected"
+
+def _get_user_broker_name(username):
+    info = _get_user_broker_info(username)
+    return info.get("user_name","")
+
 @app.route("/api/v3/dashboard")
 @require_auth
 def dashboard():
@@ -219,7 +242,9 @@ def dashboard():
 
     return jsonify({
         "success":       True,
-        "capital":       round(broker.get_funds() if broker.connected else config.PAPER_CAPITAL, 2),
+        "capital":       round(_get_user_capital(curr_username), 2),
+        "broker_status": _get_user_broker_status(curr_username),
+        "broker_name":   _get_user_broker_name(curr_username),
         "today_pnl":     today_pnl,
         "today_trades":  today_trades,
         "today_wins":    today_wins,
@@ -640,7 +665,7 @@ def switch_mode():
         mode_txt = "LIVE TRADING ACTIVE" if mode=="LIVE" else "Paper mode"
         telegram.system_alert(
             "Mode Switch! User: " + username + " Mode: " + mode + " " + mode_txt,
-            "WARNING" if mode=="LIVE" else "INFO"
+            "WARNING" if mode=="LIVE" else "SUCCESS"
         )
     except Exception:
         pass

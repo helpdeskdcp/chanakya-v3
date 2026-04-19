@@ -996,6 +996,7 @@ async function loadStatus() {
   const conn = d.connected;
   document.getElementById('tDOT').className = 'dot '+(conn?'dg':'dr');
   document.getElementById('tMODE').textContent = d.mode||'PAPER';
+  updateModeBtn(d.mode||'PAPER');
   // Show broker full name + username
   const brokerDisplay = conn ?
     `✅ ${d.user} (${d.login_user})` : '❌ Not connected';
@@ -1330,42 +1331,58 @@ async function sqAll() {
 }
 
 async function toggleMode() {
-  const curr = document.getElementById('modeBTN').textContent.trim();
-  const nm   = curr==='PAPER'?'LIVE':'PAPER';
+  // Read ACTUAL current mode from server — not button text
+  const statusD = await api('/status');
+  if(!statusD) return;
+  const currMode = statusD.mode || 'PAPER';
+  const newMode  = currMode === 'PAPER' ? 'LIVE' : 'PAPER';
 
-  if(nm === 'LIVE') {
-    // Step 1 — ask server for confirmation details
+  if(newMode === 'LIVE') {
+    // Ask server for confirmation
     const d1 = await api('/switch-mode', {
       method:'POST',
       body: JSON.stringify({mode:'LIVE', confirmed:false})
     });
+    if(d1?.error && !d1?.confirm) {
+      toast('❌ '+d1.error, '#ff5252');
+      return;
+    }
     if(d1?.confirm) {
-      // Show confirmation dialog
       if(!confirm(d1.message)) return;
-      // Step 2 — confirmed
       const d2 = await api('/switch-mode', {
         method:'POST',
         body: JSON.stringify({mode:'LIVE', confirmed:true})
       });
       if(d2?.success) {
-        toast('🔴 LIVE MODE ACTIVE — Real money!', '#ff5252');
-        loadStatus();
+        updateModeBtn('LIVE');
+        toast('🔴 LIVE MODE — Real money trading!', '#ff5252');
       } else {
         toast('❌ '+(d2?.error||'Failed'), '#ff5252');
       }
-    } else if(d1?.error) {
-      toast('❌ '+d1.error, '#ff5252');
     }
   } else {
-    // Switch to PAPER — no confirmation needed
+    // Switch to PAPER
     const d = await api('/switch-mode', {
       method:'POST',
       body: JSON.stringify({mode:'PAPER', confirmed:true})
     });
     if(d?.success) {
-      toast('📝 Paper mode active', '#00e676');
-      loadStatus();
+      updateModeBtn('PAPER');
+      toast('📝 Paper mode activated', '#00e676');
+    } else {
+      toast('❌ '+(d?.error||'Failed'), '#ff5252');
     }
+  }
+}
+
+function updateModeBtn(mode) {
+  const btn  = document.getElementById('modeBTN');
+  const chip = document.getElementById('tMODE');
+  if(btn)  { btn.textContent = mode; }
+  if(chip) {
+    chip.textContent = mode;
+    chip.style.color = mode==='LIVE' ? '#ff5252' : '#d4af37';
+    chip.style.borderColor = mode==='LIVE' ? '#ff5252' : '#d4af37';
   }
 }
 
