@@ -6,6 +6,7 @@ import logging, math
 from datetime import datetime
 import pytz
 from config import config
+from engine.strategies import get_best_signal, confluence_score, adaptive_tpsl, ALL_STRATEGIES
 
 logger = logging.getLogger(__name__)
 IST = pytz.timezone("Asia/Kolkata")
@@ -168,6 +169,16 @@ class SignalEngine:
             return 555 <= t <= 930    # 9:15 - 15:30
         else:  # MCX
             return 540 <= t <= 1410   # 9:00 - 23:30
+
+    def get_strategy_signal(self, candles, symbol, opt_type, vix=18, pcr=1.0, ml_conf=0):
+        """Get best strategy signal with confluence"""
+        try:
+            conf, strats = confluence_score(candles, opt_type, vix, pcr, symbol)
+            best = get_best_signal(candles, opt_type, vix, pcr, symbol, ml_boost=ml_conf)
+            return best, conf, strats
+        except Exception as e:
+            logger.debug(f"Strategy error: {e}")
+            return None, 0, []
 
     def analyze(self, candles, symbol, opt_type, spot=0, vix=18, pcr=1.0, fii_bias="NEUTRAL"):
         """

@@ -1528,6 +1528,29 @@ def _cpu_updater():
 import threading as _thr
 _thr.Thread(target=_cpu_updater, daemon=True).start()
 
+@app.route("/api/v3/strategies")
+def get_strategies():
+    """List all strategies + their performance"""
+    try:
+        from engine.strategies import ALL_STRATEGIES
+        from engine.backtest import strategy_performance_summary
+        perf = {p["strategy"]:p for p in strategy_performance_summary()}
+        result = []
+        for s in ALL_STRATEGIES:
+            p = perf.get(s.name, {})
+            result.append({
+                "name":       s.name,
+                "min_candles":s.min_candles,
+                "trades":     p.get("trades",0),
+                "win_rate":   p.get("win_rate",0),
+                "total_pnl":  p.get("total_pnl",0),
+                "avg_pnl":    p.get("avg_pnl",0),
+            })
+        return jsonify({"success":True, "strategies":result,
+                       "total": len(result)})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 # ── Admin System Monitor ────────────────────────────────
 @app.route("/api/v3/admin/system")
 @require_auth
