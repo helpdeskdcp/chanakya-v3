@@ -640,7 +640,18 @@ def get_signals():
         tokens  = get_all_tokens(_broker)
         signals = []
 
-        logger.info(f"Signals: broker={_broker.connected} tokens={list(tokens.keys())}")
+        logger.info(f"Signals: broker={_broker.connected}")
+        # Use cached signals if recent (< 5 min)
+        import time as _time
+        _cache_key = f"signals_{username}"
+        _now = _time.time()
+        if not hasattr(get_signals, '_cache'):
+            get_signals._cache = {}
+        cached = get_signals._cache.get(_cache_key)
+        if cached and (_now - cached['ts']) < 300:
+            logger.info("Returning cached signals")
+            return jsonify({"success":True,"signals":cached['data'],
+                           "total":len(cached['data']),"mode":user_mode,"cached":True})
         for sym, info in tokens.items():
             if sym in ("VIX",): continue
             try:
@@ -711,6 +722,8 @@ def get_signals():
                 continue
 
         signals.sort(key=lambda x: x["score"], reverse=True)
+        # Save to cache
+        get_signals._cache[_cache_key] = {'data': signals, 'ts': _now}
         return jsonify({"success":True,"signals":signals,
                         "total":len(signals),"mode":user_mode})
     except Exception as e:
