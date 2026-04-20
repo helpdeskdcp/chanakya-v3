@@ -105,6 +105,13 @@ def main():
                     sigs = scanner.scan_all()
                     if sigs:
                         logger.info(f"⚡ {len(sigs)} new signals generated")
+                        # Save to file store
+                        try:
+                            from engine.signal_store import update as _su
+                            _su('avinash', sigs)
+                            logger.info(f'Signal store: {len(sigs)} saved')
+                        except Exception as _se:
+                            logger.debug(f'Store: {_se}')
                 else:
                     logger.debug("Market closed — scanner idle")
             except Exception as _se:
