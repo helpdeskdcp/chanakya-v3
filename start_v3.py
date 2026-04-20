@@ -45,6 +45,13 @@ def main():
             if broker.connect():
                 logger.info(f"✅ Connected: {broker.user_name}")
                 broker.start_session_refresh()  # Daily 8:15 AM refresh
+    # Refresh MCX tokens daily
+    try:
+        from engine.token_manager import refresh_mcx_tokens
+        refresh_mcx_tokens()
+        logger.info("✅ MCX tokens refreshed")
+    except Exception as _te:
+        logger.warning(f"Token refresh: {_te}")
                 funds = broker.get_funds()
                 logger.info(f"💰 Funds: ₹{funds:,.2f}")
             else:
