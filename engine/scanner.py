@@ -306,6 +306,35 @@ class SignalScanner:
         except Exception as e:
             logger.error(f"scan_all: {e}")
 
+        # Add option LTP to each signal
+        try:
+            from engine.option_chain import get_best_option
+            for sig in signals:
+                try:
+                    opt = get_best_option(
+                        self.broker.api,
+                        sig["symbol"],
+                        sig["ltp"],
+                        sig["opt_type"],
+                        sig.get("regime","SIDEWAYS")
+                    )
+                    if opt and opt.get("option_ltp",0) > 0:
+                        oltp = opt["option_ltp"]
+                        sig["option_symbol"] = opt["symbol"]
+                        sig["option_token"]  = opt["token"]
+                        sig["strike"]        = opt["strike"]
+                        sig["strike_type"]   = opt["strike_type"]
+                        sig["option_ltp"]    = oltp
+                        # Option entry/target/SL
+                        sig["entry"]  = oltp
+                        sig["target"] = round(oltp * 1.50, 2)
+                        sig["sl"]     = round(oltp * 0.70, 2)
+                        sig["ltp"]    = oltp
+                except Exception:
+                    pass
+        except Exception as _oe:
+            pass
+
         signals.sort(key=lambda x: x["score"], reverse=True)
         logger.info(f"🔍 Scan complete: {len(signals)} signals from {len(tokens) if 'tokens' in dir() else 0} symbols")
         return signals
