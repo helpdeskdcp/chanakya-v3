@@ -636,6 +636,16 @@ def get_signals():
                 for opt in ["CE","PE"]:
                     sig = ai_select_strategy(candles, opt, symbol=sym, vix=18, pcr=1.0)
                     if sig and sig.get("score",0) >= 0.60:
+                        ltp_val = info.get("ltp", candles[-1]["close"])
+                        # ATM Strike calculation
+                        from config import config as _cfg
+                        lot_size = _cfg.LOT_SIZES.get(sym, 1)
+                        # MCX strike interval
+                        if info["exchange"] == "MCX":
+                            interval = 100 if "CRUDE" in sym else 10
+                        else:
+                            interval = 50 if "BANK" in sym else 50
+                        atm_strike = round(ltp_val / interval) * interval
                         signals.append({
                             "symbol":     sym,
                             "exchange":   info["exchange"],
@@ -649,7 +659,9 @@ def get_signals():
                             "sl":         sig["sl"],
                             "rr":         sig["rr"],
                             "reason":     sig.get("reason",""),
-                            "ltp":        info.get("ltp", candles[-1]["close"]),
+                            "ltp":        ltp_val,
+                            "atm_strike": atm_strike,
+                            "lot_size":   lot_size,
                         })
             except Exception as _se:
                 logger.debug(f"Signal {sym}: {_se}")

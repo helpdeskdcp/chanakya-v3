@@ -1393,9 +1393,11 @@ async function loadSignals() {
         '<div><div style="color:#8090a8;font-size:9px">SL</div><b style="color:#ff5252">₹'+sl+'</b></div>' +
         '<div><div style="color:#8090a8;font-size:9px">R:R</div><b style="color:#d4af37">'+rr+'</b></div>' +
       '</div>' +
-      '<div style="display:flex;gap:12px;font-size:10px">' +
+      '<div style="display:flex;gap:12px;font-size:10px;flex-wrap:wrap">' +
         '<span style="color:#8090a8">Score: <b style="color:#fff">'+score+'%</b></span>' +
         '<span style="color:#8090a8">LTP: <b style="color:#00c8ff">₹'+ltp+'</b></span>' +
+        '<span style="color:#8090a8">ATM Strike: <b style="color:#d4af37">'+((s.atm_strike||0).toFixed(0))+'</b></span>' +
+        '<span style="color:#8090a8">Lot: <b style="color:#fff">'+(s.lot_size||1)+'</b></span>' +
       '</div>' +
     '</div>';
   }).join('');
