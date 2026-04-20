@@ -661,6 +661,66 @@ def get_signals():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+
+@app.route("/api/v3/trade", methods=["POST"])
+@require_auth
+def place_trade_v3():
+    """Place paper or live trade"""
+    try:
+        curr_user = get_current_user()
+        username  = curr_user.get("username","")
+        user_mode = _get_user_mode(username)
+        data      = request.get_json() or {}
+
+        symbol      = data.get("symbol","")
+        exchange    = data.get("exchange","NSE")
+        opt_type    = data.get("opt_type","CE")
+        entry_price = float(data.get("entry_price",0))
+        target_price= float(data.get("target_price",0))
+        sl_price    = float(data.get("sl_price",0))
+        lots        = int(data.get("lots",1))
+        strategy    = data.get("strategy","MANUAL")
+
+        if not symbol or entry_price <= 0:
+            return jsonify({"success":False,"error":"Invalid trade params"})
+
+        # Paper trade — save to DB
+        import sqlite3 as sq
+        from datetime import datetime
+        import pytz
+        IST = pytz.timezone("Asia/Kolkata")
+        now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+
+        conn = sq.connect(config.DB_PATH)
+        cur  = conn.execute("""
+            INSERT INTO trades
+            (username,symbol,exchange,opt_type,entry_price,target_price,
+             sl_price,lots,strategy,status,mode,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (username,symbol,exchange,opt_type,entry_price,target_price,
+              sl_price,lots,strategy,"OPEN",user_mode,now,now))
+        trade_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+
+        logger.info(f"Trade placed: {username} {symbol} {opt_type} {user_mode} entry={entry_price}")
+
+        return jsonify({
+            "success":  True,
+            "trade_id": trade_id,
+            "mode":     user_mode,
+            "symbol":   symbol,
+            "opt_type": opt_type,
+            "entry":    entry_price,
+            "target":   target_price,
+            "sl":       sl_price,
+            "lots":     lots,
+            "message":  f"{user_mode} trade placed!"
+        })
+    except Exception as e:
+        logger.error(f"Trade error: {e}")
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/trades")
 @require_auth
 def get_trades():
