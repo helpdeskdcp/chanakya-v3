@@ -1369,18 +1369,36 @@ async function loadSignals() {
   if(!d) return;
   const c = document.getElementById('sigCont');
   if(!d || !d.signals || !d.signals.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
-  c.innerHTML = d.signals.map(s=>`<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <b style="color:${s.opt_type==='CE'?'#00e676':'#ff5252'}">${s.symbol} ${s.opt_type}</b>
-      <span style="font-size:10px;color:#8090a8">${ft(s.created_at)}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px">
-      <div><div style="color:#8090a8;font-size:9px">ENTRY</div><b>₹${(s.entry_price||0).toFixed(2)}</b></div>
-      <div><div style="color:#8090a8;font-size:9px">TARGET</div><b class="pos">₹${(s.target_price||0).toFixed(2)}</b></div>
-      <div><div style="color:#8090a8;font-size:9px">SL</div><b class="neg">₹${(s.sl_price||0).toFixed(2)}</b></div>
-      <div><div style="color:#8090a8;font-size:9px">ML CONF</div><b style="color:#d4af37">${s.ml_conf||0}%</b></div>
-    </div>
-  </div>`).join('');
+  c.innerHTML = d.signals.map(function(s) {
+    var entry  = (s.entry  || s.entry_price  || 0).toFixed(2);
+    var target = (s.target || s.target_price || 0).toFixed(2);
+    var sl     = (s.sl     || s.sl_price     || 0).toFixed(2);
+    var score  = ((s.score || 0) * 100).toFixed(1);
+    var rr     = (s.rr || 0).toFixed(2);
+    var ltp    = (s.ltp || 0).toFixed(2);
+    var clr    = s.opt_type === 'CE' ? '#00e676' : '#ff5252';
+    var now    = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    return '<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+          '<b style="color:'+clr+'">'+s.symbol+' '+s.opt_type+'</b>' +
+          '<span style="font-size:9px;background:rgba(0,200,255,.1);color:#00c8ff;padding:1px 6px;border-radius:10px">'+(s.strategy||'')+'</span>' +
+          '<span style="font-size:9px;color:#d4af37">'+(s.confluence||'')+'</span>' +
+        '</div>' +
+        '<span style="font-size:10px;color:#8090a8">'+now+' | '+(s.regime||'')+'</span>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px;margin-bottom:6px">' +
+        '<div><div style="color:#8090a8;font-size:9px">ENTRY</div><b style="color:#00c8ff">₹'+entry+'</b></div>' +
+        '<div><div style="color:#8090a8;font-size:9px">TARGET</div><b style="color:#00e676">₹'+target+'</b></div>' +
+        '<div><div style="color:#8090a8;font-size:9px">SL</div><b style="color:#ff5252">₹'+sl+'</b></div>' +
+        '<div><div style="color:#8090a8;font-size:9px">R:R</div><b style="color:#d4af37">'+rr+'</b></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:12px;font-size:10px">' +
+        '<span style="color:#8090a8">Score: <b style="color:#fff">'+score+'%</b></span>' +
+        '<span style="color:#8090a8">LTP: <b style="color:#00c8ff">₹'+ltp+'</b></span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
 // ── CHAIN ─────────────────────────────────────────────
