@@ -636,32 +636,54 @@ def get_signals():
                 for opt in ["CE","PE"]:
                     sig = ai_select_strategy(candles, opt, symbol=sym, vix=18, pcr=1.0)
                     if sig and sig.get("score",0) >= 0.60:
-                        ltp_val = info.get("ltp", candles[-1]["close"])
-                        # ATM Strike calculation
+                        ltp_val  = info.get("ltp", candles[-1]["close"])
                         from config import config as _cfg
+                        from engine.strike_selector import select_best_strike, calculate_option_levels
                         lot_size = _cfg.LOT_SIZES.get(sym, 1)
-                        # MCX strike interval
-                        if info["exchange"] == "MCX":
-                            interval = 100 if "CRUDE" in sym else 10
+
+                        # ATR calculation
+                        atr_pts  = sig.get("atr", ltp_val*0.02)
+                        atr_pct  = atr_pts/ltp_val if ltp_val>0 else 0.02
+
+                        # Smart strike selection
+                        strike_info = select_best_strike(
+                            _broker, sym, info["exchange"],
+                            opt, ltp_val, vix, regime
+                        )
+
+                        # Option levels
+                        opt_ltp = strike_info.get("option_ltp", 0)
+                        if opt_ltp > 0:
+                            levels = calculate_option_levels(opt_ltp, opt, atr_pct, sig.get("rr",1.5))
                         else:
-                            interval = 50 if "BANK" in sym else 50
-                        atm_strike = round(ltp_val / interval) * interval
+                            levels = None
+
                         signals.append({
-                            "symbol":     sym,
-                            "exchange":   info["exchange"],
-                            "opt_type":   opt,
-                            "strategy":   sig["strategy"],
-                            "score":      round(sig["score"],3),
-                            "confluence": sig.get("confluence",""),
-                            "regime":     regime,
-                            "entry":      sig["entry"],
-                            "target":     sig["target"],
-                            "sl":         sig["sl"],
-                            "rr":         sig["rr"],
-                            "reason":     sig.get("reason",""),
-                            "ltp":        ltp_val,
-                            "atm_strike": atm_strike,
-                            "lot_size":   lot_size,
+                            "symbol":       sym,
+                            "exchange":     info["exchange"],
+                            "opt_type":     opt,
+                            "strategy":     sig["strategy"],
+                            "score":        round(sig["score"],3),
+                            "confluence":   sig.get("confluence",""),
+                            "regime":       regime,
+                            # Underlying levels
+                            "underlying_entry":  sig["entry"],
+                            "underlying_target": sig["target"],
+                            "underlying_sl":     sig["sl"],
+                            # Option levels
+                            "entry":  levels["entry"]  if levels else sig["entry"],
+                            "target": levels["target"] if levels else sig["target"],
+                            "sl":     levels["sl"]     if levels else sig["sl"],
+                            "rr":     levels["rr"]     if levels else sig["rr"],
+                            # Strike info
+                            "strike":        strike_info["strike"],
+                            "strike_type":   strike_info["strike_type"],
+                            "atm_strike":    strike_info["atm_strike"],
+                            "option_symbol": strike_info.get("option_symbol",""),
+                            "option_ltp":    opt_ltp,
+                            "lot_size":      lot_size,
+                            "ltp":           ltp_val,
+                            "reason":        sig.get("reason",""),
                         })
             except Exception as _se:
                 logger.debug(f"Signal {sym}: {_se}")
