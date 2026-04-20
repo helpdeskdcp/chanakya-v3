@@ -1008,6 +1008,86 @@ async function submitPayment() {
   }
 }
 
+
+// ── LIVE LTP ENGINE ─────────────────────────────────
+var _ltpSymbols = [];
+var _ltpCallbacks = {};
+var _ltpInterval = null;
+
+function registerLTP(symbol, token, exchange, callback) {
+  var found = false;
+  for (var i=0; i<_ltpSymbols.length; i++) {
+    if (_ltpSymbols[i].symbol === symbol) { found=true; break; }
+  }
+  if (!found) _ltpSymbols.push({symbol:symbol, token:token||'', exchange:exchange||'NSE'});
+  if (!_ltpCallbacks[symbol]) _ltpCallbacks[symbol] = [];
+  _ltpCallbacks[symbol].push(callback);
+}
+
+async function _fetchLTP() {
+  if (!_ltpSymbols.length || !TOKEN) return;
+  try {
+    var d = await api('/ltp', {method:'POST', body: JSON.stringify({symbols:_ltpSymbols})});
+    if (!d || !d.success) return;
+    Object.keys(d.ltp).forEach(function(sym) {
+      var ltp = d.ltp[sym].ltp;
+      // Update all registered callbacks
+      var cbs = _ltpCallbacks[sym] || [];
+      cbs.forEach(function(cb) { try { cb(ltp); } catch(e){} });
+      // Update position P&L
+      _updatePositionLTP(sym, ltp);
+    });
+  } catch(e) {}
+}
+
+function startLTPEngine() {
+  if (_ltpInterval) clearInterval(_ltpInterval);
+  _ltpInterval = setInterval(_fetchLTP, 3000);
+}
+
+function stopLTPEngine() {
+  if (_ltpInterval) clearInterval(_ltpInterval);
+  _ltpSymbols = [];
+  _ltpCallbacks = {};
+}
+
+function _updatePositionLTP(sym, ltp) {
+  // Update live position rows
+  var rows = document.querySelectorAll('[data-sym="'+sym+'"]');
+  rows.forEach(function(row) {
+    var entry = parseFloat(row.getAttribute('data-entry') || 0);
+    var lots  = parseInt(row.getAttribute('data-lots') || 1);
+    var lotSz = parseInt(row.getAttribute('data-lotsize') || 1);
+    var optType = row.getAttribute('data-opt') || 'CE';
+    var ltpEl = row.querySelector('.pos-ltp');
+    var pnlEl = row.querySelector('.pos-pnl');
+    if (ltpEl) ltpEl.textContent = '₹' + ltp.toFixed(2);
+    if (pnlEl && entry > 0) {
+      var pnl = (optType==='CE' ? ltp-entry : entry-ltp) * lots * lotSz;
+      pnlEl.textContent = (pnl>=0?'+':'') + '₹' + pnl.toFixed(2);
+      pnlEl.style.color = pnl >= 0 ? '#00e676' : '#ff5252';
+    }
+  });
+}
+
+
+async function emergencyExit(tradeId, symbol) {
+  // Immediate exit — no confirmation needed
+  var msg = document.createElement('div');
+  msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#ff5252;color:#fff;padding:16px 24px;border-radius:12px;z-index:99999;font-weight:800;font-size:14px';
+  msg.textContent = '🚨 EMERGENCY EXIT — ' + symbol;
+  document.body.appendChild(msg);
+
+  var d = await api('/squareoff', {method:'POST', body: JSON.stringify({trade_id:tradeId, emergency:true})});
+  document.body.removeChild(msg);
+  if (d && d.success) {
+    toast('✅ Emergency Exit Done! ' + symbol, '#00e676');
+    loadPositions();
+  } else {
+    toast('❌ Exit Failed! Manual exit karo!', '#ff5252');
+  }
+}
+
 // ── AUTH ──────────────────────────────────────────────
 async function doLogin() {
   const u = document.getElementById('U').value.trim();
@@ -1129,7 +1209,8 @@ async function startApp() {
   await loadTickers();
   toast('✅ Dashboard Ready!', '#00e676');
   setInterval(loadAll, 15000);
-  setInterval(loadTickers, 15000);
+  setInterval(loadTickers, 3000);
+  startLTPEngine();
 }
 
 async function loadAll() {
@@ -1348,6 +1429,9 @@ async function loadTrades() {
 async function loadPositions() {
   const d = await api('/positions');
   if(!d) return;
+  stopLTPEngine();
+  _ltpSymbols = [];
+  _ltpCallbacks = {};
   const tb = document.getElementById('tbPOS');
   if(!d.positions?.length) { tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
   tb.innerHTML = d.positions.map(p=>`<tr>
@@ -1393,9 +1477,14 @@ async function loadSignals() {
         '<div><div style="color:#8090a8;font-size:9px">SL</div><b style="color:#ff5252">₹'+sl+'</b></div>' +
         '<div><div style="color:#8090a8;font-size:9px">R:R</div><b style="color:#d4af37">'+rr+'</b></div>' +
       '</div>' +
+      // Register LTP for this signal
+      registerLTP(s.symbol, '', s.exchange, function(newLtp) {
+        var ltpEl = document.getElementById('sig-ltp-'+s.symbol+s.opt_type);
+        if (ltpEl) ltpEl.textContent = '₹' + newLtp.toFixed(2);
+      });
       '<div style="display:flex;gap:12px;font-size:10px;flex-wrap:wrap">' +
         '<span style="color:#8090a8">Score: <b style="color:#fff">'+score+'%</b></span>' +
-        '<span style="color:#8090a8">LTP: <b style="color:#00c8ff">₹'+ltp+'</b></span>' +
+        '<span style="color:#8090a8">LTP: <b style="color:#00c8ff" id="sig-ltp-'+s.symbol+s.opt_type+'">₹'+ltp+'</b></span>' +
         '<span style="color:#8090a8">ATM Strike: <b style="color:#d4af37">'+((s.atm_strike||0).toFixed(0))+'</b></span>' +
         '<span style="color:#8090a8">Lot: <b style="color:#fff">'+(s.lot_size||1)+'</b></span>' +
       '</div>' +

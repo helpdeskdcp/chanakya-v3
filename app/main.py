@@ -1108,6 +1108,55 @@ def ml_retrain_v3():
         return jsonify({"success": False, "error": str(e)})
 
 # ── Squareoff Times API ────────────────────────────────
+
+@app.route("/api/v3/ltp", methods=["POST"])
+@require_auth
+def get_ltp_batch():
+    """Get live LTP for multiple symbols — called every 3-5 sec"""
+    try:
+        data    = request.get_json() or {}
+        symbols = data.get("symbols", [])
+        if not symbols:
+            return jsonify({"success":False,"error":"No symbols"})
+
+        curr_user = get_current_user()
+        username  = curr_user.get("username","")
+        from engine.broker_pool import _pool
+        ub = _pool.get(username)
+        _b = ub if (ub and ub.connected) else broker
+        if not _b or not _b.connected:
+            _b = broker
+            if not _b.connected:
+                _b.connect()
+
+        from engine.token_manager import get_all_tokens, STATIC_TOKENS
+        all_tokens = get_all_tokens(_b)
+
+        result = {}
+        for sym_info in symbols:
+            sym   = sym_info.get("symbol","")
+            token = sym_info.get("token","")
+            exch  = sym_info.get("exchange","NSE")
+            try:
+                if not token:
+                    tok_info = all_tokens.get(sym,{})
+                    token = tok_info.get("token","")
+                    exch  = tok_info.get("exchange","NSE")
+                if token:
+                    ltp_r = _b.api.ltpData(exch, sym, token)
+                    if ltp_r and ltp_r.get("data"):
+                        result[sym] = {
+                            "ltp":    float(ltp_r["data"]["ltp"]),
+                            "token":  token,
+                            "exchange": exch,
+                        }
+            except Exception:
+                pass
+
+        return jsonify({"success":True,"ltp":result,"ts":__import__("time").time()})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/squareoff/times")
 @require_auth
 def squareoff_times():
