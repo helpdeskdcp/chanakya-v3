@@ -615,10 +615,12 @@ def get_signals():
         username  = curr_user.get("username","")
         user_mode = _get_user_mode(username)
 
+        # Force user broker connect
         ub = get_user_broker(username) if username else None
-        _broker = ub if (ub and ub.connected) else broker
-        # If neither connected — try global connect
-        if not _broker or not _broker.connected:
+        if not ub or not ub.connected:
+            ub = get_user_broker(username)  # retry
+        _broker = ub if (ub and ub.connected) else None
+        if not _broker:
             if broker.connect():
                 _broker = broker
             else:
@@ -627,6 +629,7 @@ def get_signals():
         tokens  = get_all_tokens(_broker)
         signals = []
 
+        logger.info(f"Signals: broker={_broker.connected} tokens={list(tokens.keys())}")
         for sym, info in tokens.items():
             if sym in ("VIX",): continue
             try:
@@ -1973,9 +1976,7 @@ def user_pnl():
         FROM trades WHERE status='CLOSED'
         AND (username=? OR username IS NULL)
         AND ABS(pnl) < 100000
-        AND (created_at >= (SELECT COALESCE(pnl_reset_date,'2000-01-01')
-             FROM users WHERE username=?) OR username IS NULL)
-    """, (username, username)).fetchone()
+    """, (username,)).fetchone()
     conn.close()
     today_pnl   = round(t["pnl"] or 0, 2)
     today_tc    = t["tc"] or 0
