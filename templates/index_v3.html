@@ -1211,8 +1211,6 @@ async function startApp() {
   setInterval(loadAll, 15000);
   setInterval(loadTickers, 3000);
   startLTPEngine();
-  // Auto signals reload every 30 sec
-  setInterval(function(){ if(document.getElementById('pg-signals').classList.contains('on')) loadSignals(); }, 30000);
 }
 
 async function loadAll() {
@@ -1463,9 +1461,8 @@ async function loadSignals() {
     var rr     = (s.rr || 0).toFixed(2);
     var ltp    = (s.ltp || 0).toFixed(2);
     var clr    = s.opt_type === 'CE' ? '#00e676' : '#ff5252';
-    var strike = s.strike || s.atm_strike || 0;
-    var optSym = s.option_symbol && s.option_symbol !== 'undefined' ? s.option_symbol : (s.symbol + strike + s.opt_type);
     var now    = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    var optSym = (s.option_symbol && s.option_symbol.length > 3) ? s.option_symbol : (s.symbol+(s.strike||'')+(s.opt_type||''));
     return '<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">' +
       '<div style="display:flex;justify-content:space-between;margin-bottom:8px">' +
         '<div style="display:flex;align-items:center;gap:6px">' +
@@ -1486,11 +1483,10 @@ async function loadSignals() {
         var ltpEl = document.getElementById('sig-ltp-'+s.symbol+s.opt_type);
         if (ltpEl) ltpEl.textContent = '₹' + newLtp.toFixed(2);
       });
-      '<div style="font-size:10px;color:#8090a8;margin-bottom:4px">📋 '+optSym+'</div>' +
       '<div style="display:flex;gap:12px;font-size:10px;flex-wrap:wrap">' +
         '<span style="color:#8090a8">Score: <b style="color:#fff">'+score+'%</b></span>' +
         '<span style="color:#8090a8">LTP: <b style="color:#00c8ff" id="sig-ltp-'+s.symbol+s.opt_type+'">₹'+ltp+'</b></span>' +
-        '<span style="color:#8090a8">Strike: <b style="color:#d4af37">'+(s.strike||s.atm_strike||0)+'</b> '+(s.strike_type||'ATM')+'</span>' +
+        '<span style="color:#8090a8">ATM Strike: <b style="color:#d4af37">'+((s.atm_strike||0).toFixed(0))+'</b></span>' +
         '<span style="color:#8090a8">Lot: <b style="color:#fff">'+(s.lot_size||1)+'</b></span>' +
       '</div>' +
     '</div>';
@@ -1618,16 +1614,6 @@ async function testScan() {
 }
 
 // ── ACTIONS ───────────────────────────────────────────
-async function loadSignals() {
-  const d = await api('/signals');
-  if(!d || !d.success) return;
-  const c2 = document.getElementById('sigCont');
-  if(!c2) return;
-  if(!d.signals || !d.signals.length) {
-    c2.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">⏳ Scanning... refresh in 2 min</div>';
-    return;
-  }
-
 async function forceScan() {
   toast('🔍 Scanning...', '#00c8ff');
   const d = await api('/scan', {method:'POST'});
