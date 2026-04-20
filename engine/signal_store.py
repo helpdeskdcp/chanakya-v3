@@ -1,20 +1,55 @@
 """
-Chanakya v3 — Shared Signal Store
-Cross-module signal sharing without circular imports
+Chanakya v3 — File-based Signal Store
+Scanner writes → Flask reads (shared file)
 """
-import threading
+import json, os, threading, time
+import logging
+logger = logging.getLogger(__name__)
 
-_store = {}  # {username: [signals]}
-_lock  = threading.Lock()
+STORE_FILE = "data/signal_cache.json"
+_lock = threading.Lock()
 
 def update(username, signals):
-    with _lock:
-        _store[username] = signals
+    """Scanner writes signals to file"""
+    try:
+        with _lock:
+            data = {}
+            if os.path.exists(STORE_FILE):
+                with open(STORE_FILE) as f:
+                    data = json.load(f)
+            data[username] = {
+                "signals": signals,
+                "ts": time.time()
+            }
+            with open(STORE_FILE, "w") as f:
+                json.dump(data, f)
+    except Exception as e:
+        logger.debug(f"Signal store write: {e}")
 
 def get(username, fallback="avinash"):
-    with _lock:
-        return list(_store.get(username, _store.get(fallback, [])))
+    """Flask reads signals from file"""
+    try:
+        if not os.path.exists(STORE_FILE):
+            return []
+        with open(STORE_FILE) as f:
+            data = json.load(f)
+        # Try user first, then fallback
+        entry = data.get(username) or data.get(fallback)
+        if not entry:
+            return []
+        # Max 5 min old
+        if time.time() - entry.get("ts", 0) > 300:
+            return []
+        return entry.get("signals", [])
+    except Exception as e:
+        logger.debug(f"Signal store read: {e}")
+        return []
 
 def get_all():
-    with _lock:
-        return dict(_store)
+    try:
+        if not os.path.exists(STORE_FILE):
+            return {}
+        with open(STORE_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {}
