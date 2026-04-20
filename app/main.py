@@ -640,13 +640,13 @@ def get_signals():
         tokens  = get_all_tokens(_broker)
         signals = []
 
-        # Return from background scanner store
-        with _signal_lock:
-            signals = list(_signal_store.get(username, _signal_store.get("avinash",[])))
-        if signals:
-            return jsonify({"success":True,"signals":signals,
-                           "total":len(signals),"mode":user_mode})
-        logger.info(f"Signals: broker={_broker.connected} — scanning...")
+        # Return from shared signal store
+        from engine.signal_store import get as _sig_get
+        cached_sigs = _sig_get(username)
+        if cached_sigs:
+            return jsonify({"success":True,"signals":cached_sigs,
+                           "total":len(cached_sigs),"mode":user_mode,"cached":True})
+        logger.info(f"Signals: scanning... broker={_broker.connected}")
         for sym, info in tokens.items():
             if sym in ("VIX",): continue
             try:
@@ -717,8 +717,8 @@ def get_signals():
                 continue
 
         signals.sort(key=lambda x: x["score"], reverse=True)
-        with _signal_lock:
-            _signal_store[username] = signals
+        from engine.signal_store import update as _sig_upd
+        _sig_upd(username, signals)
         return jsonify({"success":True,"signals":signals,
                         "total":len(signals),"mode":user_mode})
     except Exception as e:
