@@ -244,17 +244,70 @@ class SignalScanner:
             return None
 
     def scan_all(self):
-        """Scan all configured symbols"""
+        """Scan all symbols using new AI selector + correct tokens"""
+        from engine.token_manager import get_all_tokens
+        from engine.candles import get_candles
+        from engine.ai_selector import ai_select_strategy, detect_market_regime
+        from engine.strike_selector import get_atm_strike, STRIKE_INTERVALS
+        import time as _t
+
         signals = []
-        all_symbols = config.NSE_SYMBOLS + config.MCX_SYMBOLS
+        try:
+            tokens = get_all_tokens(self.broker)
+            for sym, info in tokens.items():
+                if sym in ("VIX",): continue
+                try:
+                    cr = get_candles(self.broker, info["token"],
+                                    exchange=info["exchange"],
+                                    interval="FIVE_MINUTE", days=5)
+                    if len(cr) < 25: continue
+                    candles = [{"open":x[1],"high":x[2],"low":x[3],
+                               "close":x[4],"volume":x[5]} for x in cr]
+                    regime  = detect_market_regime(candles)
+                    ltp_val = info.get("ltp", candles[-1]["close"])
+                    atm     = get_atm_strike(ltp_val, sym)
+                    interval_sz = STRIKE_INTERVALS.get(sym.upper(), 50)
+                    lot_size = config.LOT_SIZES.get(sym, 1)
 
-        for symbol in all_symbols:
-            sig = self.scan_symbol(symbol)
-            if sig:
-                signals.append(sig)
-            time.sleep(1)  # Rate limit between symbols
+                    for opt in ["CE","PE"]:
+                        sig = ai_select_strategy(candles, opt, symbol=sym, vix=18)
+                        if sig and sig.get("score",0) >= 0.60:
+                            if regime in ("TRENDING_UP","TRENDING_DOWN"):
+                                strike = atm-interval_sz if opt=="CE" else atm+interval_sz
+                                stype = "ITM"
+                            elif regime == "VOLATILE":
+                                strike = atm+interval_sz if opt=="CE" else atm-interval_sz
+                                stype = "OTM"
+                            else:
+                                strike = atm; stype = "ATM"
 
-        logger.info(f"🔍 Scan complete: {len(signals)} signals from {len(all_symbols)} symbols")
+                            signals.append({
+                                "symbol":      sym,
+                                "exchange":    info["exchange"],
+                                "opt_type":    opt,
+                                "strategy":    sig["strategy"],
+                                "score":       round(sig["score"],3),
+                                "confluence":  sig.get("confluence",""),
+                                "regime":      regime,
+                                "entry":       sig["entry"],
+                                "target":      sig["target"],
+                                "sl":          sig["sl"],
+                                "rr":          sig["rr"],
+                                "ltp":         ltp_val,
+                                "strike":      strike,
+                                "strike_type": stype,
+                                "atm_strike":  atm,
+                                "lot_size":    lot_size,
+                                "reason":      sig.get("reason",""),
+                            })
+                except Exception as _e:
+                    logger.debug(f"Scan {sym}: {_e}")
+                    continue
+        except Exception as e:
+            logger.error(f"scan_all: {e}")
+
+        signals.sort(key=lambda x: x["score"], reverse=True)
+        logger.info(f"🔍 Scan complete: {len(signals)} signals from {len(tokens) if 'tokens' in dir() else 0} symbols")
         return signals
 
     def _get_vix(self):
