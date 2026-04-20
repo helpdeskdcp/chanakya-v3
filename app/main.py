@@ -617,8 +617,12 @@ def get_signals():
 
         ub = get_user_broker(username) if username else None
         _broker = ub if (ub and ub.connected) else broker
+        # If neither connected — try global connect
         if not _broker or not _broker.connected:
-            return jsonify({"success":True,"signals":[],"reason":"Broker not connected"})
+            if broker.connect():
+                _broker = broker
+            else:
+                return jsonify({"success":True,"signals":[],"reason":"Broker not connected"})
 
         tokens  = get_all_tokens(_broker)
         signals = []
