@@ -645,18 +645,21 @@ def get_signals():
                         atr_pts  = sig.get("atr", ltp_val*0.02)
                         atr_pct  = atr_pts/ltp_val if ltp_val>0 else 0.02
 
-                        # Smart strike selection
-                        strike_info = select_best_strike(
-                            _broker, sym, info["exchange"],
-                            opt, ltp_val, vix, regime
-                        )
-
-                        # Option levels
-                        opt_ltp = strike_info.get("option_ltp", 0)
-                        if opt_ltp > 0:
-                            levels = calculate_option_levels(opt_ltp, opt, atr_pct, sig.get("rr",1.5))
+                        # Quick ATM strike — no slow API call
+                        from engine.strike_selector import get_atm_strike, STRIKE_INTERVALS
+                        interval  = STRIKE_INTERVALS.get(sym.upper(), 50)
+                        atm       = get_atm_strike(ltp_val, sym)
+                        if regime in ("TRENDING_UP","TRENDING_DOWN"):
+                            strike      = atm - interval if opt == "CE" else atm + interval
+                            strike_type = "ITM"
+                        elif regime == "VOLATILE":
+                            strike      = atm + interval if opt == "CE" else atm - interval
+                            strike_type = "OTM"
                         else:
-                            levels = None
+                            strike      = atm
+                            strike_type = "ATM"
+                        strike_info = {"strike":strike,"strike_type":strike_type,"atm_strike":atm,"option_ltp":0,"option_symbol":""}
+                        levels = None
 
                         signals.append({
                             "symbol":       sym,
