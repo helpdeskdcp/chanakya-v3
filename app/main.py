@@ -615,16 +615,27 @@ def get_signals():
         username  = curr_user.get("username","")
         user_mode = _get_user_mode(username)
 
-        # Force user broker connect
-        ub = get_user_broker(username) if username else None
-        if not ub or not ub.connected:
-            ub = get_user_broker(username)  # retry
-        _broker = ub if (ub and ub.connected) else None
+        # Get broker — pool or fresh connect
+        from engine.broker_pool import _pool, get_broker as _gb
+        _broker = None
+        # Check pool first
+        with __import__('threading').Lock():
+            ub = _pool.get(username)
+        if ub and ub.connected:
+            _broker = ub
+        else:
+            # Try fresh connect
+            ub2 = _gb(username)
+            if ub2 and ub2.connected:
+                _broker = ub2
+        # Fallback to global
         if not _broker:
-            if broker.connect():
+            if not broker.connected:
+                broker.connect()
+            if broker.connected:
                 _broker = broker
-            else:
-                return jsonify({"success":True,"signals":[],"reason":"Broker not connected"})
+        if not _broker:
+            return jsonify({"success":True,"signals":[],"reason":"Broker not connected"})
 
         tokens  = get_all_tokens(_broker)
         signals = []
