@@ -1368,7 +1368,7 @@ async function loadSignals() {
   const d = await api('/signals');
   if(!d) return;
   const c = document.getElementById('sigCont');
-  if(!d.signals?.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
+  if(!d || !d.signals || !d.signals.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
   c.innerHTML = d.signals.map(s=>`<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;margin-bottom:8px">
       <b style="color:${s.opt_type==='CE'?'#00e676':'#ff5252'}">${s.symbol} ${s.opt_type}</b>
