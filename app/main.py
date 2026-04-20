@@ -605,18 +605,62 @@ def market_summary():
 @app.route("/api/v3/signals")
 @require_auth
 def get_signals():
-    import sqlite3
-    limit = int(request.args.get("limit", 20))
-    conn  = sqlite3.connect(config.DB_PATH)
-    conn.row_factory = sqlite3.Row
-    rows  = conn.execute("""
-        SELECT * FROM signals
-        ORDER BY created_at DESC LIMIT ?
-    """, (limit,)).fetchall()
-    conn.close()
-    return jsonify({"success": True, "signals": [dict(r) for r in rows]})
+    try:
+        from engine.token_manager import get_all_tokens
+        from engine.candles import get_candles
+        from engine.ai_selector import ai_select_strategy, detect_market_regime
+        from engine.broker_pool import get_broker as get_user_broker
 
-# ── Trades API ─────────────────────────────────────────
+        curr_user = get_current_user()
+        username  = curr_user.get("username","")
+        user_mode = _get_user_mode(username)
+
+        ub = get_user_broker(username) if username else None
+        _broker = ub if (ub and ub.connected) else broker
+        if not _broker or not _broker.connected:
+            return jsonify({"success":True,"signals":[],"reason":"Broker not connected"})
+
+        tokens  = get_all_tokens(_broker)
+        signals = []
+
+        for sym, info in tokens.items():
+            if sym in ("VIX",): continue
+            try:
+                candles_raw = get_candles(_broker, info["token"],
+                                          exchange=info["exchange"],
+                                          interval="FIVE_MINUTE", days=5)
+                if len(candles_raw) < 25: continue
+                candles = [{"open":c[1],"high":c[2],"low":c[3],
+                            "close":c[4],"volume":c[5]} for c in candles_raw]
+                regime = detect_market_regime(candles)
+                for opt in ["CE","PE"]:
+                    sig = ai_select_strategy(candles, opt, symbol=sym, vix=18, pcr=1.0)
+                    if sig and sig.get("score",0) >= 0.60:
+                        signals.append({
+                            "symbol":     sym,
+                            "exchange":   info["exchange"],
+                            "opt_type":   opt,
+                            "strategy":   sig["strategy"],
+                            "score":      round(sig["score"],3),
+                            "confluence": sig.get("confluence",""),
+                            "regime":     regime,
+                            "entry":      sig["entry"],
+                            "target":     sig["target"],
+                            "sl":         sig["sl"],
+                            "rr":         sig["rr"],
+                            "reason":     sig.get("reason",""),
+                            "ltp":        info.get("ltp", candles[-1]["close"]),
+                        })
+            except Exception as _se:
+                logger.debug(f"Signal {sym}: {_se}")
+                continue
+
+        signals.sort(key=lambda x: x["score"], reverse=True)
+        return jsonify({"success":True,"signals":signals,
+                        "total":len(signals),"mode":user_mode})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/trades")
 @require_auth
 def get_trades():
