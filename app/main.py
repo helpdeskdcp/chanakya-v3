@@ -1132,32 +1132,19 @@ def get_ltp_batch():
         from engine.token_manager import get_all_tokens
         all_tokens = get_all_tokens(_b)
 
+        # Use cached tickers — no rate limit
         result = {}
         for sym_info in symbols:
-            sym   = sym_info.get("symbol","").upper()
-            token = sym_info.get("token","")
-            exch  = sym_info.get("exchange","NSE")
-            try:
-                # Auto-fill token from token_manager
-                if not token:
-                    tok_info = all_tokens.get(sym, {})
-                    token = tok_info.get("token","")
-                    exch  = tok_info.get("exchange", exch)
-                if token and _b.api:
-                    ltp_r = _b.api.ltpData(exch, sym, token)
-                    if ltp_r and ltp_r.get("data"):
-                        result[sym] = {
-                            "ltp":     float(ltp_r["data"].get("ltp",0)),
-                            "token":   token,
-                            "exchange": exch,
-                        }
-                    else:
-                        # Try get_ltp
-                        lv = _b.get_ltp(exch, sym, token)
-                        if lv > 0:
-                            result[sym] = {"ltp":lv,"token":token,"exchange":exch}
-            except Exception as _le:
-                logger.debug(f"LTP {sym}: {_le}")
+            sym = sym_info.get("symbol","").upper()
+            # Get from tickers cache
+            tok_info = all_tokens.get(sym, {})
+            cached_ltp = tok_info.get("ltp", 0)
+            if cached_ltp > 0:
+                result[sym] = {
+                    "ltp":     cached_ltp,
+                    "token":   tok_info.get("token",""),
+                    "exchange": tok_info.get("exchange","NSE"),
+                }
 
         return jsonify({"success":True,"ltp":result,"ts":__import__("time").time()})
     except Exception as e:

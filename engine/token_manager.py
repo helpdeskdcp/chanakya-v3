@@ -98,6 +98,11 @@ def get_all_tokens(broker=None):
     result = {}
     now = datetime.now(IST)
 
+    # LTP cache — shared
+    global _ltp_cache
+    if not hasattr(get_all_tokens, '_ltp_cache'):
+        get_all_tokens._ltp_cache = {}
+
     # NSE Index tokens — static (correct)
     nse_symbols = {
         "NIFTY":     {"token":"99926000", "exchange":"NSE"},
@@ -112,6 +117,7 @@ def get_all_tokens(broker=None):
                 ltp = broker.api.ltpData(info["exchange"], sym, info["token"])
                 if ltp and ltp.get("data"):
                     result[sym]["ltp"] = float(ltp["data"]["ltp"])
+                get_all_tokens._ltp_cache[sym] = result[sym]["ltp"]
             except Exception:
                 pass
 
@@ -126,6 +132,7 @@ def get_all_tokens(broker=None):
                 ltp = broker.api.ltpData("MCX", sym, token)
                 if ltp and ltp.get("data"):
                     result[sym]["ltp"] = float(ltp["data"]["ltp"])
+                get_all_tokens._ltp_cache[sym] = result[sym]["ltp"]
             except Exception:
                 pass
 
