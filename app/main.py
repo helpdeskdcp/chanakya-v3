@@ -364,11 +364,12 @@ def dashboard():
     today_pnl    = round(r[1] or 0, 2)
     today_wins   = r[2] or 0
 
-    # All time
+    # All time — v3 start date Apr 23
     cur.execute("""SELECT COUNT(*), COALESCE(SUM(pnl),0),
         SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END)
         FROM trades WHERE status='CLOSED'
         AND ABS(pnl)<100000
+        AND created_at >= '2026-04-23'
         AND (username=? OR (? = 'avinash' AND username IS NOT NULL))
     """, (curr_username, curr_username))
     r2 = cur.fetchone()
