@@ -84,6 +84,48 @@ def smart_scan(broker):
             })
 
             logger.info(f"✅ {sym} {opt_type}: score={decision['score']} {mtf['master_trend']}")
+            # Telegram alert
+            try:
+                from engine.telegram import telegram
+                if telegram.enabled and opt_info:
+                    oltp = opt_info.get("option_ltp",0)
+                    msg = (
+                        f"⚡ CHANAKYA SIGNAL\n"
+                        f"{'━'*25}\n"
+                        f"📊 {sym} {opt_type} | {mtf['master_trend']}\n"
+                        f"📋 {opt_info.get('symbol','')}\n"
+                        f"🎯 Score: {decision['score']}% | {decision.get('confluence','') if hasattr(decision,'get') else ''}\n"
+                        f"💰 Entry:  ₹{oltp}\n"
+                        f"✅ Target: ₹{round(oltp*1.25,2)} (+25%)\n"
+                        f"🛑 SL:     ₹{round(oltp*0.85,2)} (-15%)\n"
+                        f"📈 R:R: 1.67\n"
+                        f"{'━'*25}\n"
+                        f"💡 {decision.get('reasons',[''])[0] if decision.get('reasons') else ''}"
+                    )
+                    telegram.send(msg)
+            except Exception as _te:
+                logger.debug(f"Telegram: {_te}")
+            # Telegram alert
+            try:
+                from engine.telegram import telegram
+                if telegram.enabled and opt_info:
+                    oltp = opt_info.get("option_ltp",0)
+                    msg = (
+                        f"⚡ CHANAKYA SIGNAL\n"
+                        f"{'━'*25}\n"
+                        f"📊 {sym} {opt_type} | {mtf['master_trend']}\n"
+                        f"📋 {opt_info.get('symbol','')}\n"
+                        f"🎯 Score: {decision['score']}% | {decision.get('confluence','') if hasattr(decision,'get') else ''}\n"
+                        f"💰 Entry:  ₹{oltp}\n"
+                        f"✅ Target: ₹{round(oltp*1.25,2)} (+25%)\n"
+                        f"🛑 SL:     ₹{round(oltp*0.85,2)} (-15%)\n"
+                        f"📈 R:R: 1.67\n"
+                        f"{'━'*25}\n"
+                        f"💡 {decision.get('reasons',[''])[0] if decision.get('reasons') else ''}"
+                    )
+                    telegram.send(msg)
+            except Exception as _te:
+                logger.debug(f"Telegram: {_te}")
 
         except Exception as e:
             logger.error(f"SmartScan {sym}: {e}")

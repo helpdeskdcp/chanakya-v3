@@ -335,6 +335,30 @@ class SignalScanner:
         except Exception as _oe:
             pass
 
+        # Send Telegram for top signals
+        try:
+            from engine.telegram import telegram
+            if telegram.enabled:
+                top = [s for s in signals if s.get("score",0) >= 0.70]
+                for sig in top[:2]:  # Max 2 alerts
+                    oltp = sig.get("entry",0)
+                    osym = sig.get("option_symbol","")
+                    msg = (
+                        f"⚡ CHANAKYA SIGNAL\n"
+                        f"{'━'*25}\n"
+                        f"📊 {sig['symbol']} {sig['opt_type']} | {sig.get('regime','')}\n"
+                        f"📋 {osym}\n"
+                        f"🎯 Score: {round(sig.get('score',0)*100,1)}% | {sig.get('confluence','')}\n"
+                        f"💰 Entry:  ₹{oltp}\n"
+                        f"✅ Target: ₹{sig.get('target',0)}\n"
+                        f"🛑 SL:     ₹{sig.get('sl',0)}\n"
+                        f"📈 R:R: {sig.get('rr',0)}\n"
+                        f"💡 {sig.get('strategy','')}"
+                    )
+                    telegram.send(msg)
+        except Exception as _te:
+            logger.debug(f"Telegram: {_te}")
+
         signals.sort(key=lambda x: x["score"], reverse=True)
         logger.info(f"🔍 Scan complete: {len(signals)} signals from {len(tokens) if 'tokens' in dir() else 0} symbols")
         return signals
