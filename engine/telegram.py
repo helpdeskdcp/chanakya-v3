@@ -70,10 +70,27 @@ class TelegramAlert:
                 f"{'━'*20}\n"
                 f"⚠️ <i>Educational only. Not financial advice.</i>"
             )
-            return self.send(msg, self.channel_id)
+            result = self.send_get_id(msg, self.channel_id)
+            return result
         except Exception as e:
             logger.debug(f"Signal alert: {e}")
-            return False
+            return None
+
+    def send_get_id(self, message, chat_id):
+        """Send and return message_id"""
+        if not self.token or not chat_id: return None
+        try:
+            r = requests.post(
+                f"https://api.telegram.org/bot{self.token}/sendMessage",
+                json={"chat_id":chat_id,"text":message,"parse_mode":"HTML"},
+                timeout=10
+            )
+            data = r.json()
+            if data.get("ok"):
+                return data["result"]["message_id"]
+        except Exception as e:
+            logger.debug(f"Send: {e}")
+        return None
 
     def system_alert(self, message, level="INFO"):
         """System health — admin only"""

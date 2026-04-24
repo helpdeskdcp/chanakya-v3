@@ -355,7 +355,14 @@ class SignalScanner:
                         f"📈 R:R: {sig.get('rr',0)}\n"
                         f"💡 {sig.get('strategy','')}"
                     )
-                    telegram.signal_alert(sig)
+                    msg_id = telegram.signal_alert(sig)
+                    # Start tracking
+                    if msg_id:
+                        try:
+                            from engine.signal_tracker import signal_tracker
+                            signal_tracker.add(sig, msg_id)
+                        except Exception:
+                            pass
         except Exception as _te:
             logger.debug(f"Telegram: {_te}")
 
