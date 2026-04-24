@@ -147,8 +147,30 @@ def login():
         }
         _save_tokens(_tokens)
         session.clear()
+        # Auto-connect per-user broker in background
+        def _connect_broker_bg(uname):
+            try:
+                from engine.broker_pool import get_broker
+                ub = get_broker(uname)
+                if ub:
+                    logger.info(f"✅ Broker auto-connected: {uname} → {ub.user_name}")
+            except Exception as _be:
+                logger.debug(f"Broker bg connect {uname}: {_be}")
+        import threading as _thr
+        _thr.Thread(target=_connect_broker_bg, args=(user,), daemon=True).start()
         _save_tokens(_tokens)
         session.clear()
+        # Auto-connect per-user broker in background
+        def _connect_broker_bg(uname):
+            try:
+                from engine.broker_pool import get_broker
+                ub = get_broker(uname)
+                if ub:
+                    logger.info(f"✅ Broker auto-connected: {uname} → {ub.user_name}")
+            except Exception as _be:
+                logger.debug(f"Broker bg connect {uname}: {_be}")
+        import threading as _thr
+        _thr.Thread(target=_connect_broker_bg, args=(user,), daemon=True).start()
         session["user"] = _tokens[token]
         session.permanent = True
         logger.info(f"Login OK: {user} token={token[:8]}...")
