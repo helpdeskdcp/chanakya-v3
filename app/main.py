@@ -1282,7 +1282,7 @@ def tickers_v3():
         for sym, info in symbols.items():
             try:
                 ltp = broker.get_ltp(info["exch"], sym, info["token"])
-                prev = _get_prev_close(_broker, sym, info["token"], info["exchange"])
+                prev = _get_prev_close(broker, sym, info["token"], info["exchange"])
                 chg  = round(((ltp-prev)/prev)*100, 2) if prev > 0 else 0
                 result[sym] = {"ltp": ltp, "change_pct": chg, "prev_close": prev}
             except Exception:
