@@ -1,0 +1,97 @@
+"""
+Chanakya AI v4.0 — Smart Scanner
+MTF + Options Intel + Decision Engine integrated
+"""
+import logging, time
+logger = logging.getLogger(__name__)
+
+SYMBOLS = [
+    {"symbol":"NIFTY",      "token":"99926000","exchange":"NSE","lot":75},
+    {"symbol":"BANKNIFTY",  "token":"99926009","exchange":"NSE","lot":30},
+    {"symbol":"FINNIFTY",   "token":"99926037","exchange":"NSE","lot":65},
+    {"symbol":"CRUDEOIL",   "token":"488290",  "exchange":"MCX","lot":100},
+    {"symbol":"NATURALGAS", "token":"487465",  "exchange":"MCX","lot":1250},
+]
+
+def smart_scan(broker):
+    """Full MTF + Decision scan"""
+    from engine.mtf_engine import analyze_mtf
+    from engine.decision_engine import make_decision
+    from engine.option_chain import get_best_option
+    from engine.signal_store import update
+
+    signals = []
+
+    for sym_info in SYMBOLS:
+        sym   = sym_info["symbol"]
+        token = sym_info["token"]
+        exch  = sym_info["exchange"]
+        lot   = sym_info["lot"]
+
+        try:
+            # MTF Analysis
+            mtf = analyze_mtf(broker, sym, token, exch)
+            if not mtf:
+                logger.debug(f"{sym}: MTF failed")
+                continue
+
+            # Decision
+            decision = make_decision(mtf)
+            if not decision:
+                logger.debug(f"{sym}: No signal (score too low)")
+                continue
+
+            opt_type = decision["opt_type"]
+            ltp      = mtf["ltp"]
+
+            # Get option LTP
+            opt_info = get_best_option(
+                broker.api, sym, ltp, opt_type,
+                mtf["master_trend"]
+            )
+            if not opt_info or opt_info.get("option_ltp", 0) <= 0:
+                logger.debug(f"{sym}: No option LTP")
+                continue
+
+            oltp = opt_info["option_ltp"]
+
+            signals.append({
+                "symbol":        sym,
+                "exchange":      exch,
+                "opt_type":      opt_type,
+                "strategy":      "MTF_SMART",
+                "score":         round(decision["score"] / 100, 3),
+                "score_pct":     decision["score"],
+                "confluence":    "HIGH" if decision["score"] >= 80 else "MEDIUM" if decision["score"] >= 65 else "LOW",
+                "regime":        mtf["master_trend"],
+                "ltp":           ltp,
+                "underlying_ltp": ltp,
+                "entry":         oltp,
+                "target":        round(oltp * 1.25, 2),
+                "sl":            round(oltp * 0.85, 2),
+                "rr":            round(0.25/0.15, 2),
+                "option_symbol": opt_info["symbol"],
+                "option_token":  opt_info["token"],
+                "strike":        opt_info["strike"],
+                "strike_type":   opt_info["strike_type"],
+                "atm_strike":    opt_info["atm_strike"],
+                "lot_size":      lot,
+                "rsi":           mtf["rsi_1m"],
+                "vwap":          mtf["vwap"],
+                "adx":           mtf["adx"],
+                "vol_ratio":     mtf["vol_ratio"],
+                "reason":        " | ".join(decision["reasons"][:3]),
+            })
+
+            logger.info(f"✅ {sym} {opt_type}: score={decision['score']} {mtf['master_trend']}")
+
+        except Exception as e:
+            logger.error(f"SmartScan {sym}: {e}")
+            continue
+
+        time.sleep(0.5)  # Rate limit
+
+    signals.sort(key=lambda x: x["score"], reverse=True)
+    update("avinash", signals)
+    logger.info(f"SmartScan complete: {len(signals)} signals")
+    return signals
