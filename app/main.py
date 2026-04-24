@@ -1287,12 +1287,10 @@ def tickers_v3():
         if not _tick_broker.connected:
             return jsonify({"success": True, "NIFTY":{"ltp":0,"change_pct":0}})
 
-            broker.connect()
-
         for sym, info in symbols.items():
             try:
                 ltp = _tick_broker.get_ltp(info["exch"], sym, info["token"])
-                prev = _get_prev_close(_tick_broker, sym, info["token"], info["exchange"])
+                prev = _get_prev_close(_tick_broker, sym, info["token"], info["exch"])
                 chg  = round(((ltp-prev)/prev)*100, 2) if prev > 0 else 0
                 result[sym] = {"ltp": ltp, "change_pct": chg, "prev_close": prev}
             except Exception as _te:
