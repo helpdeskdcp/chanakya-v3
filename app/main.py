@@ -188,6 +188,31 @@ def logout():
     return jsonify({"success": True})
 
 # ── Status API ─────────────────────────────────────────
+
+@app.route("/api/v3/stream/ltp")
+@require_auth
+def stream_ltp():
+    from flask import Response, stream_with_context
+    import json, time as _t
+    curr_user = get_current_user()
+    username = curr_user.get("username","")
+    def generate():
+        while True:
+            try:
+                from engine.token_manager import get_all_tokens
+                from engine.broker_pool import _pool
+                ub = _pool.get(username)
+                _b = ub if (ub and ub.connected) else broker
+                tokens = get_all_tokens(_b)
+                ltps = {sym: round(info.get("ltp",0),2) for sym,info in tokens.items() if info.get("ltp",0)>0}
+                yield f"data: {json.dumps(ltps)}\n\n"
+            except Exception:
+                yield "data: {}\n\n"
+            _t.sleep(3)
+    return Response(stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+
 @app.route("/api/v3/status")
 def status():
     # Per-user broker info
