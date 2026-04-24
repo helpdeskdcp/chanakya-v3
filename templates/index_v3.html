@@ -1088,6 +1088,66 @@ async function emergencyExit(tradeId, symbol) {
   }
 }
 
+
+// ── REAL-TIME LTP via SSE ──────────────────────────
+var _sseSource = null;
+var _ltpData   = {};
+
+function startSSE() {
+  if (_sseSource) _sseSource.close();
+  if (!TOKEN) return;
+
+  _sseSource = new EventSource(API + '/stream/ltp?token=' + TOKEN);
+
+  _sseSource.onmessage = function(e) {
+    try {
+      var data = JSON.parse(e.data);
+      if (!data || Object.keys(data).length === 0) return;
+      _ltpData = data;
+      // Update ticker display
+      Object.keys(data).forEach(function(sym) {
+        var ltp = data[sym];
+        if (!ltp || ltp === 0) return;
+        // Update ticker elements
+        var el = document.getElementById('tick-' + sym);
+        if (el) el.textContent = '₹' + ltp.toFixed(2);
+        // Update signal LTP
+        var sigEl = document.getElementById('sig-ltp-' + sym + 'CE');
+        if (sigEl) sigEl.textContent = '₹' + ltp.toFixed(2);
+        var sigElPE = document.getElementById('sig-ltp-' + sym + 'PE');
+        if (sigElPE) sigElPE.textContent = '₹' + ltp.toFixed(2);
+      });
+      // Update positions live P&L
+      _updateAllPositionPnL(data);
+    } catch(ex) {}
+  };
+
+  _sseSource.onerror = function() {
+    // Reconnect after 5 sec
+    setTimeout(function() { startSSE(); }, 5000);
+  };
+}
+
+function _updateAllPositionPnL(ltpMap) {
+  document.querySelectorAll('[data-sym]').forEach(function(row) {
+    var sym    = row.getAttribute('data-sym');
+    var ltp    = ltpMap[sym] || 0;
+    if (!ltp) return;
+    var entry  = parseFloat(row.getAttribute('data-entry') || 0);
+    var lots   = parseInt(row.getAttribute('data-lots') || 1);
+    var lotSz  = parseInt(row.getAttribute('data-lotsize') || 1);
+    var opt    = row.getAttribute('data-opt') || 'CE';
+    var ltpEl  = row.querySelector('.pos-ltp');
+    var pnlEl  = row.querySelector('.pos-pnl');
+    if (ltpEl) ltpEl.textContent = '₹' + ltp.toFixed(2);
+    if (pnlEl && entry > 0) {
+      var pnl = (ltp - entry) * lots * lotSz;
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + '₹' + pnl.toFixed(2);
+      pnlEl.style.color = pnl >= 0 ? '#00e676' : '#ff5252';
+    }
+  });
+}
+
 // ── AUTH ──────────────────────────────────────────────
 async function doLogin() {
   const u = document.getElementById('U').value.trim();
@@ -1210,7 +1270,7 @@ async function startApp() {
   toast('✅ Dashboard Ready!', '#00e676');
   setInterval(loadAll, 15000);
   setInterval(loadTickers, 3000);
-  startLTPEngine();
+  startSSE();  // Real-time SSE LTP
 }
 
 async function loadAll() {
