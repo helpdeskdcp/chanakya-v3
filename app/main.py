@@ -1279,6 +1279,10 @@ def tickers_v3():
             "BANKNIFTY": {"token": "99926009", "exch": "NSE"},
             "FINNIFTY":  {"token": "99926037", "exch": "NSE"},
         }
+        # Ensure broker connected
+        if not broker.connected:
+            broker.connect()
+
         for sym, info in symbols.items():
             try:
                 ltp = broker.get_ltp(info["exch"], sym, info["token"])
