@@ -1242,34 +1242,6 @@ function buyFromCard(btn) {
 }
 
 
-function buyFromCard(btn) {
-  var sym     = btn.getAttribute('data-sym');
-  var opt     = btn.getAttribute('data-opt');
-  var osym    = btn.getAttribute('data-osym');
-  var entry   = parseFloat(btn.getAttribute('data-entry')||0);
-  var target  = parseFloat(btn.getAttribute('data-target')||0);
-  var sl      = parseFloat(btn.getAttribute('data-sl')||0);
-  var rr      = parseFloat(btn.getAttribute('data-rr')||0);
-  var strategy= btn.getAttribute('data-strategy')||'';
-  var exch    = btn.getAttribute('data-exch')||'NSE';
-
-  var msg = 'PAPER BUY\n\n'+osym+'\nEntry: ₹'+entry.toFixed(2)+'\nTarget: ₹'+target.toFixed(2)+'\nSL: ₹'+sl.toFixed(2)+'\nR:R: '+rr.toFixed(2);
-  if (!confirm(msg)) return;
-
-  api('/trade', {method:'POST', body: JSON.stringify({
-    symbol: sym, exchange: exch, opt_type: opt,
-    option_symbol: osym,
-    entry_price: entry, target_price: target, sl_price: sl,
-    lots: 1, strategy: strategy, mode: 'PAPER'
-  })}).then(function(d) {
-    if (d && d.success) {
-      toast('✅ PAPER Trade: '+osym, '#00e676');
-      loadPositions();
-    } else {
-      toast('❌ Failed: '+(d&&d.error?d.error:'Error'), '#ff5252');
-    }
-  });
-}
 
 // ── AUTH ──────────────────────────────────────────────
 async function doLogin() {
@@ -1637,40 +1609,49 @@ async function loadSignals() {
   const c = document.getElementById('sigCont');
   if(!d || !d.signals || !d.signals.length) { c.innerHTML='<div style="text-align:center;padding:40px;color:#8090a8">No signals — market may be closed</div>'; return; }
   c.innerHTML = d.signals.map(function(s) {
-    var entry  = (s.entry  || s.entry_price  || 0).toFixed(2);
-    var target = (s.target || s.target_price || 0).toFixed(2);
-    var sl     = (s.sl     || s.sl_price     || 0).toFixed(2);
+    var entry  = (s.entry  || 0).toFixed(2);
+    var target = (s.target || 0).toFixed(2);
+    var sl     = (s.sl     || 0).toFixed(2);
     var score  = ((s.score || 0) * 100).toFixed(1);
     var rr     = (s.rr || 0).toFixed(2);
     var ltp    = (s.ltp || 0).toFixed(2);
     var clr    = s.opt_type === 'CE' ? '#00e676' : '#ff5252';
     var now    = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    var optSym = (s.option_symbol && s.option_symbol.length > 3) ? s.option_symbol : (s.symbol+(s.strike||'')+(s.opt_type||''));
+    var osym   = (s.option_symbol && s.option_symbol.length > 3) ? s.option_symbol : '';
+    var strike = s.strike || s.atm_strike || 0;
     return '<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:10px;padding:12px;margin-bottom:8px">' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
         '<div style="display:flex;align-items:center;gap:6px">' +
           '<b style="color:'+clr+'">'+s.symbol+' '+s.opt_type+'</b>' +
           '<span style="font-size:9px;background:rgba(0,200,255,.1);color:#00c8ff;padding:1px 6px;border-radius:10px">'+(s.strategy||'')+'</span>' +
           '<span style="font-size:9px;color:#d4af37">'+(s.confluence||'')+'</span>' +
         '</div>' +
-        '<span style="font-size:10px;color:#8090a8">'+now+' | '+(s.regime||'')+'</span>' +
+        '<span style="font-size:9px;color:#8090a8">'+now+' | '+(s.regime||'')+'</span>' +
       '</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px;margin-bottom:6px">' +
+      (osym ? '<div style="font-size:10px;color:#00c8ff;margin-bottom:6px;font-weight:600">📋 '+osym+'</div>' : '') +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px;margin-bottom:6px">' +
         '<div><div style="color:#8090a8;font-size:9px">ENTRY</div><b style="color:#00c8ff">₹'+entry+'</b></div>' +
         '<div><div style="color:#8090a8;font-size:9px">TARGET</div><b style="color:#00e676">₹'+target+'</b></div>' +
         '<div><div style="color:#8090a8;font-size:9px">SL</div><b style="color:#ff5252">₹'+sl+'</b></div>' +
         '<div><div style="color:#8090a8;font-size:9px">R:R</div><b style="color:#d4af37">'+rr+'</b></div>' +
       '</div>' +
-      // Register LTP for this signal
-      registerLTP(s.symbol, '', s.exchange, function(newLtp) {
-        var ltpEl = document.getElementById('sig-ltp-'+s.symbol+s.opt_type);
-        if (ltpEl) ltpEl.textContent = '₹' + newLtp.toFixed(2);
-      });
-      '<div style="display:flex;gap:12px;font-size:10px;flex-wrap:wrap">' +
+      '<div style="display:flex;gap:12px;font-size:10px;margin-bottom:8px">' +
         '<span style="color:#8090a8">Score: <b style="color:#fff">'+score+'%</b></span>' +
-        '<span style="color:#8090a8">LTP: <b style="color:#00c8ff" id="sig-ltp-'+s.symbol+s.opt_type+'">₹'+ltp+'</b></span>' +
-        '<span style="color:#8090a8">ATM Strike: <b style="color:#d4af37">'+((s.atm_strike||0).toFixed(0))+'</b></span>' +
-        '<span style="color:#8090a8">Lot: <b style="color:#fff">'+(s.lot_size||1)+'</b></span>' +
+        '<span style="color:#8090a8">LTP: <b style="color:#00c8ff">₹'+ltp+'</b></span>' +
+        '<span style="color:#8090a8">Strike: <b style="color:#d4af37">'+strike+'</b></span>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="buyFromCard(this)" ' +
+          'data-sym="'+s.symbol+'" ' +
+          'data-opt="'+(s.opt_type||'')+'" ' +
+          'data-osym="'+(s.option_symbol||s.symbol)+'" ' +
+          'data-entry="'+(s.entry||0)+'" ' +
+          'data-target="'+(s.target||0)+'" ' +
+          'data-sl="'+(s.sl||0)+'" ' +
+          'data-rr="'+(s.rr||0)+'" ' +
+          'data-strategy="'+(s.strategy||'')+'" ' +
+          'data-exch="'+(s.exchange||'MCX')+'" ' +
+          'style="flex:1;background:linear-gradient(135deg,#1e3a5f,#00c8ff33);color:#00c8ff;border:1px solid #00c8ff;padding:8px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer">📈 BUY PAPER</button>' +
       '</div>' +
     '</div>';
   }).join('');
