@@ -1149,7 +1149,8 @@ function _updateAllPositionPnL(ltpMap) {
 }
 
 
-async function buySignal(sig) {
+// removed
+async function buySignal_old(sig) {
   var sym  = sig.option_symbol || sig.symbol;
   var mode = 'PAPER';
   var lots = 1;
@@ -1179,7 +1180,8 @@ async function buySignal(sig) {
   }
 }
 
-async function buySignalLive(sig) {
+// removed
+async function buySignal_oldLive(sig) {
   var sym = sig.option_symbol || sig.symbol;
   var confirmed = confirm('🔴 LIVE TRADE — REAL MONEY!\n\n' + sym + '\nEntry: ₹' + (sig.entry||0).toFixed(2) + '\nSL: ₹' + (sig.sl||0).toFixed(2) + '\n\n⚠️ This will use real money!\nConfirm?');
   if (!confirmed) return;
@@ -1205,6 +1207,36 @@ async function buySignalLive(sig) {
   } else {
     toast('❌ Trade failed: ' + (d && d.error ? d.error : 'Error'), '#ff5252');
   }
+}
+
+
+function buyFromCard(btn) {
+  var sym     = btn.getAttribute('data-sym');
+  var opt     = btn.getAttribute('data-opt');
+  var osym    = btn.getAttribute('data-osym');
+  var entry   = parseFloat(btn.getAttribute('data-entry')||0);
+  var target  = parseFloat(btn.getAttribute('data-target')||0);
+  var sl      = parseFloat(btn.getAttribute('data-sl')||0);
+  var rr      = parseFloat(btn.getAttribute('data-rr')||0);
+  var strategy= btn.getAttribute('data-strategy')||'';
+  var exch    = btn.getAttribute('data-exch')||'NSE';
+
+  var msg = 'PAPER BUY\n\n'+osym+'\nEntry: ₹'+entry.toFixed(2)+'\nTarget: ₹'+target.toFixed(2)+'\nSL: ₹'+sl.toFixed(2)+'\nR:R: '+rr.toFixed(2);
+  if (!confirm(msg)) return;
+
+  api('/trade', {method:'POST', body: JSON.stringify({
+    symbol: sym, exchange: exch, opt_type: opt,
+    option_symbol: osym,
+    entry_price: entry, target_price: target, sl_price: sl,
+    lots: 1, strategy: strategy, mode: 'PAPER'
+  })}).then(function(d) {
+    if (d && d.success) {
+      toast('✅ PAPER Trade: '+osym, '#00e676');
+      loadPositions();
+    } else {
+      toast('❌ Failed: '+(d&&d.error?d.error:'Error'), '#ff5252');
+    }
+  });
 }
 
 // ── AUTH ──────────────────────────────────────────────
