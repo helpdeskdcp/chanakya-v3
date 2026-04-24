@@ -1272,6 +1272,39 @@ def backtest_replay():
 def tickers_v3():
     """Live ticker prices — no auth required for topbar"""
     try:
+        from engine.broker import broker as _b
+        if not _b.connected:
+            _b.connect()
+        result = {}
+        ALL_SYMBOLS = [
+            ("NIFTY",      "99926000", "NSE"),
+            ("BANKNIFTY",  "99926009", "NSE"),
+            ("FINNIFTY",   "99926037", "NSE"),
+            ("CRUDEOIL",   "488290",   "MCX"),
+            ("NATURALGAS", "487465",   "MCX"),
+        ]
+        for sym, token, exch in ALL_SYMBOLS:
+            try:
+                r = _b.api.ltpData(exch, sym, token)
+                if r and r.get("data"):
+                    ltp  = float(r["data"].get("ltp", 0))
+                    prev = float(r["data"].get("close", 0))
+                    chg  = round(((ltp-prev)/prev)*100, 2) if prev > 0 else 0
+                    result[sym] = {"ltp": ltp, "change_pct": chg, "prev_close": prev}
+                else:
+                    result[sym] = {"ltp": 0, "change_pct": 0}
+            except Exception as _te:
+                result[sym] = {"ltp": 0, "change_pct": 0}
+                logger.debug(f"Ticker {sym}: {_te}")
+        from data.market import get_vix
+        result["VIX"] = {"ltp": get_vix(), "change_pct": 0}
+        return jsonify({"success": True, **result})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+def _tickers_old():
+    """OLD — disabled"""
+    try:
         from config import config
         result = {}
         symbols = {
@@ -1279,13 +1312,6 @@ def tickers_v3():
             "BANKNIFTY": {"token": "99926009", "exch": "NSE"},
             "FINNIFTY":  {"token": "99926037", "exch": "NSE"},
         }
-        # Ensure broker connected
-        # Fresh broker import — ensure correct instance
-        from engine.broker import broker as _tick_broker
-        if not _tick_broker.connected:
-            _tick_broker.connect()
-        if not _tick_broker.connected:
-            return jsonify({"success": True, "NIFTY":{"ltp":0,"change_pct":0}})
 
         for sym, info in symbols.items():
             try:
