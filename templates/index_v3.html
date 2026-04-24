@@ -1148,6 +1148,65 @@ function _updateAllPositionPnL(ltpMap) {
   });
 }
 
+
+async function buySignal(sig) {
+  var sym  = sig.option_symbol || sig.symbol;
+  var mode = 'PAPER';
+  var lots = 1;
+  var confirmed = confirm('📈 PAPER BUY\n\n' + sym + '\nEntry: ₹' + (sig.entry||0).toFixed(2) + '\nTarget: ₹' + (sig.target||0).toFixed(2) + '\nSL: ₹' + (sig.sl||0).toFixed(2) + '\nR:R: ' + (sig.rr||0).toFixed(2) + '\n\nConfirm?');
+  if (!confirmed) return;
+  var d = await api('/trade', {
+    method: 'POST',
+    body: JSON.stringify({
+      symbol:       sig.symbol,
+      exchange:     sig.exchange || 'NSE',
+      opt_type:     sig.opt_type,
+      option_symbol: sym,
+      entry_price:  sig.entry || 0,
+      target_price: sig.target || 0,
+      sl_price:     sig.sl || 0,
+      lots:         lots,
+      strategy:     sig.strategy || 'SIGNAL',
+      strike:       sig.strike || 0,
+      mode:         mode,
+    })
+  });
+  if (d && d.success) {
+    toast('✅ PAPER Trade placed! ' + sym, '#00e676');
+    loadPositions();
+  } else {
+    toast('❌ Trade failed: ' + (d && d.error ? d.error : 'Error'), '#ff5252');
+  }
+}
+
+async function buySignalLive(sig) {
+  var sym = sig.option_symbol || sig.symbol;
+  var confirmed = confirm('🔴 LIVE TRADE — REAL MONEY!\n\n' + sym + '\nEntry: ₹' + (sig.entry||0).toFixed(2) + '\nSL: ₹' + (sig.sl||0).toFixed(2) + '\n\n⚠️ This will use real money!\nConfirm?');
+  if (!confirmed) return;
+  var d = await api('/trade', {
+    method: 'POST',
+    body: JSON.stringify({
+      symbol:       sig.symbol,
+      exchange:     sig.exchange || 'NSE',
+      opt_type:     sig.opt_type,
+      option_symbol: sym,
+      entry_price:  sig.entry || 0,
+      target_price: sig.target || 0,
+      sl_price:     sig.sl || 0,
+      lots:         1,
+      strategy:     sig.strategy || 'SIGNAL',
+      strike:       sig.strike || 0,
+      mode:         'LIVE',
+    })
+  });
+  if (d && d.success) {
+    toast('✅ LIVE Trade placed! ' + sym, '#00e676');
+    loadPositions();
+  } else {
+    toast('❌ Trade failed: ' + (d && d.error ? d.error : 'Error'), '#ff5252');
+  }
+}
+
 // ── AUTH ──────────────────────────────────────────────
 async function doLogin() {
   const u = document.getElementById('U').value.trim();
