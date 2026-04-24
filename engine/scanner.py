@@ -355,7 +355,7 @@ class SignalScanner:
                         f"📈 R:R: {sig.get('rr',0)}\n"
                         f"💡 {sig.get('strategy','')}"
                     )
-                    telegram.send(msg)
+                    telegram.signal_alert(sig)
         except Exception as _te:
             logger.debug(f"Telegram: {_te}")
 

@@ -102,7 +102,7 @@ def smart_scan(broker):
                         f"{'━'*25}\n"
                         f"💡 {decision.get('reasons',[''])[0] if decision.get('reasons') else ''}"
                     )
-                    telegram.send(msg)
+                    telegram.signal_alert(signals[-1])
             except Exception as _te:
                 logger.debug(f"Telegram: {_te}")
             # Telegram alert
@@ -123,7 +123,7 @@ def smart_scan(broker):
                         f"{'━'*25}\n"
                         f"💡 {decision.get('reasons',[''])[0] if decision.get('reasons') else ''}"
                     )
-                    telegram.send(msg)
+                    telegram.signal_alert(signals[-1])
             except Exception as _te:
                 logger.debug(f"Telegram: {_te}")
 
