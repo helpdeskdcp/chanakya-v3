@@ -1280,17 +1280,24 @@ def tickers_v3():
             "FINNIFTY":  {"token": "99926037", "exch": "NSE"},
         }
         # Ensure broker connected
-        if not broker.connected:
+        # Fresh broker import — ensure correct instance
+        from engine.broker import broker as _tick_broker
+        if not _tick_broker.connected:
+            _tick_broker.connect()
+        if not _tick_broker.connected:
+            return jsonify({"success": True, "NIFTY":{"ltp":0,"change_pct":0}})
+
             broker.connect()
 
         for sym, info in symbols.items():
             try:
-                ltp = broker.get_ltp(info["exch"], sym, info["token"])
-                prev = _get_prev_close(broker, sym, info["token"], info["exchange"])
+                ltp = _tick_broker.get_ltp(info["exch"], sym, info["token"])
+                prev = _get_prev_close(_tick_broker, sym, info["token"], info["exchange"])
                 chg  = round(((ltp-prev)/prev)*100, 2) if prev > 0 else 0
                 result[sym] = {"ltp": ltp, "change_pct": chg, "prev_close": prev}
-            except Exception:
+            except Exception as _te:
                 result[sym] = {"ltp": 0, "change_pct": 0}
+                logger.error(f"Ticker {sym} error: {_te}")
         # MCX spot prices
         try:
             from angel_live_chain_v3 import load_instruments
@@ -1305,7 +1312,7 @@ def tickers_v3():
                     i.get("exch_seg")=="MCX" and
                     i.get("instrumenttype")=="FUTCOM"), None)
                 if fut:
-                    ltp = broker.get_ltp("MCX", fut["symbol"], fut["token"])
+                    ltp = _tick_broker.get_ltp("MCX", fut["symbol"], fut["token"])
                     result[sym] = {"ltp": ltp or 0, "change_pct": 0}
         except Exception as _me:
             pass
