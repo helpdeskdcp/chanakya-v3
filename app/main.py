@@ -2121,6 +2121,7 @@ def user_pnl():
         FROM trades WHERE status='CLOSED'
         AND (username=? OR username IS NULL)
         AND ABS(pnl) < 100000
+        AND created_at >= '2026-04-23'
     """, (username,)).fetchone()
     conn.close()
     today_pnl   = round(t["pnl"] or 0, 2)
