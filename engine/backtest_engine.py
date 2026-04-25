@@ -181,6 +181,7 @@ def generate_signals(candles, symbol="NIFTY", opt_type="CE"):
 
 
 def simulate_trade(signal, candles, sl_pct=0.30, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
+    # spot_sl=0.4%, spot_t1=0.7%, spot_t2=1.2%, spot_t3=2.0%
     """
     Simulate option trade using spot price movement
     """
@@ -215,66 +216,78 @@ def simulate_trade(signal, candles, sl_pct=0.30, t1_pct=0.20, t2_pct=0.35, t3_pc
         "adx":         signal['adx'],
     }
 
-    trail_sl   = sl
-    max_bars   = 30
-    best_high  = entry  # Track cumulative best option high
-    worst_low  = entry  # Track cumulative worst option low
+    # SPOT-based levels (much more realistic)
+    # CE: profit when spot goes UP | PE: profit when spot goes DOWN
+    spot_sl_pct = 0.004   # 0.4% spot adverse  → -30% option loss
+    spot_t1_pct = 0.007   # 0.7% spot favourable → +20% option gain
+    spot_t2_pct = 0.012   # 1.2% → +35% option gain
+    spot_t3_pct = 0.020   # 2.0% → +50% option gain
+
+    if opt_type == "CE":
+        spot_sl = spot_entry * (1 - spot_sl_pct)
+        spot_t1 = spot_entry * (1 + spot_t1_pct)
+        spot_t2 = spot_entry * (1 + spot_t2_pct)
+        spot_t3 = spot_entry * (1 + spot_t3_pct)
+    else:
+        spot_sl = spot_entry * (1 + spot_sl_pct)
+        spot_t1 = spot_entry * (1 - spot_t1_pct)
+        spot_t2 = spot_entry * (1 - spot_t2_pct)
+        spot_t3 = spot_entry * (1 - spot_t3_pct)
+
+    trail_spot_sl = spot_sl
+    max_bars = 30
 
     for i in range(i_start, min(i_start+max_bars, len(candles))):
-        c = candles[i]
+        can = candles[i]
         result['bars_held'] = i - i_start + 1
+        sh = can['high']; sl_c = can['low']; sc = can['close']
 
-        spot_now  = c['close']
-        spot_high = c['high']
-        spot_low  = c['low']
-
-        # Cumulative % change from entry spot
         if opt_type == "CE":
-            chg_high = (spot_high - spot_entry) / spot_entry
-            chg_low  = (spot_low  - spot_entry) / spot_entry
+            fav_price = sh   # CE profits from high
+            adv_price = sl_c # CE risks from low
         else:
-            chg_high = (spot_entry - spot_low)  / spot_entry
-            chg_low  = (spot_entry - spot_high) / spot_entry
+            fav_price = sl_c # PE profits from low
+            adv_price = sh   # PE risks from high
 
-        # Option price simulation with 3x leverage
-        sim_high = entry * (1 + chg_high * 3.0)
-        sim_low  = entry * (1 + chg_low  * 3.0)
-        sim_high = max(sim_high, entry * 0.05)
-        sim_low  = max(sim_low,  entry * 0.05)
+        # T3
+        if result['t2_hit']:
+            hit = fav_price >= spot_t3 if opt_type=="CE" else fav_price <= spot_t3
+            if hit:
+                result['t3_hit'] = True
+                result['exit']   = round(entry*(1+t3_pct),1)
+                result['exit_reason'] = "T3_HIT"; break
 
-        # Update running best/worst
-        if sim_high > best_high: best_high = sim_high
-        if sim_low  < worst_low: worst_low = sim_low
+        # T2
+        if result['t1_hit'] and not result['t2_hit']:
+            hit = fav_price >= spot_t2 if opt_type=="CE" else fav_price <= spot_t2
+            if hit:
+                result['t2_hit'] = True
+                trail_spot_sl = spot_entry  # Trail to entry spot
 
-        # T3 check
-        if result['t2_hit'] and best_high >= t3:
-            result['t3_hit']     = True
-            result['exit']       = round(t3, 1)
-            result['exit_reason']= "T3_HIT"
-            break
-
-        # T2 check
-        if result['t1_hit'] and best_high >= t2:
-            result['t2_hit'] = True
-            trail_sl = entry * (1 + t1_pct*0.5)
-
-        # T1 check
-        if not result['t1_hit'] and best_high >= t1:
-            result['t1_hit'] = True
-            trail_sl = entry  # Move to cost
+        # T1
+        if not result['t1_hit']:
+            hit = fav_price >= spot_t1 if opt_type=="CE" else fav_price <= spot_t1
+            if hit:
+                result['t1_hit'] = True
+                trail_spot_sl = spot_entry  # Move SL to cost
 
         # SL check
-        if worst_low <= trail_sl:
-            result['exit']       = round(trail_sl, 1)
-            result['exit_reason']= "TRAIL_SL" if result['t1_hit'] else "SL_HIT"
+        sl_hit = adv_price <= trail_spot_sl if opt_type=="CE" else adv_price >= trail_spot_sl
+        if sl_hit:
+            if result['t1_hit']:
+                result['exit'] = round(entry,1)  # Cost exit
+                result['exit_reason'] = "TRAIL_SL"
+            else:
+                result['exit'] = round(entry*(1-sl_pct),1)
+                result['exit_reason'] = "SL_HIT"
             break
 
-        # Final bar timeout
+        # Timeout
         if i == min(i_start+max_bars, len(candles))-1:
-            spot_now_chg = (spot_now-spot_entry)/spot_entry if opt_type=="CE" else (spot_entry-spot_now)/spot_entry
-            curr_prem    = max(entry*(1+spot_now_chg*2), entry*0.1)
-            result['exit']       = round(curr_prem, 1)
-            result['exit_reason']= "TIMEOUT"
+            chg = (sc-spot_entry)/spot_entry if opt_type=="CE" else (spot_entry-sc)/spot_entry
+            curr = max(entry*(1+chg*3), entry*0.1)
+            result['exit'] = round(curr,1)
+            result['exit_reason'] = "TIMEOUT"
 
     pnl_pct = (result['exit'] - entry) / entry * 100
     result['pnl_pct'] = round(pnl_pct, 2)
