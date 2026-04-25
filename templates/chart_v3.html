@@ -261,6 +261,10 @@ async function loadMain() {
 
   mainChart.timeScale().fitContent();
   macdChart.timeScale().fitContent();
+  // Force resize
+  mainChart.applyOptions({width: document.getElementById('mainChart').clientWidth});
+  macdChart.applyOptions({width: document.getElementById('macdChart').clientWidth});
+  if (el) el.style.display='none';
 }
 
 async function loadStrikes() {
@@ -336,6 +340,13 @@ function startSSE() {
 }
 
 // Init after DOM ready
+window.addEventListener('resize', function() {
+  if (mainChart) mainChart.applyOptions({width: document.getElementById('mainChart').clientWidth});
+  if (macdChart) macdChart.applyOptions({width: document.getElementById('macdChart').clientWidth});
+  if (ceChart)   ceChart.applyOptions({width: document.getElementById('ceChart').clientWidth});
+  if (peChart)   peChart.applyOptions({width: document.getElementById('peChart').clientWidth});
+});
+
 window.onload = function() {
   document.getElementById('chartStatus').textContent = 'Charts init...';
   initCharts();
