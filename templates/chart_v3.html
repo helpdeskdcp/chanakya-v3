@@ -124,7 +124,11 @@ body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;height:1
 var TOKEN = localStorage.getItem('cv3t') || '';
 var API   = '/api/v3';
 console.log('TOKEN:', TOKEN ? TOKEN.substring(0,8)+'...' : 'EMPTY');
-if (!TOKEN) { window.location.href = '/v3'; }
+if (!TOKEN) {
+  // Save current URL and redirect to login
+  localStorage.setItem('cv3_redirect', '/v3/chart');
+  window.location.href = '/v3';
+}
 
 var _sym      = 'NIFTY';
 var _interval = 'FIVE_MINUTE';
