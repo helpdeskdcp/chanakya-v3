@@ -56,6 +56,7 @@ body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;overflow
 </div>
 
 <!-- MAIN CHART — fixed 300px -->
+<div id="chartStatus" style="padding:8px;color:#d4af37;font-size:11px;text-align:center">Loading...</div>
 <div id="mainChart" style="width:100%;height:300px;background:#060d14"></div>
 
 <!-- MACD -->
@@ -211,11 +212,15 @@ function pivots(cs) {
 }
 
 async function loadMain() {
+  var el = document.getElementById('chartStatus');
+  if (el) el.textContent = 'Fetching '+_sym+' '+_tf+'...';
   var d = await api('/chart/candles?symbol='+_sym+'&interval='+_tf+'&days='+_days);
   if (!d||!d.success||!d.candles||!d.candles.length) {
+    if (el) el.textContent = 'No data: '+(d?d.error||d.count:'null');
     console.log('No data:', d);
     return;
   }
+  if (el) el.textContent = 'Got '+d.candles.length+' candles — rendering...';
   var cs = d.candles;
   var cd = cs.map(function(c){return {time:c.ts,open:c.open,high:c.high,low:c.low,close:c.close};});
   cd.sort(function(a,b){return a.time-b.time;});
@@ -331,15 +336,19 @@ function startSSE() {
 }
 
 // Init after DOM ready
-document.addEventListener('DOMContentLoaded', function() {
+window.onload = function() {
+  document.getElementById('chartStatus').textContent = 'Charts init...';
   initCharts();
+  document.getElementById('chartStatus').textContent = 'Loading candles...';
   setTimeout(function(){
-    loadMain();
+    loadMain().then(function(){
+      document.getElementById('chartStatus').style.display='none';
+    });
     loadStrikes();
     startSSE();
     setInterval(loadMain, 60000);
-  }, 200);
-});
+  }, 500);
+};
 </script>
 </body>
 </html>
