@@ -235,6 +235,63 @@ def stream_ltp():
         mimetype="text/event-stream",
         headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
 
+
+# ── Chart APIs ────────────────────────────────────────
+
+@app.route("/api/v3/chart/db-stats")
+@require_auth
+def chart_db_stats():
+    curr_user = get_current_user()
+    if curr_user.get("role") != "admin":
+        return jsonify({"success":False,"error":"Admin only"}), 403
+    from engine.candle_db import get_db_stats
+    return jsonify({"success":True,"stats":get_db_stats()})
+
+@app.route("/api/v3/chart/candles")
+@require_auth
+def chart_candles():
+    try:
+        curr_user = get_current_user()
+        if curr_user.get("role") not in ("admin","premium"):
+            return jsonify({"success":False,"error":"Premium only"}), 403
+        symbol   = request.args.get("symbol","NIFTY").upper()
+        interval = request.args.get("interval","FIVE_MINUTE")
+        days     = int(request.args.get("days","5"))
+        from engine.candle_db import get_candles_db, SYMBOLS, store_candles
+        candles = get_candles_db(symbol, interval, days=days)
+        if not candles:
+            from engine.candles import get_candles as _gc
+            si = next((s for s in SYMBOLS if s["symbol"]==symbol), None)
+            if si:
+                raw = _gc(broker, si["token"], exchange=si["exchange"],
+                         interval=interval, days=days)
+                if raw:
+                    store_candles(symbol, si["exchange"], interval, raw)
+                    candles = get_candles_db(symbol, interval, days=days)
+        return jsonify({"success":True,"symbol":symbol,"interval":interval,
+                        "count":len(candles),"candles":candles})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+@app.route("/api/v3/chart/strikes")
+@require_auth
+def chart_strikes():
+    try:
+        curr_user = get_current_user()
+        if curr_user.get("role") not in ("admin","premium"):
+            return jsonify({"success":False,"error":"Premium only"}), 403
+        symbol = request.args.get("symbol","NIFTY").upper()
+        from engine.candle_db import SYMBOLS
+        from engine.option_chain import get_atm_options
+        si = next((s for s in SYMBOLS if s["symbol"]==symbol), None)
+        if not si: return jsonify({"success":False,"error":"Unknown symbol"})
+        r = broker.api.ltpData(si["exchange"], symbol, si["token"])
+        ltp = float(r["data"]["ltp"]) if r and r.get("data") else 0
+        chain = get_atm_options(broker.api, symbol, ltp, num_strikes=3)
+        return jsonify({"success":True,"symbol":symbol,"ltp":ltp,"chain":chain})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/status")
 def status():
     # Per-user broker info
