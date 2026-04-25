@@ -45,102 +45,71 @@
 ## 🔴 PENDING HIGH PRIORITY
 
 ### 1. Live Trade — Angel One Order
-Currently: PAPER only
-Need:
-NSE options → INTRADAY + NRML
-MCX options → CARRYFORWARD
-Bracket order (simultaneous Target+SL)
-Order status tracking
+- Currently: PAPER only
+- Need: NSE INTRADAY+NRML, MCX CARRYFORWARD
+- Need: Bracket order (Target+SL simultaneous)
+- Need: Order status tracking
+
 ### 2. Auto SL/Target Monitor
-Currently: Manual only
-Need:
-5-sec position monitoring
-SL hit → auto exit order
-Target hit → auto exit
-Trail SL → auto update
+- Currently: Manual only
+- Need: 5-sec position monitoring
+- Need: SL/Target hit → auto exit
+- Need: Trail SL → auto update
+
 ### 3. Option Chain Page
-Currently: "Data not available"
-Need:
-Live CE/PE premiums
-OI data visualization
-ATM highlight
-Support/Resistance display
+- Currently: "Data not available"
+- Need: Live CE/PE premiums display
+- Need: OI visualization, ATM highlight
+
 ---
 
 ## 🟡 PENDING MEDIUM PRIORITY
 
-### 4. Phase 2 — ML Ensemble Voting
-Currently: Rules-based only (score 0-100)
-Need:
-XGBoost model retrain with new features
-Random Forest voting
-2/3 model agreement → TRADE
-ML probability in signal score
+### 4. ML Ensemble Voting (Phase 2)
+- Currently: Rules-based only
+- Need: XGBoost + RF + Rules 2/3 voting
+- Need: ML probability in signal score
+
 ### 5. Feature Engine (42+ features)
-Currently: Basic EMA/RSI/ADX
-Need:
-VWAP bands
-Volume profile
-OI-based features
-Greeks (Delta, Gamma, Theta)
-IV percentile
-### 6. Phase 3 — Risk Engine
-Need:
-ATR-based SL (not just %)
-Partial exit at T1
-Position sizing (2% capital)
-Max 3 concurrent trades
-### 7. FII/DII Real Data
----
+- Currently: Basic EMA/RSI/ADX
+- Need: VWAP bands, Volume profile
+- Need: OI features, Greeks, IV percentile
 
-## 🟢 PENDING LOWER PRIORITY
-
-### 8. Phase 4 — Self-Learning
-### 9. Backtest Engine
----
-
-## 🟢 PENDING LOWER PRIORITY
+### 6. Risk Engine (Phase 3)
+- Need: ATR-based SL
+- Need: Partial exit at T1
+- Need: Position sizing (2% capital max)
 
 ### 7. FII/DII Real Data
-Currently: 0 (market closed fetch)
-Need:
-NSE API fetch on market open
-Daily bias indicator
-Caching strategy
+- Currently: 0 (market closed)
+- Need: NSE API on market open
+- Need: Daily bias indicator
+
 ---
 
 ## 🟢 PENDING LOWER PRIORITY
 
-### 8. Phase 4 — Self-Learning
-Per-trade logging with features
-Weekly weight adjustment
-Win/loss pattern analysis
-Strategy performance tracking
+### 8. Self-Learning Engine (Phase 4)
+- Per-trade logging with features
+- Weekly weight adjustment
+- Win/loss pattern analysis
+
 ### 9. Backtest Engine
-Historical signal validation
-3-month backtest
-Strategy comparison
-Win rate per strategy
+- 3-month historical validation
+- Strategy comparison
+- Win rate per strategy
+
 ### 10. Mobile PWA
-Add to home screen
-Push notifications
-Offline capability
-### 11. SMTP Email OTP
-### 12. Multi-User Signals
-Currently: All users same signal (avinash)
-Need: Per-user signal based on their broker
-
-
+- Add to home screen
+- Push notifications
 
 ### 11. SMTP Email OTP
-Gmail App Password setup
-Registration verification
-Password reset
-
+- Gmail App Password setup
+- Registration verification
 
 ### 12. Multi-User Signals
-Currently: All users same signal (avinash)
-Need: Per-user signal based on their broker
+- Currently: All users get avinash signals
+- Need: Per-user signal based on own broker
 
 ---
 
@@ -149,32 +118,28 @@ Current (v3.6.3): ~65-70% (rules + MTF)
 Phase 2 ML:       ~72-76% (ensemble)
 Phase 3 Risk:     ~74-78% (better exits)
 Phase 4 Learning: ~76-80% (self-improving)
-
-
-
 ---
 
 ## ⚠️ CHANAKYA'S GOLDEN RULES
-Paper trade minimum 2 weeks before Live
-Capital protection > profit chasing
-Score >= 70 only — no FOMO trades
-Log every trade — learn from losses
-Market respect karo — 100% win rate impossible
+
+1. Paper trade minimum 2 weeks before Live
+2. Capital protection > profit chasing
+3. Score >= 70 only — no FOMO trades
+4. Log every trade — learn from losses
+5. Market respect karo — 100% win rate impossible
 
 ---
 
 ## 🗓️ NEXT SESSION PLAN
 Monday 9:15 AM:
-→ Market open
-→ First MTF signals
+→ Market open → First MTF signals
 → Paper trade test
 → Telegram alerts verify
 → T1/T2/T3 tracking test
 This Week:
-→ Live Trade implementation
+→ Live Trade (Angel One order)
 → Auto SL Monitor
 → Option Chain page
 Next Week:
 → ML Ensemble Phase 2
 → Backtest validation
-
