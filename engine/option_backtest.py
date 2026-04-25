@@ -151,6 +151,10 @@ def generate_spot_signals(spot_candles, opt_type="CE"):
             avg_v = sum(vols)/len(vols) if vols else 1
             if avg_v > 0 and c.get('volume',0) > avg_v*1.5: score += 15
 
+        # Skip low volatility
+        if atr_v < 3:
+            continue
+
         if score >= 75:
             signals.append({
                 "ts":       ts,
@@ -170,16 +174,20 @@ def generate_spot_signals(spot_candles, opt_type="CE"):
 
 
 def find_atm_option(spot, options, opt_type):
-    """Find best ATM option for given spot"""
+    """Find slightly ITM option for faster premium move"""
     atm = round(spot/50)*50
-    # Find closest strike
     candidates = [o for o in options if o['type']==opt_type]
     if not candidates: return None
-    candidates.sort(key=lambda x: abs(x['strike']-atm))
+    # CE: slightly ITM = strike below spot | PE: slightly ITM = strike above spot
+    if opt_type == "CE":
+        target_strike = atm - 50  # 1 strike ITM for CE
+    else:
+        target_strike = atm + 50  # 1 strike ITM for PE
+    candidates.sort(key=lambda x: abs(x['strike']-target_strike))
     return candidates[0]
 
 
-def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
+def simulate_real_trade(signal, opt_candles, sl_pct=0.12, t1_pct=0.08, t2_pct=0.15, t3_pct=0.25):
     """
     Simulate trade using REAL option candles
     Find matching timestamp in option candles
@@ -231,7 +239,7 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.
     }
 
     trail_sl  = sl
-    max_bars  = 12  # Max 60 min hold (12×5min)
+    max_bars  = 6   # Max 30 min scalping
     brokerage = 0.001  # 0.1% per side
 
     for i in range(entry_idx+1, min(entry_idx+max_bars+1, len(opt_candles))):
@@ -254,7 +262,7 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.
         # T1
         if not result['t1_hit'] and h >= t1:
             result['t1_hit'] = True
-            trail_sl = entry_price  # Move to cost
+            trail_sl = round(entry_price * 1.02, 1)  # Lock 2% profit
 
         # SL
         if l <= trail_sl:
@@ -262,7 +270,14 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.
             result['exit_reason']= "TRAIL_SL" if result['t1_hit'] else "SL_HIT"
             break
 
-        # Final
+        # No momentum exit (stuck trade)
+        if i - entry_idx >= 3 and cl < entry_price * 1.005:
+            if not result['t1_hit']:
+                result['exit']       = round(cl * (1-brokerage), 1)
+                result['exit_reason']= "NO_MOMENTUM"
+                break
+
+        # Final timeout
         if i == min(entry_idx+max_bars, len(opt_candles)-1):
             result['exit']       = round(cl * (1-brokerage), 1)
             result['exit_reason']= "TIMEOUT"
