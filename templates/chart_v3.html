@@ -259,14 +259,33 @@ async function loadMainChart() {
   }
 
   var candles = d.candles;
+  if (!candles || candles.length === 0) {
+    console.log('No candles data');
+    return;
+  }
+  console.log('Candles:', candles.length, 'First:', candles[0]);
+
   var chartData = candles.map(function(c) {
-    return {time: c.ts, open: c.open, high: c.high, low: c.low, close: c.close};
+    return {
+      time:  Math.floor(c.ts),
+      open:  parseFloat(c.open),
+      high:  parseFloat(c.high),
+      low:   parseFloat(c.low),
+      close: parseFloat(c.close)
+    };
+  }).filter(function(c) {
+    return c.time > 0 && c.open > 0;
   });
+
+  // Sort by time
+  chartData.sort(function(a,b){ return a.time - b.time; });
+  console.log('Chart data:', chartData.length, 'items');
   mainSeries.setData(chartData);
 
   // VWAP
   var vwap = calcVWAP(candles);
-  var vwapData = candles.map(function(c,i){ return {time:c.ts, value:vwap[i]}; });
+  var vwapData = candles.map(function(c,i){ return {time:Math.floor(c.ts), value:parseFloat(vwap[i])}; }).filter(function(d){return d.time>0 && d.value>0;});
+  vwapData.sort(function(a,b){return a.time-b.time;});
   vwapSeries.setData(vwapData);
 
   // MACD
@@ -274,9 +293,9 @@ async function loadMainChart() {
   var macdRes = calcMACD(closes);
   if (macdRes.length > 0) {
     var offset = candles.length - macdRes.length;
-    macdSeries.setData(macdRes.map(function(m,i){ return {time:candles[offset+i].ts, value:m.macd}; }));
-    macdSignalSeries.setData(macdRes.map(function(m,i){ return {time:candles[offset+i].ts, value:m.signal}; }));
-    macdHistSeries.setData(macdRes.map(function(m,i){ return {time:candles[offset+i].ts, value:m.hist, color:m.hist>=0?'#00e676':'#ff5252'}; }));
+    macdSeries.setData(macdRes.map(function(m,i){ return {time:Math.floor(candles[offset+i].ts), value:m.macd}; }));
+    macdSignalSeries.setData(macdRes.map(function(m,i){ return {time:Math.floor(candles[offset+i].ts), value:m.signal}; }));
+    macdHistSeries.setData(macdRes.map(function(m,i){ return {time:Math.floor(candles[offset+i].ts), value:m.hist, color:m.hist>=0?'#00e676':'#ff5252'}; }));
   }
 
   // S/R levels
@@ -285,7 +304,7 @@ async function loadMainChart() {
   var levels = calcSR(candles);
   levels.forEach(function(l) {
     var s = mainChart.addLineSeries({color:l.color,lineWidth:1,lineStyle:2,title:l.title,lastValueVisible:true,priceLineVisible:false});
-    s.setData([{time:candles[0].ts,value:l.price},{time:candles[candles.length-1].ts,value:l.price}]);
+    s.setData([{time:Math.floor(candles[0].ts),value:l.price},{time:Math.floor(candles[candles.length-1].ts),value:l.price}]);
     srSeries.push(s);
   });
 
