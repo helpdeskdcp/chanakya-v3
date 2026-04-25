@@ -150,7 +150,7 @@ function initCharts() {
   };
 
   // Main chart
-  mainChart = LightweightCharts.createChart(document.getElementById('mainChart'), Object.assign({}, opts, {height: document.getElementById('mainChart').offsetHeight}));
+  mainChart = LightweightCharts.createChart(document.getElementById('mainChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('mainChart').offsetHeight, 280)}));
   mainSeries = mainChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
   vwapSeries = mainChart.addLineSeries({color:'#d4af37',lineWidth:1,title:'VWAP'});
 
@@ -167,17 +167,17 @@ function initCharts() {
   });
 
   // MACD chart
-  macdChart = LightweightCharts.createChart(document.getElementById('macdChart'), Object.assign({}, opts, {height: document.getElementById('macdChart').offsetHeight}));
+  macdChart = LightweightCharts.createChart(document.getElementById('macdChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('macdChart').offsetHeight, 80)}));
   macdSeries       = macdChart.addLineSeries({color:'#00c8ff',lineWidth:1,title:'MACD'});
   macdSignalSeries = macdChart.addLineSeries({color:'#ff9800',lineWidth:1,title:'Signal'});
   macdHistSeries   = macdChart.addHistogramSeries({color:'#4caf50',title:'Hist'});
 
   // CE chart
-  ceChart = LightweightCharts.createChart(document.getElementById('ceChart'), Object.assign({}, opts, {height: document.getElementById('ceChart').offsetHeight}));
+  ceChart = LightweightCharts.createChart(document.getElementById('ceChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('ceChart').offsetHeight, 120)}));
   ceSeries = ceChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
 
   // PE chart
-  peChart = LightweightCharts.createChart(document.getElementById('peChart'), Object.assign({}, opts, {height: document.getElementById('peChart').offsetHeight}));
+  peChart = LightweightCharts.createChart(document.getElementById('peChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('peChart').offsetHeight, 120)}));
   peSeries = peChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
 
   // Sync main + macd time scale
@@ -445,9 +445,12 @@ function startAutoRefresh() {
 // Init
 window.addEventListener('load', function() {
   initCharts();
-  loadAll();
-  startLTP();
-  startAutoRefresh();
+  // Small delay to ensure charts are rendered
+  setTimeout(function() {
+    loadAll();
+    startLTP();
+    startAutoRefresh();
+  }, 300);
 });
 </script>
 </body>
