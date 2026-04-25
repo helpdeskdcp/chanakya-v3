@@ -113,6 +113,7 @@ var ceChart, ceSeries, peChart, peSeries;
 var srLines = [];
 
 var chartOpts = {
+  autoSize: true,
   layout: {background:{color:'#060d14'}, textColor:'#8090a8'},
   grid: {vertLines:{color:'#0d1b2a'}, horzLines:{color:'#0d1b2a'}},
   crosshair: {mode:1},
@@ -125,7 +126,9 @@ var chartOpts = {
 function mkChart(id, h) {
   var el = document.getElementById(id);
   el.style.height = h + 'px';
-  return LightweightCharts.createChart(el, Object.assign({}, chartOpts, {height: h}));
+  el.style.width = '100%';
+  el.style.display = 'block';
+  return LightweightCharts.createChart(el, chartOpts);
 }
 
 function initCharts() {
