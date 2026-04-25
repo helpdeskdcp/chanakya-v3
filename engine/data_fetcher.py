@@ -21,7 +21,7 @@ _fetching = False
 
 def fetch_symbol_interval(broker, symbol, token, exchange, interval, days=None):
     """Fetch and store candles for one symbol+interval"""
-    from engine.candles import get_candles
+    from engine.candles import get_candles_direct, get_candles
 
     if days is None:
         days = HISTORY_DAYS.get(interval, 30)
@@ -35,8 +35,12 @@ def fetch_symbol_interval(broker, symbol, token, exchange, interval, days=None):
         gap_days = (datetime.now(IST) - last_dt).days + 1
         days = min(gap_days + 1, days)
 
-    raw = get_candles(broker, token, exchange=exchange,
-                     interval=interval, days=days)
+    # Try direct API first (better history), fallback to library
+    raw = get_candles_direct(broker, token, exchange=exchange,
+                             interval=interval, days=days)
+    if not raw:
+        raw = get_candles(broker, token, exchange=exchange,
+                         interval=interval, days=days)
     if raw:
         saved = store_candles(symbol, exchange, interval, raw)
         logger.info(f"Fetched {len(raw)} candles, saved {saved} new: {symbol} {interval}")
