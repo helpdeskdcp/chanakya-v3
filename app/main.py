@@ -299,8 +299,13 @@ def run_backtest_api():
         interval = data.get("interval","FIVE_MINUTE")
         days     = int(data.get("days",30))
         opt_type = data.get("opt_type","CE")
-        from engine.backtest_engine import run_backtest
-        result = run_backtest(symbol, interval, days, opt_type)
+        use_real = data.get("real_data", True)
+        if use_real and symbol == "NIFTY":
+            from engine.option_backtest import run_real_backtest
+            result = run_real_backtest(symbol, interval, days, opt_type)
+        else:
+            from engine.backtest_engine import run_backtest
+            result = run_backtest(symbol, interval, days, opt_type)
         result["success"] = "error" not in result
         return jsonify(result)
     except Exception as e:
