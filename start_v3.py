@@ -125,6 +125,14 @@ def main():
     scan_thread.start()
     logger.info("✅ Auto scanner thread started")
 
+    # Start Candle DB Engine
+    try:
+        from engine.data_fetcher import start_data_engine
+        start_data_engine(broker)
+        logger.info("✅ Candle data engine started")
+    except Exception as _de:
+        logger.warning(f"Data engine: {_de}")
+
     # Start Flask
     logger.info(f"🌐 Starting web server on port {config.PORT}...")
     from app.main import app
