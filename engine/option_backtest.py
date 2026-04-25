@@ -234,6 +234,7 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.
     }
 
     trail_sl  = sl
+    best_prem = entry_price  # Track best premium
     max_bars  = 12  # Max 60 min
     brokerage = 0.001  # 0.1% per side
 
@@ -241,6 +242,13 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.
         c = opt_candles[i]
         result['bars_held'] = i - entry_idx
         h = c['high']; l = c['low']; cl = c['close']
+
+        # Update best premium seen
+        if h > best_prem: best_prem = h
+
+        # Trail SL after 3% profit — lock gains
+        if best_prem > entry_price * 1.03 and not result['t1_hit']:
+            trail_sl = max(trail_sl, round(entry_price * 1.01, 1))
 
         # T3
         if result['t2_hit'] and h >= t3:
