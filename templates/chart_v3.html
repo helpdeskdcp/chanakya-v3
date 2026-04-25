@@ -123,7 +123,8 @@ body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;height:1
 <script>
 var TOKEN = localStorage.getItem('cv3t') || '';
 var API   = '/api/v3';
-if (!TOKEN) window.location.href = '/v3';
+console.log('TOKEN:', TOKEN ? TOKEN.substring(0,8)+'...' : 'EMPTY');
+if (!TOKEN) { window.location.href = '/v3'; }
 
 var _sym      = 'NIFTY';
 var _interval = 'FIVE_MINUTE';
@@ -183,10 +184,21 @@ function initCharts() {
 
 async function apiGet(path) {
   try {
+    console.log('API call:', path);
     var r = await fetch(API+path, {headers:{'X-Auth-Token':TOKEN}});
-    if (r.status === 401) { window.location.href='/v3'; return null; }
-    return await r.json();
-  } catch(e) { return null; }
+    console.log('Response status:', r.status);
+    if (r.status === 401 || r.status === 403) {
+      console.log('Auth failed — redirecting');
+      window.location.href='/v3';
+      return null;
+    }
+    var j = await r.json();
+    console.log('Response:', JSON.stringify(j).substring(0,100));
+    return j;
+  } catch(e) {
+    console.error('API error:', e);
+    return null;
+  }
 }
 
 // EMA calculation
@@ -253,10 +265,13 @@ function calcSR(candles) {
 
 async function loadMainChart() {
   var d = await apiGet('/chart/candles?symbol='+_sym+'&interval='+_interval+'&days='+_days);
-  if (!d || !d.candles || !d.candles.length) {
-    console.log('No candles');
+  if (!d) { console.error('API returned null'); return; }
+  if (!d.success) { console.error('API error:', d.error); return; }
+  if (!d.candles || !d.candles.length) {
+    console.log('No candles in response, count:', d.count);
     return;
   }
+  console.log('Got candles:', d.candles.length);
 
   var candles = d.candles;
   if (!candles || candles.length === 0) {
