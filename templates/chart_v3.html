@@ -109,7 +109,7 @@ if (!TOKEN) { localStorage.setItem('cv3_redirect','/v3/chart'); window.location.
 
 var _sym='NIFTY', _tf='FIVE_MINUTE', _days=10, _strike=0, _ceSymbol='', _peSymbol='';
 var mainChart, mainSeries, vwapLine, macdChart, macdLine, sigLine, histSeries;
-var ceChart, ceSeries, peChart, peSeries;
+var ceChart, ceSeries, ceVwap, peChart, peSeries, peVwap;
 var srLines = [];
 
 var chartOpts = {
@@ -131,7 +131,8 @@ function mkChart(id, h) {
   el.style.height = h + 'px';
   el.style.width = '100%';
   el.style.display = 'block';
-  return LightweightCharts.createChart(el, chartOpts);
+  var w = window.innerWidth || document.documentElement.clientWidth || 800;
+  return LightweightCharts.createChart(el, Object.assign({}, chartOpts, {width: w, height: h}));
 }
 
 function initCharts() {
@@ -154,11 +155,13 @@ function initCharts() {
   sigLine    = macdChart.addLineSeries({color:'#ff9800',lineWidth:1});
   histSeries = macdChart.addHistogramSeries({priceFormat:{type:'price',precision:2}});
 
-  ceChart  = mkChart('ceChart', 120);
-  ceSeries = ceChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
+  ceChart   = mkChart('ceChart', 120);
+  ceSeries  = ceChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
+  ceVwap    = ceChart.addLineSeries({color:'#d4af37',lineWidth:1,title:'VWAP'});
 
-  peChart  = mkChart('peChart', 120);
-  peSeries = peChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
+  peChart   = mkChart('peChart', 120);
+  peSeries  = peChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
+  peVwap    = peChart.addLineSeries({color:'#d4af37',lineWidth:1,title:'VWAP'});
 
   mainChart.timeScale().subscribeVisibleLogicalRangeChange(function(r) {
     if (r) macdChart.timeScale().setVisibleLogicalRange(r);
@@ -330,6 +333,12 @@ async function loadOptionCandles() {
       var data = cd.candles.map(function(c){return {time:c.ts,open:c.open,high:c.high,low:c.low,close:c.close};});
       data.sort(function(a,b){return a.time-b.time;});
       ceSeries.setData(data);
+      // VWAP on CE
+      var ceVwapData = cd.candles.map(function(c,i){
+        var vw=vwap(cd.candles.slice(0,i+1));
+        return {time:c.ts,value:parseFloat(vw[vw.length-1].toFixed(2))};
+      });
+      ceVwap.setData(ceVwapData);
       ceChart.timeScale().fitContent();
       var g = cd.greeks || {};
       document.getElementById('ceIV').textContent    = g.iv ? g.iv+'%' : '-';
@@ -345,6 +354,12 @@ async function loadOptionCandles() {
       var pdata = pd.candles.map(function(c){return {time:c.ts,open:c.open,high:c.high,low:c.low,close:c.close};});
       pdata.sort(function(a,b){return a.time-b.time;});
       peSeries.setData(pdata);
+      // VWAP on PE
+      var peVwapData = pd.candles.map(function(c,i){
+        var vw=vwap(pd.candles.slice(0,i+1));
+        return {time:c.ts,value:parseFloat(vw[vw.length-1].toFixed(2))};
+      });
+      peVwap.setData(peVwapData);
       peChart.timeScale().fitContent();
       var pg = pd.greeks || {};
       document.getElementById('peIV').textContent    = pg.iv ? pg.iv+'%' : '-';
