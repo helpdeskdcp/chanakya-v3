@@ -151,19 +151,9 @@ def generate_spot_signals(spot_candles, opt_type="CE"):
             avg_v = sum(vols)/len(vols) if vols else 1
             if avg_v > 0 and c.get('volume',0) > avg_v*1.5: score += 15
 
-        # Skip very low volatility
-        if atr_v < 1.5:
-            continue
 
-        # Skip very low volatility
-        if atr_v < 1.5:
-            continue
 
-        # Trend filter — avoid sideways
-        if e9 is not None and e21 is not None:
-            ema_gap = abs(e9 - e21)
-            if ema_gap < 3:
-                continue
+
 
         if score >= 75:
             signals.append({
@@ -192,7 +182,7 @@ def find_atm_option(spot, options, opt_type):
     return candidates[0]  # True ATM — most liquid
 
 
-def simulate_real_trade(signal, opt_candles, sl_pct=0.12, t1_pct=0.10, t2_pct=0.18, t3_pct=0.30):
+def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
     """
     Simulate trade using REAL option candles
     Find matching timestamp in option candles
@@ -244,7 +234,7 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.12, t1_pct=0.10, t2_pct=0.
     }
 
     trail_sl  = sl
-    max_bars  = 8   # Max 40 min
+    max_bars  = 12  # Max 60 min
     brokerage = 0.001  # 0.1% per side
 
     for i in range(entry_idx+1, min(entry_idx+max_bars+1, len(opt_candles))):
@@ -275,12 +265,7 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.12, t1_pct=0.10, t2_pct=0.
             result['exit_reason']= "TRAIL_SL" if result['t1_hit'] else "SL_HIT"
             break
 
-        # No momentum exit (soft)
-        if i - entry_idx >= 5 and cl < entry_price * 0.995:
-            if not result['t1_hit']:
-                result['exit']       = round(cl * (1-brokerage), 1)
-                result['exit_reason']= "NO_MOMENTUM"
-                break
+
 
         # Final timeout
         if i == min(entry_idx+max_bars, len(opt_candles)-1):
