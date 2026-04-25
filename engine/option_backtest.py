@@ -155,6 +155,10 @@ def generate_spot_signals(spot_candles, opt_type="CE"):
         if atr_v < 3:
             continue
 
+        # Skip low volatility
+        if atr_v < 3:
+            continue
+
         if score >= 75:
             signals.append({
                 "ts":       ts,
