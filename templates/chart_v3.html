@@ -7,450 +7,338 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;height:100vh;overflow:hidden}
-.top{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0a1520;border-bottom:1px solid #1e3a5f;flex-wrap:wrap}
-.logo{color:#d4af37;font-weight:900;font-size:14px;margin-right:8px}
-.sym-btn{padding:4px 10px;border-radius:6px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:11px;font-weight:700}
-.sym-btn.active{background:#00c8ff;color:#000;border-color:#00c8ff}
-.tf-btn{padding:3px 7px;border-radius:4px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:10px}
-.tf-btn.active{background:#d4af37;color:#000}
-.ohlc{font-size:10px;color:#8090a8;margin-left:auto}
-.ohlc span{color:#fff;margin-left:4px}
-.main-chart{width:100%;background:#060d14}
-.panel-label{font-size:9px;color:#8090a8;padding:2px 6px;background:#0a1520}
-.opt-row{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px}
-.opt-panel{background:#0a1520;border:1px solid #1e3a5f;border-radius:8px;overflow:hidden}
-.opt-header{padding:6px 10px;display:flex;justify-content:space-between;align-items:center;background:#0d1b2a}
+body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;overflow-x:hidden}
+.topbar{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#0a1520;border-bottom:1px solid #1e3a5f;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.logo{color:#d4af37;font-weight:900;font-size:13px;white-space:nowrap}
+.sym-btn{padding:4px 10px;border-radius:6px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap}
+.sym-btn.act{background:#00c8ff;color:#000;border-color:#00c8ff}
+.tf-btn{padding:3px 8px;border-radius:4px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:11px}
+.tf-btn.act{background:#d4af37;color:#000;border-color:#d4af37}
+.ohlc{font-size:10px;color:#8090a8;margin-left:auto;white-space:nowrap}
+.ohlc b{color:#fff}
+.ltp{font-size:11px;font-weight:700;padding:3px 8px;background:#1e3a5f;border-radius:6px;color:#00c8ff}
+.sect-label{font-size:9px;color:#5a6a7a;padding:2px 10px;background:#0a1520}
+.strike-row{display:flex;gap:4px;padding:5px 10px;align-items:center;flex-wrap:wrap;background:#0a1520;border-top:1px solid #0d1b2a}
+.sk-btn{padding:2px 8px;border-radius:4px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:10px}
+.sk-btn.act{background:#d4af37;color:#000;border-color:#d4af37}
+.exp{font-size:10px;color:#d4af37;margin-left:4px}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#060d14}
+.opt-box{background:#0a1520;border:1px solid #1e3a5f;border-radius:8px;overflow:hidden}
+.opt-hdr{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:#0d1b2a}
 .opt-title{font-size:11px;font-weight:800}
-.greeks{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px;font-size:10px;text-align:center}
-.greek-item{background:#060d14;border-radius:4px;padding:4px}
-.greek-label{color:#8090a8;font-size:8px}
-.greek-val{font-weight:700;font-size:11px}
-.strike-row{display:flex;gap:4px;padding:6px 12px;align-items:center;flex-wrap:wrap}
-.strike-btn{padding:3px 8px;border-radius:4px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:10px}
-.strike-btn.active{background:#d4af37;color:#000;border-color:#d4af37}
-.ltp-badge{font-size:10px;padding:2px 8px;border-radius:10px}
-.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#8090a8;font-size:12px}
+.greeks{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:5px;font-size:9px;text-align:center}
+.gk{background:#060d14;border-radius:4px;padding:3px 2px}
+.gk-l{color:#5a6a7a;font-size:8px;margin-bottom:2px}
+.gk-v{font-weight:700;font-size:10px;color:#00c8ff}
 </style>
 </head>
 <body>
 
-<!-- Top Bar -->
-<div class="top">
-  <div class="logo">⚡ CHANAKYA CHART</div>
-
-  <!-- Symbol tabs -->
-  <div style="display:flex;gap:4px">
-    <button class="sym-btn active" onclick="setSym('NIFTY',this)">NIFTY</button>
-    <button class="sym-btn" onclick="setSym('BANKNIFTY',this)">BANKNIFTY</button>
-    <button class="sym-btn" onclick="setSym('FINNIFTY',this)">FINNIFTY</button>
+<div class="topbar">
+  <span class="logo">⚡ CHANAKYA</span>
+  <div style="display:flex;gap:3px;flex-wrap:wrap">
+    <button class="sym-btn act" onclick="setSym('NIFTY',this)">NIFTY</button>
+    <button class="sym-btn" onclick="setSym('BANKNIFTY',this)">BN</button>
+    <button class="sym-btn" onclick="setSym('FINNIFTY',this)">FIN</button>
     <button class="sym-btn" onclick="setSym('CRUDEOIL',this)">CRUDE</button>
     <button class="sym-btn" onclick="setSym('NATURALGAS',this)">NATGAS</button>
   </div>
-
-  <!-- Timeframe -->
   <div style="display:flex;gap:3px">
-    <button class="tf-btn" onclick="setTF('ONE_MINUTE','1D',this)">1m</button>
-    <button class="tf-btn active" onclick="setTF('FIVE_MINUTE','5D',this)">5m</button>
-    <button class="tf-btn" onclick="setTF('FIFTEEN_MINUTE','10D',this)">15m</button>
-    <button class="tf-btn" onclick="setTF('THIRTY_MINUTE','15D',this)">30m</button>
-    <button class="tf-btn" onclick="setTF('ONE_HOUR','30D',this)">1h</button>
-    <button class="tf-btn" onclick="setTF('ONE_DAY','365D',this)">D</button>
+    <button class="tf-btn" onclick="setTF('ONE_MINUTE',2,this)">1m</button>
+    <button class="tf-btn act" onclick="setTF('FIVE_MINUTE',10,this)">5m</button>
+    <button class="tf-btn" onclick="setTF('FIFTEEN_MINUTE',20,this)">15m</button>
+    <button class="tf-btn" onclick="setTF('THIRTY_MINUTE',30,this)">30m</button>
+    <button class="tf-btn" onclick="setTF('ONE_HOUR',60,this)">1h</button>
+    <button class="tf-btn" onclick="setTF('ONE_DAY',365,this)">D</button>
   </div>
-
-  <!-- OHLC display -->
-  <div class="ohlc" id="ohlcBar">
-    O<span id="oO">-</span>
-    H<span id="oH" style="color:#00e676">-</span>
-    L<span id="oL" style="color:#ff5252">-</span>
-    C<span id="oC">-</span>
-    V<span id="oV">-</span>
-  </div>
-
-  <!-- LTP -->
-  <div class="ltp-badge" id="ltpBadge" style="background:#1e3a5f">LTP: --</div>
+  <div class="ohlc">O<b id="oO">-</b> H<b id="oH" style="color:#00e676">-</b> L<b id="oL" style="color:#ff5252">-</b> C<b id="oC">-</b></div>
+  <div class="ltp" id="ltpBadge">LTP:--</div>
 </div>
 
-<!-- Main Index Chart -->
-<div id="mainChart" style="height:300px;width:100%"></div>
+<!-- MAIN CHART — fixed 300px -->
+<div id="mainChart" style="width:100%;height:300px;background:#060d14"></div>
 
-<!-- MACD Panel -->
-<div class="panel-label">MACD (12,26,9)</div>
-<div id="macdChart" style="height:80px;width:100%"></div>
+<!-- MACD -->
+<div class="sect-label">MACD (12,26,9)</div>
+<div id="macdChart" style="width:100%;height:80px;background:#060d14"></div>
 
-<!-- Strike Selector -->
+<!-- STRIKES -->
 <div class="strike-row">
   <span style="font-size:10px;color:#8090a8">Strike:</span>
-  <div id="strikeButtons"></div>
-  <span style="font-size:10px;color:#d4af37" id="expiryLabel"></span>
+  <div id="skBtns" style="display:flex;gap:3px;flex-wrap:wrap"></div>
+  <span class="exp" id="expLabel"></span>
 </div>
 
-<!-- CE / PE Charts -->
-<div class="opt-row" style="height:260px">
-  <!-- CE Panel -->
-  <div class="opt-panel">
-    <div class="opt-header">
-      <div class="opt-title" style="color:#00e676">📈 CE</div>
-      <div style="font-size:10px;color:#00e676" id="ceLTP">₹--</div>
+<!-- CE / PE -->
+<div class="opt-grid">
+  <div class="opt-box">
+    <div class="opt-hdr">
+      <span class="opt-title" style="color:#00e676">📈 CE</span>
+      <span style="font-size:10px;color:#00e676" id="ceLTP">₹--</span>
     </div>
-    <div id="ceChart" style="height:120px"></div>
-    <div class="greeks" id="ceGreeks">
-      <div class="greek-item"><div class="greek-label">IV</div><div class="greek-val" id="ceIV">-</div></div>
-      <div class="greek-item"><div class="greek-label">Δ Delta</div><div class="greek-val" id="ceDelta">-</div></div>
-      <div class="greek-item"><div class="greek-label">Θ Theta</div><div class="greek-val" id="ceTheta">-</div></div>
-      <div class="greek-item"><div class="greek-label">Γ Gamma</div><div class="greek-val" id="ceGamma">-</div></div>
-      <div class="greek-item"><div class="greek-label">ATR</div><div class="greek-val" id="ceATR">-</div></div>
+    <div id="ceChart" style="width:100%;height:120px;background:#060d14"></div>
+    <div class="greeks">
+      <div class="gk"><div class="gk-l">IV%</div><div class="gk-v" id="ceIV">-</div></div>
+      <div class="gk"><div class="gk-l">Δ Delta</div><div class="gk-v" id="ceDelta">-</div></div>
+      <div class="gk"><div class="gk-l">Θ Theta</div><div class="gk-v" id="ceTheta">-</div></div>
+      <div class="gk"><div class="gk-l">Γ Gamma</div><div class="gk-v" id="ceGamma">-</div></div>
+      <div class="gk"><div class="gk-l">ATR</div><div class="gk-v" id="ceATR">-</div></div>
     </div>
   </div>
-
-  <!-- PE Panel -->
-  <div class="opt-panel">
-    <div class="opt-header">
-      <div class="opt-title" style="color:#ff5252">📉 PE</div>
-      <div style="font-size:10px;color:#ff5252" id="peLTP">₹--</div>
+  <div class="opt-box">
+    <div class="opt-hdr">
+      <span class="opt-title" style="color:#ff5252">📉 PE</span>
+      <span style="font-size:10px;color:#ff5252" id="peLTP">₹--</span>
     </div>
-    <div id="peChart" style="height:120px"></div>
-    <div class="greeks" id="peGreeks">
-      <div class="greek-item"><div class="greek-label">IV</div><div class="greek-val" id="peIV">-</div></div>
-      <div class="greek-item"><div class="greek-label">Δ Delta</div><div class="greek-val" id="peDelta">-</div></div>
-      <div class="greek-item"><div class="greek-label">Θ Theta</div><div class="greek-val" id="peTheta">-</div></div>
-      <div class="greek-item"><div class="greek-label">Γ Gamma</div><div class="greek-val" id="peGamma">-</div></div>
-      <div class="greek-item"><div class="greek-label">ATR</div><div class="greek-val" id="peATR">-</div></div>
+    <div id="peChart" style="width:100%;height:120px;background:#060d14"></div>
+    <div class="greeks">
+      <div class="gk"><div class="gk-l">IV%</div><div class="gk-v" id="peIV">-</div></div>
+      <div class="gk"><div class="gk-l">Δ Delta</div><div class="gk-v" id="peDelta">-</div></div>
+      <div class="gk"><div class="gk-l">Θ Theta</div><div class="gk-v" id="peTheta">-</div></div>
+      <div class="gk"><div class="gk-l">Γ Gamma</div><div class="gk-v" id="peGamma">-</div></div>
+      <div class="gk"><div class="gk-l">ATR</div><div class="gk-v" id="peATR">-</div></div>
     </div>
   </div>
 </div>
 
 <script>
 var TOKEN = localStorage.getItem('cv3t') || '';
-var API   = '/api/v3';
-console.log('TOKEN:', TOKEN ? TOKEN.substring(0,8)+'...' : 'EMPTY');
-if (!TOKEN) {
-  // Save current URL and redirect to login
-  localStorage.setItem('cv3_redirect', '/v3/chart');
-  window.location.href = '/v3';
+var API = '/api/v3';
+if (!TOKEN) { localStorage.setItem('cv3_redirect','/v3/chart'); window.location.href='/v3'; }
+
+var _sym='NIFTY', _tf='FIVE_MINUTE', _days=10, _strike=0;
+var mainChart, mainSeries, vwapLine, macdChart, macdLine, sigLine, histSeries;
+var ceChart, ceSeries, peChart, peSeries;
+var srLines = [];
+
+var chartOpts = {
+  layout: {background:{color:'#060d14'}, textColor:'#8090a8'},
+  grid: {vertLines:{color:'#0d1b2a'}, horzLines:{color:'#0d1b2a'}},
+  crosshair: {mode:1},
+  timeScale: {borderColor:'#1e3a5f', timeVisible:true, secondsVisible:false},
+  rightPriceScale: {borderColor:'#1e3a5f'},
+  handleScroll: true,
+  handleScale: true,
+};
+
+function mkChart(id, h) {
+  var el = document.getElementById(id);
+  el.style.height = h + 'px';
+  return LightweightCharts.createChart(el, Object.assign({}, chartOpts, {height: h}));
 }
 
-var _sym      = 'NIFTY';
-var _interval = 'FIVE_MINUTE';
-var _days     = 5;
-var _strike   = 0;
-var _atm      = 0;
-
-// Chart instances
-var mainChart, mainSeries, vwapSeries, srSeries = [], macdChart, macdSeries, macdSignalSeries, macdHistSeries;
-var ceChart, ceSeries, peChart, peSeries;
-
 function initCharts() {
-  var opts = {
-    layout:{background:{color:'#060d14'},textColor:'#8090a8'},
-    grid:{vertLines:{color:'#0d1b2a'},horzLines:{color:'#0d1b2a'}},
-    crosshair:{mode:1},
-    timeScale:{borderColor:'#1e3a5f',timeVisible:true,secondsVisible:false},
-    rightPriceScale:{borderColor:'#1e3a5f'},
-  };
-
-  // Main chart
-  mainChart = LightweightCharts.createChart(document.getElementById('mainChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('mainChart').offsetHeight, 280)}));
+  mainChart  = mkChart('mainChart', 300);
   mainSeries = mainChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
-  vwapSeries = mainChart.addLineSeries({color:'#d4af37',lineWidth:1,title:'VWAP'});
+  vwapLine   = mainChart.addLineSeries({color:'#d4af37',lineWidth:1,title:'VWAP',lastValueVisible:true});
 
-  // Crosshair data display
-  mainChart.subscribeCrosshairMove(function(param) {
-    if (!param.seriesData) return;
-    var d = param.seriesData.get(mainSeries);
-    if (d) {
-      document.getElementById('oO').textContent = d.open.toFixed(2);
-      document.getElementById('oH').textContent = d.high.toFixed(2);
-      document.getElementById('oL').textContent = d.low.toFixed(2);
-      document.getElementById('oC').textContent = d.close.toFixed(2);
-    }
+  mainChart.subscribeCrosshairMove(function(p) {
+    if (!p.seriesData) return;
+    var d = p.seriesData.get(mainSeries);
+    if (!d) return;
+    document.getElementById('oO').textContent = d.open.toFixed(1);
+    document.getElementById('oH').textContent = d.high.toFixed(1);
+    document.getElementById('oL').textContent = d.low.toFixed(1);
+    document.getElementById('oC').textContent = d.close.toFixed(1);
   });
 
-  // MACD chart
-  macdChart = LightweightCharts.createChart(document.getElementById('macdChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('macdChart').offsetHeight, 80)}));
-  macdSeries       = macdChart.addLineSeries({color:'#00c8ff',lineWidth:1,title:'MACD'});
-  macdSignalSeries = macdChart.addLineSeries({color:'#ff9800',lineWidth:1,title:'Signal'});
-  macdHistSeries   = macdChart.addHistogramSeries({color:'#4caf50',title:'Hist'});
+  macdChart  = mkChart('macdChart', 80);
+  macdLine   = macdChart.addLineSeries({color:'#00c8ff',lineWidth:1});
+  sigLine    = macdChart.addLineSeries({color:'#ff9800',lineWidth:1});
+  histSeries = macdChart.addHistogramSeries({priceFormat:{type:'price',precision:2}});
 
-  // CE chart
-  ceChart = LightweightCharts.createChart(document.getElementById('ceChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('ceChart').offsetHeight, 120)}));
+  ceChart  = mkChart('ceChart', 120);
   ceSeries = ceChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
 
-  // PE chart
-  peChart = LightweightCharts.createChart(document.getElementById('peChart'), Object.assign({}, opts, {height: Math.max(document.getElementById('peChart').offsetHeight, 120)}));
+  peChart  = mkChart('peChart', 120);
   peSeries = peChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
 
-  // Sync main + macd time scale
   mainChart.timeScale().subscribeVisibleLogicalRangeChange(function(r) {
     if (r) macdChart.timeScale().setVisibleLogicalRange(r);
   });
 }
 
-async function apiGet(path) {
+async function api(path) {
   try {
-    console.log('API call:', path);
     var r = await fetch(API+path, {headers:{'X-Auth-Token':TOKEN}});
-    console.log('Response status:', r.status);
-    if (r.status === 401 || r.status === 403) {
-      console.log('Auth failed — redirecting');
-      window.location.href='/v3';
-      return null;
-    }
-    var j = await r.json();
-    console.log('Response:', JSON.stringify(j).substring(0,100));
-    return j;
-  } catch(e) {
-    console.error('API error:', e);
-    return null;
-  }
+    if (r.status===401||r.status===403) { window.location.href='/v3'; return null; }
+    return await r.json();
+  } catch(e) { console.error(e); return null; }
 }
 
-// EMA calculation
-function calcEMA(data, period) {
-  var k = 2/(period+1);
-  var ema = [data[0]];
-  for (var i=1; i<data.length; i++) {
-    ema.push(data[i]*k + ema[i-1]*(1-k));
-  }
-  return ema;
+function ema(v, p) {
+  if (v.length<p) return v.map(function(){return 0;});
+  var k=2/(p+1), e=v.slice(0,p).reduce(function(a,b){return a+b;})/p, r=[e];
+  for (var i=p;i<v.length;i++){e=v[i]*k+e*(1-k);r.push(e);}
+  return r;
 }
 
-// MACD calculation
-function calcMACD(closes) {
-  if (closes.length < 26) return [];
-  var ema12 = calcEMA(closes, 12);
-  var ema26 = calcEMA(closes, 26);
-  var macdLine = ema12.map(function(v,i){ return v - ema26[i]; });
-  var signal   = calcEMA(macdLine.slice(9), 9);
-  var result   = [];
-  for (var i=9; i<macdLine.length; i++) {
-    result.push({
-      macd:   macdLine[i],
-      signal: signal[i-9],
-      hist:   macdLine[i] - signal[i-9],
-    });
-  }
-  return result;
+function macd(cl) {
+  if (cl.length<35) return [];
+  var e12=ema(cl,12), e26=ema(cl,26);
+  var ml=e12.map(function(v,i){return v-e26[i];});
+  var sig=ema(ml.slice(9),9);
+  return ml.slice(9).map(function(m,i){return {m:m,s:sig[i],h:m-sig[i]};});
 }
 
-// VWAP calculation
-function calcVWAP(candles) {
-  var cumTP = 0, cumVol = 0;
-  return candles.map(function(c) {
-    var tp  = (c.high + c.low + c.close) / 3;
-    cumTP  += tp * c.volume;
-    cumVol += c.volume;
-    return cumVol > 0 ? cumTP/cumVol : c.close;
+function vwap(cs) {
+  var ct=0,cv=0;
+  return cs.map(function(c){
+    var tp=(c.high+c.low+c.close)/3;
+    ct+=tp*(c.volume||1); cv+=(c.volume||1);
+    return ct/cv;
   });
 }
 
-// ATR calculation
-function calcATR(candles, period) {
-  if (candles.length < 2) return 0;
-  var trs = candles.slice(1).map(function(c,i) {
-    var pc = candles[i].close;
-    return Math.max(c.high-c.low, Math.abs(c.high-pc), Math.abs(c.low-pc));
+function atr(cs, p) {
+  if (cs.length<2) return 0;
+  var trs=cs.slice(1).map(function(c,i){
+    return Math.max(c.high-c.low,Math.abs(c.high-cs[i].close),Math.abs(c.low-cs[i].close));
   });
-  var atr = trs.slice(-period);
-  return atr.length > 0 ? (atr.reduce(function(a,b){return a+b;},0)/atr.length).toFixed(1) : 0;
+  var a=trs.slice(-p);
+  return a.length>0?(a.reduce(function(x,y){return x+y;})/a.length).toFixed(1):0;
 }
 
-// S/R levels (pivot)
-function calcSR(candles) {
-  if (candles.length < 2) return [];
-  var prev = candles[candles.length-2];
-  var P  = (prev.high + prev.low + prev.close) / 3;
+function pivots(cs) {
+  if (cs.length<2) return [];
+  var p=cs[cs.length-2];
+  var PP=(p.high+p.low+p.close)/3;
   return [
-    {price: parseFloat((P*2 - prev.low).toFixed(2)),  color:'#00e676', title:'R1'},
-    {price: parseFloat(P.toFixed(2)),                  color:'#d4af37', title:'PP'},
-    {price: parseFloat((P*2 - prev.high).toFixed(2)), color:'#ff5252', title:'S1'},
+    {p:(2*PP-p.low).toFixed(1),  c:'#00e676', t:'R1'},
+    {p:PP.toFixed(1),             c:'#d4af37', t:'PP'},
+    {p:(2*PP-p.high).toFixed(1), c:'#ff5252', t:'S1'},
   ];
 }
 
-async function loadMainChart() {
-  var d = await apiGet('/chart/candles?symbol='+_sym+'&interval='+_interval+'&days='+_days);
-  if (!d) { console.error('API returned null'); return; }
-  if (!d.success) { console.error('API error:', d.error); return; }
-  if (!d.candles || !d.candles.length) {
-    console.log('No candles in response, count:', d.count);
+async function loadMain() {
+  var d = await api('/chart/candles?symbol='+_sym+'&interval='+_tf+'&days='+_days);
+  if (!d||!d.success||!d.candles||!d.candles.length) {
+    console.log('No data:', d);
     return;
   }
-  console.log('Got candles:', d.candles.length);
+  var cs = d.candles;
+  var cd = cs.map(function(c){return {time:c.ts,open:c.open,high:c.high,low:c.low,close:c.close};});
+  cd.sort(function(a,b){return a.time-b.time;});
 
-  var candles = d.candles;
-  if (!candles || candles.length === 0) {
-    console.log('No candles data');
-    return;
-  }
-  console.log('Candles:', candles.length, 'First:', candles[0]);
-
-  var chartData = candles.map(function(c) {
-    return {
-      time:  Math.floor(c.ts),
-      open:  parseFloat(c.open),
-      high:  parseFloat(c.high),
-      low:   parseFloat(c.low),
-      close: parseFloat(c.close)
-    };
-  }).filter(function(c) {
-    return c.time > 0 && c.open > 0;
-  });
-
-  // Sort by time
-  chartData.sort(function(a,b){ return a.time - b.time; });
-  console.log('Chart data:', chartData.length, 'items');
-  mainSeries.setData(chartData);
+  mainSeries.setData(cd);
+  console.log('Set', cd.length, 'candles. First time:', cd[0].time);
 
   // VWAP
-  var vwap = calcVWAP(candles);
-  var vwapData = candles.map(function(c,i){ return {time:Math.floor(c.ts), value:parseFloat(vwap[i])}; }).filter(function(d){return d.time>0 && d.value>0;});
-  vwapData.sort(function(a,b){return a.time-b.time;});
-  vwapSeries.setData(vwapData);
+  var vw = vwap(cs);
+  var vd = cs.map(function(c,i){return {time:c.ts,value:parseFloat(vw[i].toFixed(2))};});
+  vd.sort(function(a,b){return a.time-b.time;});
+  vwapLine.setData(vd);
 
   // MACD
-  var closes  = candles.map(function(c){return c.close;});
-  var macdRes = calcMACD(closes);
-  if (macdRes.length > 0) {
-    var offset = candles.length - macdRes.length;
-    macdSeries.setData(macdRes.map(function(m,i){ return {time:Math.floor(candles[offset+i].ts), value:m.macd}; }));
-    macdSignalSeries.setData(macdRes.map(function(m,i){ return {time:Math.floor(candles[offset+i].ts), value:m.signal}; }));
-    macdHistSeries.setData(macdRes.map(function(m,i){ return {time:Math.floor(candles[offset+i].ts), value:m.hist, color:m.hist>=0?'#00e676':'#ff5252'}; }));
+  var cl = cs.map(function(c){return c.close;});
+  var mr = macd(cl);
+  if (mr.length) {
+    var off = cs.length-mr.length;
+    macdLine.setData(mr.map(function(m,i){return {time:cs[off+i].ts,value:m.m};}));
+    sigLine.setData(mr.map(function(m,i){return {time:cs[off+i].ts,value:m.s};}));
+    histSeries.setData(mr.map(function(m,i){return {time:cs[off+i].ts,value:m.h,color:m.h>=0?'#00e676':'#ff5252'};}));
   }
 
-  // S/R levels
-  srSeries.forEach(function(s){mainChart.removeSeries(s);});
-  srSeries = [];
-  var levels = calcSR(candles);
-  levels.forEach(function(l) {
-    var s = mainChart.addLineSeries({color:l.color,lineWidth:1,lineStyle:2,title:l.title,lastValueVisible:true,priceLineVisible:false});
-    s.setData([{time:Math.floor(candles[0].ts),value:l.price},{time:Math.floor(candles[candles.length-1].ts),value:l.price}]);
-    srSeries.push(s);
+  // S/R
+  srLines.forEach(function(s){try{mainChart.removeSeries(s);}catch(e){}});
+  srLines=[];
+  var t0=cd[0].time, t1=cd[cd.length-1].time;
+  pivots(cs).forEach(function(l){
+    var s=mainChart.addLineSeries({color:l.c,lineWidth:1,lineStyle:2,title:l.t,lastValueVisible:true,priceLineVisible:false});
+    s.setData([{time:t0,value:parseFloat(l.p)},{time:t1,value:parseFloat(l.p)}]);
+    srLines.push(s);
   });
 
-  // ATR display
-  var atr = calcATR(candles, 14);
-
-  // Latest candle OHLC
-  var last = candles[candles.length-1];
-  document.getElementById('oO').textContent = last.open.toFixed(2);
-  document.getElementById('oH').textContent = last.high.toFixed(2);
-  document.getElementById('oL').textContent = last.low.toFixed(2);
-  document.getElementById('oC').textContent = last.close.toFixed(2);
-  document.getElementById('oV').textContent = last.volume || '-';
+  // ATR in CE/PE
+  var a = atr(cs, 14);
+  document.getElementById('ceATR').textContent = a;
+  document.getElementById('peATR').textContent = a;
 
   mainChart.timeScale().fitContent();
   macdChart.timeScale().fitContent();
 }
 
 async function loadStrikes() {
-  var d = await apiGet('/chart/strikes?symbol='+_sym);
-  if (!d || !d.success) return;
+  var d = await api('/chart/strikes?symbol='+_sym);
+  if (!d||!d.success) return;
+  var atm = d.chain && d.chain.atm ? d.chain.atm : 0;
+  var exp = d.chain && d.chain.expiry ? d.chain.expiry : '';
+  document.getElementById('expLabel').textContent = exp ? 'Exp:'+exp : '';
 
-  _atm = d.chain ? d.chain.atm : 0;
-  var expiry = d.chain ? d.chain.expiry : '';
-  document.getElementById('expiryLabel').textContent = expiry ? 'Exp: '+expiry : '';
-
-  var btns = document.getElementById('strikeButtons');
-  btns.innerHTML = '';
-
+  var strikes = [];
   if (d.chain && d.chain.CE) {
-    var strikes = d.chain.CE.map(function(o){return o.strike;}).sort(function(a,b){return a-b;});
-    strikes.forEach(function(strike) {
-      var btn = document.createElement('button');
-      btn.className = 'strike-btn' + (strike === _atm ? ' active' : '');
-      btn.textContent = strike + (strike === _atm ? ' ★ATM' : '');
-      btn.onclick = function() {
-        _strike = strike;
-        document.querySelectorAll('.strike-btn').forEach(function(b){b.classList.remove('active');});
-        btn.classList.add('active');
-        loadOptionCharts();
-      };
-      btns.appendChild(btn);
-    });
-    _strike = _atm;
+    strikes = d.chain.CE.map(function(o){return o.strike;}).sort(function(a,b){return a-b;});
+  }
+
+  var btns = document.getElementById('skBtns');
+  btns.innerHTML = '';
+  _strike = atm;
+
+  strikes.forEach(function(sk) {
+    var btn = document.createElement('button');
+    btn.className = 'sk-btn' + (sk===atm?' act':'');
+    btn.textContent = sk + (sk===atm?' ★':'');
+    btn.onclick = function() {
+      _strike = sk;
+      document.querySelectorAll('.sk-btn').forEach(function(b){b.classList.remove('act');});
+      btn.classList.add('act');
+      // Update LTP from chain
+      if (d.chain) {
+        var ce = (d.chain.CE||[]).find(function(o){return o.strike===sk;});
+        var pe = (d.chain.PE||[]).find(function(o){return o.strike===sk;});
+        if (ce) document.getElementById('ceLTP').textContent = '₹'+(ce.ltp||0).toFixed(1);
+        if (pe) document.getElementById('peLTP').textContent = '₹'+(pe.ltp||0).toFixed(1);
+      }
+    };
+    btns.appendChild(btn);
+  });
+
+  // Set initial LTP
+  if (d.chain) {
+    var ce0 = (d.chain.CE||[]).find(function(o){return o.strike===atm;});
+    var pe0 = (d.chain.PE||[]).find(function(o){return o.strike===atm;});
+    if (ce0) document.getElementById('ceLTP').textContent = '₹'+(ce0.ltp||0).toFixed(1);
+    if (pe0) document.getElementById('peLTP').textContent = '₹'+(pe0.ltp||0).toFixed(1);
   }
 }
 
-async function loadOptionCharts() {
-  if (!_strike) return;
-  var sym = _sym;
-
-  // Find option symbols from chain
-  var d = await apiGet('/chart/strikes?symbol='+sym);
-  if (!d || !d.chain) return;
-
-  var ceOpt = null, peOpt = null;
-  if (d.chain.CE) {
-    ceOpt = d.chain.CE.find(function(o){return o.strike === _strike;});
-  }
-  if (d.chain.PE) {
-    peOpt = d.chain.PE.find(function(o){return o.strike === _strike;});
-  }
-
-  // Update LTP
-  if (ceOpt) {
-    document.getElementById('ceLTP').textContent = '₹'+(ceOpt.ltp||0).toFixed(2);
-  }
-  if (peOpt) {
-    document.getElementById('peLTP').textContent = '₹'+(peOpt.ltp||0).toFixed(2);
-  }
-}
-
-function setSym(sym, btn) {
-  _sym = sym;
-  document.querySelectorAll('.sym-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  loadAll();
-}
-
-function setTF(interval, range, btn) {
-  _interval = interval;
-  var daysMap = {'1D':1,'5D':5,'10D':10,'15D':15,'30D':30,'365D':365};
-  _days = daysMap[range] || 5;
-  document.querySelectorAll('.tf-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  loadMainChart();
-}
-
-function loadAll() {
-  loadMainChart();
+function setSym(s, btn) {
+  _sym = s;
+  document.querySelectorAll('.sym-btn').forEach(function(b){b.classList.remove('act');});
+  btn.classList.add('act');
+  loadMain();
   loadStrikes();
 }
 
-// Live LTP update via SSE
-function startLTP() {
+function setTF(tf, days, btn) {
+  _tf = tf; _days = days;
+  document.querySelectorAll('.tf-btn').forEach(function(b){b.classList.remove('act');});
+  btn.classList.add('act');
+  loadMain();
+}
+
+// Live LTP SSE
+function startSSE() {
   var src = new EventSource(API+'/stream/ltp?token='+TOKEN);
   src.onmessage = function(e) {
     try {
-      var data = JSON.parse(e.data);
-      var ltp = data[_sym] || 0;
-      if (ltp > 0) {
-        document.getElementById('ltpBadge').textContent = _sym+': ₹'+ltp.toFixed(2);
-        document.getElementById('ltpBadge').style.background = '#1e3a5f';
-      }
-    } catch(ex) {}
+      var d = JSON.parse(e.data);
+      var v = d[_sym];
+      if (v) document.getElementById('ltpBadge').textContent = _sym+':₹'+parseFloat(v).toFixed(1);
+    } catch(x){}
   };
-  src.onerror = function() {
-    setTimeout(startLTP, 5000);
-  };
+  src.onerror = function(){ setTimeout(startSSE,5000); };
 }
 
-// Auto refresh every 1 min
-function startAutoRefresh() {
-  setInterval(function() {
-    loadMainChart();
-  }, 60000);
-}
-
-// Init
-window.addEventListener('load', function() {
+// Init after DOM ready
+document.addEventListener('DOMContentLoaded', function() {
   initCharts();
-  // Small delay to ensure charts are rendered
-  setTimeout(function() {
-    loadAll();
-    startLTP();
-    startAutoRefresh();
-  }, 300);
+  setTimeout(function(){
+    loadMain();
+    loadStrikes();
+    startSSE();
+    setInterval(loadMain, 60000);
+  }, 200);
 });
 </script>
 </body>
