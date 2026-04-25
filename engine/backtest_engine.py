@@ -155,7 +155,7 @@ def generate_signals(candles, symbol="NIFTY", opt_type="CE"):
             score += 25
 
         # Skip if ADX weak
-        if adx_val < 25:
+        if adx_val < 18:
             continue
 
         # Skip no-trade times
@@ -164,7 +164,7 @@ def generate_signals(candles, symbol="NIFTY", opt_type="CE"):
         if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30):
             continue
 
-        if score >= 80:
+        if score >= 75:
             # Estimate realistic premium
             premium = estimate_option_premium(ltp, atr_val, opt_type, trend)
 
