@@ -180,7 +180,7 @@ def generate_signals(candles, symbol="NIFTY", opt_type="CE"):
     return signals
 
 
-def simulate_trade(signal, candles, sl_pct=0.15, t1_pct=0.15, t2_pct=0.25, t3_pct=0.40):
+def simulate_trade(signal, candles, sl_pct=0.30, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
     """
     Simulate option trade using spot price movement
     """
@@ -216,7 +216,7 @@ def simulate_trade(signal, candles, sl_pct=0.15, t1_pct=0.15, t2_pct=0.25, t3_pc
     }
 
     trail_sl = sl
-    max_bars = 20
+    max_bars = 30
 
     for i in range(i_start, min(i_start+max_bars, len(candles))):
         c = candles[i]
@@ -235,9 +235,9 @@ def simulate_trade(signal, candles, sl_pct=0.15, t1_pct=0.15, t2_pct=0.25, t3_pc
             chg_high = (spot_entry - spot_low)  / spot_entry
             chg_low  = (spot_entry - spot_high) / spot_entry
 
-        # Option moves faster than spot (2x delta approximation)
-        sim_high = entry * (1 + chg_high * 2.0)
-        sim_low  = entry * (1 + chg_low  * 2.0)
+        # Option moves faster than spot (3x delta approximation)
+        sim_high = entry * (1 + chg_high * 3.0)
+        sim_low  = entry * (1 + chg_low  * 3.0)
         sim_high = max(sim_high, entry * 0.05)
         sim_low  = max(sim_low,  entry * 0.05)
 
