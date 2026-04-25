@@ -154,7 +154,17 @@ def generate_signals(candles, symbol="NIFTY", opt_type="CE"):
         if avg_vol > 0 and c.get('volume',0) > avg_vol*1.5:
             score += 25
 
-        if score >= 70:
+        # Skip if ADX weak
+        if adx_val < 25:
+            continue
+
+        # Skip no-trade times
+        dt = datetime.fromtimestamp(candles[i]['ts'], IST)
+        h, m = dt.hour, dt.minute
+        if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30):
+            continue
+
+        if score >= 80:
             # Estimate realistic premium
             premium = estimate_option_premium(ltp, atr_val, opt_type, trend)
 

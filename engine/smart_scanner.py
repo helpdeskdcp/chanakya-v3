@@ -35,8 +35,15 @@ def smart_scan(broker):
                 logger.debug(f"{sym}: MTF failed")
                 continue
 
-            # Decision
-            decision = make_decision(mtf)
+            # Quality decision (stricter)
+            try:
+                from engine.signal_quality import make_quality_decision
+                from data.market import get_vix
+                vix = get_vix() or 18.0
+                decision = make_quality_decision(mtf, vix=vix)
+            except Exception:
+                from engine.decision_engine import make_decision
+                decision = make_decision(mtf)
             if not decision:
                 logger.debug(f"{sym}: No signal (score too low)")
                 continue
