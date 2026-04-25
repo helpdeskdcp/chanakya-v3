@@ -285,6 +285,32 @@ def chart_candles():
         return jsonify({"success":False,"error":str(e)})
 
 
+
+@app.route("/api/v3/backtest", methods=["POST"])
+@require_auth
+def run_backtest_api():
+    """Run backtest — admin + premium only"""
+    try:
+        curr_user = get_current_user()
+        if curr_user.get("role") not in ("admin","premium"):
+            return jsonify({"success":False,"error":"Premium only"}), 403
+        data = request.json or {}
+        symbol   = data.get("symbol","NIFTY").upper()
+        interval = data.get("interval","FIVE_MINUTE")
+        days     = int(data.get("days",30))
+        opt_type = data.get("opt_type","CE")
+        from engine.backtest_engine import run_backtest
+        result = run_backtest(symbol, interval, days, opt_type)
+        result["success"] = "error" not in result
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+@app.route("/v3/backtest")
+def backtest_page():
+    """Backtest dashboard page"""
+    return render_template("backtest_v3.html")
+
 @app.route("/api/v3/chart/option-candles")
 @require_auth
 def chart_option_candles():

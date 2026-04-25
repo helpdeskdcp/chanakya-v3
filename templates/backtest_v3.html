@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chanakya Backtest</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif}
+.top{background:#0a1520;border-bottom:1px solid #1e3a5f;padding:10px 16px;display:flex;align-items:center;gap:10px}
+.logo{color:#d4af37;font-weight:900;font-size:14px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:#0a1520;border-bottom:1px solid #0d1b2a}
+select,button{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700}
+select{background:#0d1b2a;color:#e0e8f0;border:1px solid #1e3a5f}
+.run-btn{background:linear-gradient(135deg,#d4af37,#ff9800);color:#000;border:none;cursor:pointer;padding:8px 20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px}
+.stat{background:#0a1520;border:1px solid #1e3a5f;border-radius:8px;padding:10px;text-align:center}
+.stat-l{font-size:9px;color:#8090a8;margin-bottom:4px}
+.stat-v{font-size:18px;font-weight:900}
+.section{padding:0 16px 16px}
+.section-title{font-size:11px;color:#8090a8;margin:12px 0 6px;font-weight:700;text-transform:uppercase}
+.trade-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:4px;padding:6px 8px;border-radius:4px;font-size:10px;margin-bottom:3px;border:1px solid #0d1b2a}
+.trade-row.win{border-left:3px solid #00e676}
+.trade-row.loss{border-left:3px solid #ff5252}
+.bar{height:6px;border-radius:3px;margin-top:4px}
+.loading{text-align:center;padding:40px;color:#8090a8}
+.badge{display:inline-block;padding:2px 6px;border-radius:10px;font-size:9px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="logo">⚡ CHANAKYA BACKTEST</span>
+  <a href="/v3" style="font-size:11px;color:#00c8ff">← Dashboard</a>
+</div>
+
+<div class="controls">
+  <select id="sym">
+    <option>NIFTY</option>
+    <option>BANKNIFTY</option>
+    <option>FINNIFTY</option>
+    <option>CRUDEOIL</option>
+    <option>NATURALGAS</option>
+  </select>
+  <select id="opt">
+    <option value="CE">CE (Bull)</option>
+    <option value="PE">PE (Bear)</option>
+  </select>
+  <select id="tf">
+    <option value="FIVE_MINUTE">5 min</option>
+    <option value="FIFTEEN_MINUTE">15 min</option>
+    <option value="ONE_HOUR">1 hour</option>
+  </select>
+  <select id="days">
+    <option value="10">10 days</option>
+    <option value="20">20 days</option>
+    <option value="30" selected>30 days</option>
+    <option value="60">60 days</option>
+  </select>
+  <button class="run-btn" onclick="runBacktest()">🚀 RUN BACKTEST</button>
+</div>
+
+<div id="results" style="display:none">
+  <!-- Stats Cards -->
+  <div class="stats" id="statsCards"></div>
+
+  <!-- Target Rates -->
+  <div class="section">
+    <div class="section-title">Target Achievement</div>
+    <div id="targetBars"></div>
+  </div>
+
+  <!-- Exit Reasons -->
+  <div class="section">
+    <div class="section-title">Exit Reasons</div>
+    <div id="exitReasons"></div>
+  </div>
+
+  <!-- Trade List -->
+  <div class="section">
+    <div class="section-title">Recent Trades</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:4px;padding:4px 8px;font-size:9px;color:#8090a8">
+      <div>Date/Time</div><div>Entry</div><div>Exit</div><div>P&L%</div><div>Result</div>
+    </div>
+    <div id="tradeList"></div>
+  </div>
+</div>
+
+<div id="loading" class="loading" style="display:none">
+  ⏳ Running backtest...
+</div>
+
+<div id="empty" class="loading">
+  Select parameters and click RUN BACKTEST
+</div>
+
+<script>
+var TOKEN = localStorage.getItem('cv3t') || '';
+if (!TOKEN) window.location.href = '/v3';
+
+async function runBacktest() {
+  var sym  = document.getElementById('sym').value;
+  var opt  = document.getElementById('opt').value;
+  var tf   = document.getElementById('tf').value;
+  var days = document.getElementById('days').value;
+
+  document.getElementById('empty').style.display='none';
+  document.getElementById('results').style.display='none';
+  document.getElementById('loading').style.display='block';
+
+  try {
+    var r = await fetch('/api/v3/backtest', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},
+      body: JSON.stringify({symbol:sym,opt_type:opt,interval:tf,days:parseInt(days)})
+    });
+    var d = await r.json();
+    document.getElementById('loading').style.display='none';
+
+    if (!d.success) {
+      alert('Error: '+(d.error||'Unknown'));
+      document.getElementById('empty').style.display='block';
+      return;
+    }
+    showResults(d);
+  } catch(e) {
+    document.getElementById('loading').style.display='none';
+    document.getElementById('empty').style.display='block';
+    alert('Error: '+e.message);
+  }
+}
+
+function showResults(d) {
+  document.getElementById('results').style.display='block';
+
+  var wrColor  = d.win_rate >= 60 ? '#00e676' : d.win_rate >= 45 ? '#d4af37' : '#ff5252';
+  var pnlColor = d.total_pnl >= 0 ? '#00e676' : '#ff5252';
+
+  document.getElementById('statsCards').innerHTML = `
+    <div class="stat">
+      <div class="stat-l">Win Rate</div>
+      <div class="stat-v" style="color:${wrColor}">${d.win_rate}%</div>
+      <div style="font-size:9px;color:#8090a8">${d.wins}W / ${d.losses}L</div>
+    </div>
+    <div class="stat">
+      <div class="stat-l">Total P&L</div>
+      <div class="stat-v" style="color:${pnlColor}">${d.total_pnl>0?'+':''}${d.total_pnl}%</div>
+      <div style="font-size:9px;color:#8090a8">${d.trades} trades</div>
+    </div>
+    <div class="stat">
+      <div class="stat-l">R:R Ratio</div>
+      <div class="stat-v" style="color:#00c8ff">${d.rr_ratio}</div>
+      <div style="font-size:9px;color:#8090a8">W:${d.avg_win}% L:${d.avg_loss}%</div>
+    </div>
+    <div class="stat">
+      <div class="stat-l">Max Drawdown</div>
+      <div class="stat-v" style="color:#ff5252">${d.max_drawdown}%</div>
+      <div style="font-size:9px;color:#8090a8">Streak W:${d.max_consec_win} L:${d.max_consec_loss}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-l">Signals</div>
+      <div class="stat-v" style="color:#d4af37">${d.signals}</div>
+      <div style="font-size:9px;color:#8090a8">${d.candles} candles</div>
+    </div>
+    <div class="stat">
+      <div class="stat-l">Avg Win</div>
+      <div class="stat-v" style="color:#00e676">+${d.avg_win}%</div>
+    </div>
+    <div class="stat">
+      <div class="stat-l">Avg Loss</div>
+      <div class="stat-v" style="color:#ff5252">${d.avg_loss}%</div>
+    </div>
+    <div class="stat">
+      <div class="stat-l">Interval</div>
+      <div class="stat-v" style="color:#8090a8;font-size:12px">${d.interval.replace('_MINUTE','m').replace('ONE_HOUR','1H')}</div>
+      <div style="font-size:9px;color:#8090a8">${d.days}d | ${d.symbol} ${d.opt_type}</div>
+    </div>
+  `;
+
+  // Target bars
+  document.getElementById('targetBars').innerHTML = `
+    <div style="margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;font-size:10px">
+        <span>T1 (+15%) — ${d.t1_rate}%</span><span style="color:#d4af37">${Math.round(d.t1_rate*d.trades/100)} trades</span>
+      </div>
+      <div class="bar" style="background:#1e3a5f"><div class="bar" style="width:${d.t1_rate}%;background:#00e676"></div></div>
+    </div>
+    <div style="margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;font-size:10px">
+        <span>T2 (+25%) — ${d.t2_rate}%</span><span style="color:#d4af37">${Math.round(d.t2_rate*d.trades/100)} trades</span>
+      </div>
+      <div class="bar" style="background:#1e3a5f"><div class="bar" style="width:${d.t2_rate}%;background:#00c8ff"></div></div>
+    </div>
+    <div style="margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;font-size:10px">
+        <span>T3 (+40%) — ${d.t3_rate}%</span><span style="color:#d4af37">${Math.round(d.t3_rate*d.trades/100)} trades</span>
+      </div>
+      <div class="bar" style="background:#1e3a5f"><div class="bar" style="width:${d.t3_rate}%;background:#d4af37"></div></div>
+    </div>
+  `;
+
+  // Exit reasons
+  var reasons = d.exit_reasons || {};
+  var exitHtml = Object.entries(reasons).map(function(e){
+    var colors = {'T3_HIT':'#d4af37','T2_HIT':'#00c8ff','T1_HIT':'#00e676','TRAIL_SL':'#00e676','SL_HIT':'#ff5252','TIMEOUT':'#8090a8'};
+    var clr = colors[e[0]] || '#8090a8';
+    return '<span class="badge" style="background:'+clr+'33;color:'+clr+';margin:2px">'+e[0]+': '+e[1]+'</span>';
+  }).join('');
+  document.getElementById('exitReasons').innerHTML = exitHtml || '<span style="color:#8090a8">No exits</span>';
+
+  // Trade list
+  var trades = d.trade_list || [];
+  var html = trades.slice(0,20).map(function(t) {
+    var dt = new Date(t.ts * 1000);
+    var dtStr = dt.toLocaleDateString('en-IN',{month:'short',day:'numeric'})+' '+
+                dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    var pnlClr = t.pnl >= 0 ? '#00e676' : '#ff5252';
+    var cls    = t.pnl >= 0 ? 'win' : 'loss';
+    var badges = '';
+    if (t.t1_hit) badges += '<span style="color:#00e676">T1</span> ';
+    if (t.t2_hit) badges += '<span style="color:#00c8ff">T2</span> ';
+    if (t.t3_hit) badges += '<span style="color:#d4af37">T3</span> ';
+    if (!badges) badges = '<span style="color:#8090a8">'+t.exit_reason+'</span>';
+    return '<div class="trade-row '+cls+'">'+
+      '<div style="color:#8090a8">'+dtStr+'</div>'+
+      '<div>₹'+t.entry+'</div>'+
+      '<div>₹'+t.exit+'</div>'+
+      '<div style="color:'+pnlClr+'">'+(t.pnl>=0?'+':'')+t.pnl+'%</div>'+
+      '<div>'+badges+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('tradeList').innerHTML = html || '<div style="color:#8090a8;padding:10px">No trades</div>';
+}
+</script>
+</body>
+</html>
