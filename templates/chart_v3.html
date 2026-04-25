@@ -107,7 +107,7 @@ var TOKEN = localStorage.getItem('cv3t') || '';
 var API = '/api/v3';
 if (!TOKEN) { localStorage.setItem('cv3_redirect','/v3/chart'); window.location.href='/v3'; }
 
-var _sym='NIFTY', _tf='FIVE_MINUTE', _days=10, _strike=0;
+var _sym='NIFTY', _tf='FIVE_MINUTE', _days=10, _strike=0, _ceSymbol='', _peSymbol='';
 var mainChart, mainSeries, vwapLine, macdChart, macdLine, sigLine, histSeries;
 var ceChart, ceSeries, peChart, peSeries;
 var srLines = [];
@@ -292,25 +292,63 @@ async function loadStrikes() {
     btn.textContent = sk + (sk===atm?' ★':'');
     btn.onclick = function() {
       _strike = sk;
+      _ceSymbol = '';
+      _peSymbol = '';
       document.querySelectorAll('.sk-btn').forEach(function(b){b.classList.remove('act');});
       btn.classList.add('act');
-      // Update LTP from chain
       if (d.chain) {
         var ce = (d.chain.CE||[]).find(function(o){return o.strike===sk;});
         var pe = (d.chain.PE||[]).find(function(o){return o.strike===sk;});
-        if (ce) document.getElementById('ceLTP').textContent = '₹'+(ce.ltp||0).toFixed(1);
-        if (pe) document.getElementById('peLTP').textContent = '₹'+(pe.ltp||0).toFixed(1);
+        if (ce) { document.getElementById('ceLTP').textContent='₹'+(ce.ltp||0).toFixed(1); _ceSymbol=ce.symbol||''; }
+        if (pe) { document.getElementById('peLTP').textContent='₹'+(pe.ltp||0).toFixed(1); _peSymbol=pe.symbol||''; }
+        loadOptionCandles();
       }
     };
     btns.appendChild(btn);
   });
 
-  // Set initial LTP
+  // Set initial LTP + load candles
   if (d.chain) {
     var ce0 = (d.chain.CE||[]).find(function(o){return o.strike===atm;});
     var pe0 = (d.chain.PE||[]).find(function(o){return o.strike===atm;});
-    if (ce0) document.getElementById('ceLTP').textContent = '₹'+(ce0.ltp||0).toFixed(1);
-    if (pe0) document.getElementById('peLTP').textContent = '₹'+(pe0.ltp||0).toFixed(1);
+    if (ce0) { document.getElementById('ceLTP').textContent='₹'+(ce0.ltp||0).toFixed(1); _ceSymbol=ce0.symbol||''; }
+    if (pe0) { document.getElementById('peLTP').textContent='₹'+(pe0.ltp||0).toFixed(1); _peSymbol=pe0.symbol||''; }
+    loadOptionCandles();
+  }
+}
+
+async function loadOptionCandles() {
+  if (!_ceSymbol && !_peSymbol) return;
+  var days = _tf === 'ONE_MINUTE' ? 1 : _tf === 'FIVE_MINUTE' ? 5 : 10;
+
+  if (_ceSymbol) {
+    var cd = await api('/chart/option-candles?opt_symbol='+encodeURIComponent(_ceSymbol)+'&symbol='+_sym+'&interval='+_tf+'&days='+days);
+    if (cd && cd.success && cd.candles && cd.candles.length) {
+      var data = cd.candles.map(function(c){return {time:c.ts,open:c.open,high:c.high,low:c.low,close:c.close};});
+      data.sort(function(a,b){return a.time-b.time;});
+      ceSeries.setData(data);
+      ceChart.timeScale().fitContent();
+      var g = cd.greeks || {};
+      document.getElementById('ceIV').textContent    = g.iv ? g.iv+'%' : '-';
+      document.getElementById('ceDelta').textContent = g.delta || '-';
+      document.getElementById('ceTheta').textContent = g.theta || '-';
+      document.getElementById('ceGamma').textContent = g.gamma || '-';
+    }
+  }
+
+  if (_peSymbol) {
+    var pd = await api('/chart/option-candles?opt_symbol='+encodeURIComponent(_peSymbol)+'&symbol='+_sym+'&interval='+_tf+'&days='+days);
+    if (pd && pd.success && pd.candles && pd.candles.length) {
+      var pdata = pd.candles.map(function(c){return {time:c.ts,open:c.open,high:c.high,low:c.low,close:c.close};});
+      pdata.sort(function(a,b){return a.time-b.time;});
+      peSeries.setData(pdata);
+      peChart.timeScale().fitContent();
+      var pg = pd.greeks || {};
+      document.getElementById('peIV').textContent    = pg.iv ? pg.iv+'%' : '-';
+      document.getElementById('peDelta').textContent = pg.delta || '-';
+      document.getElementById('peTheta').textContent = pg.theta || '-';
+      document.getElementById('peGamma').textContent = pg.gamma || '-';
+    }
   }
 }
 
