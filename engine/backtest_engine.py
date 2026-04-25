@@ -215,19 +215,20 @@ def simulate_trade(signal, candles, sl_pct=0.30, t1_pct=0.20, t2_pct=0.35, t3_pc
         "adx":         signal['adx'],
     }
 
-    trail_sl = sl
-    max_bars = 30
+    trail_sl   = sl
+    max_bars   = 30
+    best_high  = entry  # Track cumulative best option high
+    worst_low  = entry  # Track cumulative worst option low
 
     for i in range(i_start, min(i_start+max_bars, len(candles))):
         c = candles[i]
         result['bars_held'] = i - i_start + 1
 
-        # Simulate option price from spot movement
         spot_now  = c['close']
         spot_high = c['high']
         spot_low  = c['low']
 
-        # % change from entry
+        # Cumulative % change from entry spot
         if opt_type == "CE":
             chg_high = (spot_high - spot_entry) / spot_entry
             chg_low  = (spot_low  - spot_entry) / spot_entry
@@ -235,31 +236,35 @@ def simulate_trade(signal, candles, sl_pct=0.30, t1_pct=0.20, t2_pct=0.35, t3_pc
             chg_high = (spot_entry - spot_low)  / spot_entry
             chg_low  = (spot_entry - spot_high) / spot_entry
 
-        # Option moves faster than spot (3x delta approximation)
+        # Option price simulation with 3x leverage
         sim_high = entry * (1 + chg_high * 3.0)
         sim_low  = entry * (1 + chg_low  * 3.0)
         sim_high = max(sim_high, entry * 0.05)
         sim_low  = max(sim_low,  entry * 0.05)
 
+        # Update running best/worst
+        if sim_high > best_high: best_high = sim_high
+        if sim_low  < worst_low: worst_low = sim_low
+
         # T3 check
-        if result['t2_hit'] and sim_high >= t3:
+        if result['t2_hit'] and best_high >= t3:
             result['t3_hit']     = True
             result['exit']       = round(t3, 1)
             result['exit_reason']= "T3_HIT"
             break
 
         # T2 check
-        if result['t1_hit'] and sim_high >= t2:
+        if result['t1_hit'] and best_high >= t2:
             result['t2_hit'] = True
             trail_sl = entry * (1 + t1_pct*0.5)
 
         # T1 check
-        if not result['t1_hit'] and sim_high >= t1:
+        if not result['t1_hit'] and best_high >= t1:
             result['t1_hit'] = True
             trail_sl = entry  # Move to cost
 
         # SL check
-        if sim_low <= trail_sl:
+        if worst_low <= trail_sl:
             result['exit']       = round(trail_sl, 1)
             result['exit_reason']= "TRAIL_SL" if result['t1_hit'] else "SL_HIT"
             break
