@@ -238,6 +238,12 @@ def stream_ltp():
 
 # ── Chart APIs ────────────────────────────────────────
 
+
+@app.route("/v3/chart")
+def chart_page():
+    """Chart page — admin + premium only"""
+    return render_template("chart_v3.html")
+
 @app.route("/api/v3/chart/db-stats")
 @require_auth
 def chart_db_stats():

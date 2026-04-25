@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chanakya AI — Chart</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;height:100vh;overflow:hidden}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0a1520;border-bottom:1px solid #1e3a5f;flex-wrap:wrap}
+.logo{color:#d4af37;font-weight:900;font-size:14px;margin-right:8px}
+.sym-btn{padding:4px 10px;border-radius:6px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:11px;font-weight:700}
+.sym-btn.active{background:#00c8ff;color:#000;border-color:#00c8ff}
+.tf-btn{padding:3px 7px;border-radius:4px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:10px}
+.tf-btn.active{background:#d4af37;color:#000}
+.ohlc{font-size:10px;color:#8090a8;margin-left:auto}
+.ohlc span{color:#fff;margin-left:4px}
+.main-chart{width:100%;background:#060d14}
+.panel-label{font-size:9px;color:#8090a8;padding:2px 6px;background:#0a1520}
+.opt-row{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px}
+.opt-panel{background:#0a1520;border:1px solid #1e3a5f;border-radius:8px;overflow:hidden}
+.opt-header{padding:6px 10px;display:flex;justify-content:space-between;align-items:center;background:#0d1b2a}
+.opt-title{font-size:11px;font-weight:800}
+.greeks{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px;font-size:10px;text-align:center}
+.greek-item{background:#060d14;border-radius:4px;padding:4px}
+.greek-label{color:#8090a8;font-size:8px}
+.greek-val{font-weight:700;font-size:11px}
+.strike-row{display:flex;gap:4px;padding:6px 12px;align-items:center;flex-wrap:wrap}
+.strike-btn{padding:3px 8px;border-radius:4px;border:1px solid #1e3a5f;background:transparent;color:#8090a8;cursor:pointer;font-size:10px}
+.strike-btn.active{background:#d4af37;color:#000;border-color:#d4af37}
+.ltp-badge{font-size:10px;padding:2px 8px;border-radius:10px}
+.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#8090a8;font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="top">
+  <div class="logo">⚡ CHANAKYA CHART</div>
+
+  <!-- Symbol tabs -->
+  <div style="display:flex;gap:4px">
+    <button class="sym-btn active" onclick="setSym('NIFTY',this)">NIFTY</button>
+    <button class="sym-btn" onclick="setSym('BANKNIFTY',this)">BANKNIFTY</button>
+    <button class="sym-btn" onclick="setSym('FINNIFTY',this)">FINNIFTY</button>
+    <button class="sym-btn" onclick="setSym('CRUDEOIL',this)">CRUDE</button>
+    <button class="sym-btn" onclick="setSym('NATURALGAS',this)">NATGAS</button>
+  </div>
+
+  <!-- Timeframe -->
+  <div style="display:flex;gap:3px">
+    <button class="tf-btn" onclick="setTF('ONE_MINUTE','1D',this)">1m</button>
+    <button class="tf-btn active" onclick="setTF('FIVE_MINUTE','5D',this)">5m</button>
+    <button class="tf-btn" onclick="setTF('FIFTEEN_MINUTE','10D',this)">15m</button>
+    <button class="tf-btn" onclick="setTF('THIRTY_MINUTE','15D',this)">30m</button>
+    <button class="tf-btn" onclick="setTF('ONE_HOUR','30D',this)">1h</button>
+    <button class="tf-btn" onclick="setTF('ONE_DAY','365D',this)">D</button>
+  </div>
+
+  <!-- OHLC display -->
+  <div class="ohlc" id="ohlcBar">
+    O<span id="oO">-</span>
+    H<span id="oH" style="color:#00e676">-</span>
+    L<span id="oL" style="color:#ff5252">-</span>
+    C<span id="oC">-</span>
+    V<span id="oV">-</span>
+  </div>
+
+  <!-- LTP -->
+  <div class="ltp-badge" id="ltpBadge" style="background:#1e3a5f">LTP: --</div>
+</div>
+
+<!-- Main Index Chart -->
+<div id="mainChart" style="height:38vh;width:100%"></div>
+
+<!-- MACD Panel -->
+<div class="panel-label">MACD (12,26,9)</div>
+<div id="macdChart" style="height:10vh;width:100%"></div>
+
+<!-- Strike Selector -->
+<div class="strike-row">
+  <span style="font-size:10px;color:#8090a8">Strike:</span>
+  <div id="strikeButtons"></div>
+  <span style="font-size:10px;color:#d4af37" id="expiryLabel"></span>
+</div>
+
+<!-- CE / PE Charts -->
+<div class="opt-row" style="height:32vh">
+  <!-- CE Panel -->
+  <div class="opt-panel">
+    <div class="opt-header">
+      <div class="opt-title" style="color:#00e676">📈 CE</div>
+      <div style="font-size:10px;color:#00e676" id="ceLTP">₹--</div>
+    </div>
+    <div id="ceChart" style="height:16vh"></div>
+    <div class="greeks" id="ceGreeks">
+      <div class="greek-item"><div class="greek-label">IV</div><div class="greek-val" id="ceIV">-</div></div>
+      <div class="greek-item"><div class="greek-label">Δ Delta</div><div class="greek-val" id="ceDelta">-</div></div>
+      <div class="greek-item"><div class="greek-label">Θ Theta</div><div class="greek-val" id="ceTheta">-</div></div>
+      <div class="greek-item"><div class="greek-label">Γ Gamma</div><div class="greek-val" id="ceGamma">-</div></div>
+      <div class="greek-item"><div class="greek-label">ATR</div><div class="greek-val" id="ceATR">-</div></div>
+    </div>
+  </div>
+
+  <!-- PE Panel -->
+  <div class="opt-panel">
+    <div class="opt-header">
+      <div class="opt-title" style="color:#ff5252">📉 PE</div>
+      <div style="font-size:10px;color:#ff5252" id="peLTP">₹--</div>
+    </div>
+    <div id="peChart" style="height:16vh"></div>
+    <div class="greeks" id="peGreeks">
+      <div class="greek-item"><div class="greek-label">IV</div><div class="greek-val" id="peIV">-</div></div>
+      <div class="greek-item"><div class="greek-label">Δ Delta</div><div class="greek-val" id="peDelta">-</div></div>
+      <div class="greek-item"><div class="greek-label">Θ Theta</div><div class="greek-val" id="peTheta">-</div></div>
+      <div class="greek-item"><div class="greek-label">Γ Gamma</div><div class="greek-val" id="peGamma">-</div></div>
+      <div class="greek-item"><div class="greek-label">ATR</div><div class="greek-val" id="peATR">-</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var TOKEN = localStorage.getItem('cv3t') || '';
+var API   = '/api/v3';
+if (!TOKEN) window.location.href = '/v3';
+
+var _sym      = 'NIFTY';
+var _interval = 'FIVE_MINUTE';
+var _days     = 5;
+var _strike   = 0;
+var _atm      = 0;
+
+// Chart instances
+var mainChart, mainSeries, vwapSeries, srSeries = [], macdChart, macdSeries, macdSignalSeries, macdHistSeries;
+var ceChart, ceSeries, peChart, peSeries;
+
+function initCharts() {
+  var opts = {
+    layout:{background:{color:'#060d14'},textColor:'#8090a8'},
+    grid:{vertLines:{color:'#0d1b2a'},horzLines:{color:'#0d1b2a'}},
+    crosshair:{mode:1},
+    timeScale:{borderColor:'#1e3a5f',timeVisible:true,secondsVisible:false},
+    rightPriceScale:{borderColor:'#1e3a5f'},
+  };
+
+  // Main chart
+  mainChart = LightweightCharts.createChart(document.getElementById('mainChart'), Object.assign({}, opts, {height: document.getElementById('mainChart').offsetHeight}));
+  mainSeries = mainChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
+  vwapSeries = mainChart.addLineSeries({color:'#d4af37',lineWidth:1,title:'VWAP'});
+
+  // Crosshair data display
+  mainChart.subscribeCrosshairMove(function(param) {
+    if (!param.seriesData) return;
+    var d = param.seriesData.get(mainSeries);
+    if (d) {
+      document.getElementById('oO').textContent = d.open.toFixed(2);
+      document.getElementById('oH').textContent = d.high.toFixed(2);
+      document.getElementById('oL').textContent = d.low.toFixed(2);
+      document.getElementById('oC').textContent = d.close.toFixed(2);
+    }
+  });
+
+  // MACD chart
+  macdChart = LightweightCharts.createChart(document.getElementById('macdChart'), Object.assign({}, opts, {height: document.getElementById('macdChart').offsetHeight}));
+  macdSeries       = macdChart.addLineSeries({color:'#00c8ff',lineWidth:1,title:'MACD'});
+  macdSignalSeries = macdChart.addLineSeries({color:'#ff9800',lineWidth:1,title:'Signal'});
+  macdHistSeries   = macdChart.addHistogramSeries({color:'#4caf50',title:'Hist'});
+
+  // CE chart
+  ceChart = LightweightCharts.createChart(document.getElementById('ceChart'), Object.assign({}, opts, {height: document.getElementById('ceChart').offsetHeight}));
+  ceSeries = ceChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
+
+  // PE chart
+  peChart = LightweightCharts.createChart(document.getElementById('peChart'), Object.assign({}, opts, {height: document.getElementById('peChart').offsetHeight}));
+  peSeries = peChart.addCandlestickSeries({upColor:'#00e676',downColor:'#ff5252',borderUpColor:'#00e676',borderDownColor:'#ff5252',wickUpColor:'#00e676',wickDownColor:'#ff5252'});
+
+  // Sync main + macd time scale
+  mainChart.timeScale().subscribeVisibleLogicalRangeChange(function(r) {
+    if (r) macdChart.timeScale().setVisibleLogicalRange(r);
+  });
+}
+
+async function apiGet(path) {
+  try {
+    var r = await fetch(API+path, {headers:{'X-Auth-Token':TOKEN}});
+    if (r.status === 401) { window.location.href='/v3'; return null; }
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+// EMA calculation
+function calcEMA(data, period) {
+  var k = 2/(period+1);
+  var ema = [data[0]];
+  for (var i=1; i<data.length; i++) {
+    ema.push(data[i]*k + ema[i-1]*(1-k));
+  }
+  return ema;
+}
+
+// MACD calculation
+function calcMACD(closes) {
+  if (closes.length < 26) return [];
+  var ema12 = calcEMA(closes, 12);
+  var ema26 = calcEMA(closes, 26);
+  var macdLine = ema12.map(function(v,i){ return v - ema26[i]; });
+  var signal   = calcEMA(macdLine.slice(9), 9);
+  var result   = [];
+  for (var i=9; i<macdLine.length; i++) {
+    result.push({
+      macd:   macdLine[i],
+      signal: signal[i-9],
+      hist:   macdLine[i] - signal[i-9],
+    });
+  }
+  return result;
+}
+
+// VWAP calculation
+function calcVWAP(candles) {
+  var cumTP = 0, cumVol = 0;
+  return candles.map(function(c) {
+    var tp  = (c.high + c.low + c.close) / 3;
+    cumTP  += tp * c.volume;
+    cumVol += c.volume;
+    return cumVol > 0 ? cumTP/cumVol : c.close;
+  });
+}
+
+// ATR calculation
+function calcATR(candles, period) {
+  if (candles.length < 2) return 0;
+  var trs = candles.slice(1).map(function(c,i) {
+    var pc = candles[i].close;
+    return Math.max(c.high-c.low, Math.abs(c.high-pc), Math.abs(c.low-pc));
+  });
+  var atr = trs.slice(-period);
+  return atr.length > 0 ? (atr.reduce(function(a,b){return a+b;},0)/atr.length).toFixed(1) : 0;
+}
+
+// S/R levels (pivot)
+function calcSR(candles) {
+  if (candles.length < 2) return [];
+  var prev = candles[candles.length-2];
+  var P  = (prev.high + prev.low + prev.close) / 3;
+  return [
+    {price: parseFloat((P*2 - prev.low).toFixed(2)),  color:'#00e676', title:'R1'},
+    {price: parseFloat(P.toFixed(2)),                  color:'#d4af37', title:'PP'},
+    {price: parseFloat((P*2 - prev.high).toFixed(2)), color:'#ff5252', title:'S1'},
+  ];
+}
+
+async function loadMainChart() {
+  var d = await apiGet('/chart/candles?symbol='+_sym+'&interval='+_interval+'&days='+_days);
+  if (!d || !d.candles || !d.candles.length) {
+    console.log('No candles');
+    return;
+  }
+
+  var candles = d.candles;
+  var chartData = candles.map(function(c) {
+    return {time: c.ts, open: c.open, high: c.high, low: c.low, close: c.close};
+  });
+  mainSeries.setData(chartData);
+
+  // VWAP
+  var vwap = calcVWAP(candles);
+  var vwapData = candles.map(function(c,i){ return {time:c.ts, value:vwap[i]}; });
+  vwapSeries.setData(vwapData);
+
+  // MACD
+  var closes  = candles.map(function(c){return c.close;});
+  var macdRes = calcMACD(closes);
+  if (macdRes.length > 0) {
+    var offset = candles.length - macdRes.length;
+    macdSeries.setData(macdRes.map(function(m,i){ return {time:candles[offset+i].ts, value:m.macd}; }));
+    macdSignalSeries.setData(macdRes.map(function(m,i){ return {time:candles[offset+i].ts, value:m.signal}; }));
+    macdHistSeries.setData(macdRes.map(function(m,i){ return {time:candles[offset+i].ts, value:m.hist, color:m.hist>=0?'#00e676':'#ff5252'}; }));
+  }
+
+  // S/R levels
+  srSeries.forEach(function(s){mainChart.removeSeries(s);});
+  srSeries = [];
+  var levels = calcSR(candles);
+  levels.forEach(function(l) {
+    var s = mainChart.addLineSeries({color:l.color,lineWidth:1,lineStyle:2,title:l.title,lastValueVisible:true,priceLineVisible:false});
+    s.setData([{time:candles[0].ts,value:l.price},{time:candles[candles.length-1].ts,value:l.price}]);
+    srSeries.push(s);
+  });
+
+  // ATR display
+  var atr = calcATR(candles, 14);
+
+  // Latest candle OHLC
+  var last = candles[candles.length-1];
+  document.getElementById('oO').textContent = last.open.toFixed(2);
+  document.getElementById('oH').textContent = last.high.toFixed(2);
+  document.getElementById('oL').textContent = last.low.toFixed(2);
+  document.getElementById('oC').textContent = last.close.toFixed(2);
+  document.getElementById('oV').textContent = last.volume || '-';
+
+  mainChart.timeScale().fitContent();
+  macdChart.timeScale().fitContent();
+}
+
+async function loadStrikes() {
+  var d = await apiGet('/chart/strikes?symbol='+_sym);
+  if (!d || !d.success) return;
+
+  _atm = d.chain ? d.chain.atm : 0;
+  var expiry = d.chain ? d.chain.expiry : '';
+  document.getElementById('expiryLabel').textContent = expiry ? 'Exp: '+expiry : '';
+
+  var btns = document.getElementById('strikeButtons');
+  btns.innerHTML = '';
+
+  if (d.chain && d.chain.CE) {
+    var strikes = d.chain.CE.map(function(o){return o.strike;}).sort(function(a,b){return a-b;});
+    strikes.forEach(function(strike) {
+      var btn = document.createElement('button');
+      btn.className = 'strike-btn' + (strike === _atm ? ' active' : '');
+      btn.textContent = strike + (strike === _atm ? ' ★ATM' : '');
+      btn.onclick = function() {
+        _strike = strike;
+        document.querySelectorAll('.strike-btn').forEach(function(b){b.classList.remove('active');});
+        btn.classList.add('active');
+        loadOptionCharts();
+      };
+      btns.appendChild(btn);
+    });
+    _strike = _atm;
+  }
+}
+
+async function loadOptionCharts() {
+  if (!_strike) return;
+  var sym = _sym;
+
+  // Find option symbols from chain
+  var d = await apiGet('/chart/strikes?symbol='+sym);
+  if (!d || !d.chain) return;
+
+  var ceOpt = null, peOpt = null;
+  if (d.chain.CE) {
+    ceOpt = d.chain.CE.find(function(o){return o.strike === _strike;});
+  }
+  if (d.chain.PE) {
+    peOpt = d.chain.PE.find(function(o){return o.strike === _strike;});
+  }
+
+  // Update LTP
+  if (ceOpt) {
+    document.getElementById('ceLTP').textContent = '₹'+(ceOpt.ltp||0).toFixed(2);
+  }
+  if (peOpt) {
+    document.getElementById('peLTP').textContent = '₹'+(peOpt.ltp||0).toFixed(2);
+  }
+}
+
+function setSym(sym, btn) {
+  _sym = sym;
+  document.querySelectorAll('.sym-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  loadAll();
+}
+
+function setTF(interval, range, btn) {
+  _interval = interval;
+  var daysMap = {'1D':1,'5D':5,'10D':10,'15D':15,'30D':30,'365D':365};
+  _days = daysMap[range] || 5;
+  document.querySelectorAll('.tf-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  loadMainChart();
+}
+
+function loadAll() {
+  loadMainChart();
+  loadStrikes();
+}
+
+// Live LTP update via SSE
+function startLTP() {
+  var src = new EventSource(API+'/stream/ltp?token='+TOKEN);
+  src.onmessage = function(e) {
+    try {
+      var data = JSON.parse(e.data);
+      var ltp = data[_sym] || 0;
+      if (ltp > 0) {
+        document.getElementById('ltpBadge').textContent = _sym+': ₹'+ltp.toFixed(2);
+        document.getElementById('ltpBadge').style.background = '#1e3a5f';
+      }
+    } catch(ex) {}
+  };
+  src.onerror = function() {
+    setTimeout(startLTP, 5000);
+  };
+}
+
+// Auto refresh every 1 min
+function startAutoRefresh() {
+  setInterval(function() {
+    loadMainChart();
+  }, 60000);
+}
+
+// Init
+window.addEventListener('load', function() {
+  initCharts();
+  loadAll();
+  startLTP();
+  startAutoRefresh();
+});
+</script>
+</body>
+</html>
