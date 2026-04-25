@@ -180,7 +180,7 @@ def generate_signals(candles, symbol="NIFTY", opt_type="CE"):
     return signals
 
 
-def simulate_trade(signal, candles, sl_pct=0.30, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
+def simulate_trade(signal, candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
     # spot_sl=0.4%, spot_t1=0.7%, spot_t2=1.2%, spot_t3=2.0%
     """
     Simulate option trade using spot price movement
@@ -290,6 +290,7 @@ def simulate_trade(signal, candles, sl_pct=0.30, t1_pct=0.20, t2_pct=0.35, t3_pc
             result['exit_reason'] = "TIMEOUT"
 
     pnl_pct = (result['exit'] - entry) / entry * 100
+    pnl_pct = max(pnl_pct, -sl_pct*100)  # Cap loss at sl_pct
     result['pnl_pct'] = round(pnl_pct, 2)
     result['pnl']     = round(pnl_pct, 2)
     return result
