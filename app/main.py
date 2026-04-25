@@ -239,6 +239,11 @@ def stream_ltp():
 # ── Chart APIs ────────────────────────────────────────
 
 
+
+@app.route("/v3/chart-test")
+def chart_test():
+    return render_template("chart_test.html")
+
 @app.route("/v3/chart")
 def chart_page():
     """Chart page — admin + premium only"""
@@ -277,6 +282,105 @@ def chart_candles():
         return jsonify({"success":True,"symbol":symbol,"interval":interval,
                         "count":len(candles),"candles":candles})
     except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+
+@app.route("/api/v3/chart/option-candles")
+@require_auth
+def chart_option_candles():
+    try:
+        curr_user = get_current_user()
+        if curr_user.get("role") not in ("admin","premium"):
+            return jsonify({"success":False,"error":"Premium only"}), 403
+
+        opt_symbol = request.args.get("opt_symbol","")
+        symbol     = request.args.get("symbol","NIFTY").upper()
+        interval   = request.args.get("interval","FIVE_MINUTE")
+        days       = int(request.args.get("days","5"))
+
+        if not opt_symbol:
+            return jsonify({"success":False,"error":"opt_symbol required"})
+
+        # Find token from instruments
+        from engine.option_chain import _get_instruments
+        instruments = _get_instruments()
+        opt_info = next((i for i in instruments if i.get("symbol","")==opt_symbol), None)
+        if not opt_info:
+            return jsonify({"success":False,"error":f"Option {opt_symbol} not found"})
+
+        token    = opt_info["token"]
+        exchange = opt_info["exch_seg"]
+
+        # Fetch candles
+        from engine.candle_db import get_candles_db, store_candles
+        from engine.candles import get_candles_direct
+        candles = get_candles_db(opt_symbol, interval, days=days)
+        if not candles:
+            raw = get_candles_direct(broker, token, exchange=exchange,
+                                     interval=interval, days=days)
+            if raw:
+                store_candles(opt_symbol, exchange, interval, raw)
+                candles = get_candles_db(opt_symbol, interval, days=days)
+
+        # Calculate Greeks
+        greeks = {"iv":0,"delta":0,"gamma":0,"theta":0,"vega":0,"ltp":0}
+        try:
+            import math
+            r = broker.api.ltpData(exchange, opt_symbol, token)
+            opt_ltp = float(r["data"]["ltp"]) if r and r.get("data") else 0
+
+            from engine.candle_db import SYMBOLS
+            si = next((s for s in SYMBOLS if s["symbol"]==symbol), None)
+            spot_ltp = 0
+            if si:
+                sr = broker.api.ltpData(si["exchange"], symbol, si["token"])
+                spot_ltp = float(sr["data"]["ltp"]) if sr and sr.get("data") else 0
+
+            strike   = float(opt_info.get("strike",0)) / 100
+            opt_type = "CE" if "CE" in opt_symbol else "PE"
+            expiry_str = opt_info.get("expiry","")
+
+            if spot_ltp > 0 and opt_ltp > 0 and expiry_str and strike > 0:
+                from datetime import datetime
+                import pytz
+                IST2 = pytz.timezone("Asia/Kolkata")
+                exp  = IST2.localize(datetime.strptime(expiry_str, "%d%b%Y"))
+                now2 = datetime.now(IST2)
+                T    = max((exp - now2).days / 365, 0.001)
+                r_f  = 0.065
+                sigma = 0.2
+
+                def N(x): return 0.5*(1+math.erf(x/math.sqrt(2)))
+                def phi(x): return math.exp(-0.5*x**2)/math.sqrt(2*math.pi)
+
+                for _ in range(50):
+                    if sigma <= 0: sigma=0.01
+                    d1 = (math.log(spot_ltp/strike)+(r_f+0.5*sigma**2)*T)/(sigma*math.sqrt(T))
+                    d2 = d1 - sigma*math.sqrt(T)
+                    if opt_type=="CE":
+                        price = spot_ltp*N(d1) - strike*math.exp(-r_f*T)*N(d2)
+                    else:
+                        price = strike*math.exp(-r_f*T)*N(-d2) - spot_ltp*N(-d1)
+                    vega = spot_ltp*math.sqrt(T)*phi(d1)
+                    if abs(vega)<1e-10: break
+                    sigma -= (price-opt_ltp)/vega
+                IV = round(sigma*100,1)
+                d1 = (math.log(spot_ltp/strike)+(r_f+0.5*sigma**2)*T)/(sigma*math.sqrt(T))
+                d2 = d1 - sigma*math.sqrt(T)
+                greeks = {
+                    "iv":    IV,
+                    "delta": round(N(d1) if opt_type=="CE" else N(d1)-1, 3),
+                    "gamma": round(phi(d1)/(spot_ltp*sigma*math.sqrt(T)), 5),
+                    "theta": round(-(spot_ltp*phi(d1)*sigma/(2*math.sqrt(T)))/365, 2),
+                    "vega":  round(spot_ltp*math.sqrt(T)*phi(d1)/100, 2),
+                    "ltp":   opt_ltp,
+                }
+        except Exception as ge:
+            logger.debug(f"Greeks: {ge}")
+
+        return jsonify({"success":True,"candles":candles,"greeks":greeks})
+    except Exception as e:
+        logger.error(f"option-candles: {e}")
         return jsonify({"success":False,"error":str(e)})
 
 @app.route("/api/v3/chart/strikes")
