@@ -78,11 +78,17 @@ def init_db():
 
 def _parse_ts(dt_str):
     """Parse Angel One datetime → Unix timestamp"""
+    # Already integer timestamp
+    if isinstance(dt_str, (int, float)):
+        return int(dt_str)
     try:
-        if "T" in str(dt_str):
-            dt = datetime.fromisoformat(str(dt_str))
+        s = str(dt_str)
+        if "T" in s:
+            dt = datetime.fromisoformat(s)
+        elif s.isdigit():
+            return int(s)
         else:
-            dt = datetime.strptime(str(dt_str), "%Y-%m-%d %H:%M:%S")
+            dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
         if dt.tzinfo is None:
             dt = IST.localize(dt)
         return int(dt.timestamp())
