@@ -299,10 +299,23 @@ def run_backtest_api():
         interval = data.get("interval","FIVE_MINUTE")
         days     = int(data.get("days",30))
         opt_type = data.get("opt_type","CE")
-        use_real = data.get("real_data", True)
-        if use_real and symbol == "NIFTY":
+        strategy = data.get("strategy","ORIGINAL")
+        sl_pct   = float(data.get("sl_pct", 0.15))
+        t1_pct   = float(data.get("t1_pct", 0.20))
+        t2_pct   = float(data.get("t2_pct", 0.35))
+        t3_pct   = float(data.get("t3_pct", 0.50))
+
+        if strategy == "ORIGINAL" and symbol == "NIFTY":
             from engine.option_backtest import run_real_backtest
-            result = run_real_backtest(symbol, interval, days, opt_type)
+            result = run_real_backtest(symbol, interval, days, opt_type,
+                                       sl_pct=sl_pct, t1_pct=t1_pct,
+                                       t2_pct=t2_pct, t3_pct=t3_pct)
+        elif symbol == "NIFTY":
+            from engine.option_backtest import run_strategy_backtest_api
+            result = run_strategy_backtest_api(strategy, symbol, interval,
+                                               days, opt_type,
+                                               sl_pct=sl_pct, t1_pct=t1_pct,
+                                               t2_pct=t2_pct, t3_pct=t3_pct)
         else:
             from engine.backtest_engine import run_backtest
             result = run_backtest(symbol, interval, days, opt_type)

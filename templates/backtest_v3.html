@@ -56,7 +56,38 @@ select{background:#0d1b2a;color:#e0e8f0;border:1px solid #1e3a5f}
     <option value="30" selected>30 days</option>
     <option value="60">60 days</option>
   </select>
+  <select id="strategy">
+    <option value="ORIGINAL">Original (EMA+RSI+VWAP)</option>
+    <option value="MACD_MOMENTUM">MACD Momentum 🥇CE</option>
+    <option value="EMA_CROSS">EMA Cross 🥇PE</option>
+    <option value="SUPERTREND">Supertrend</option>
+    <option value="RSI_REVERSAL">RSI Reversal</option>
+    <option value="BB_SQUEEZE">BB Squeeze</option>
+    <option value="VWAP_BOUNCE">VWAP Bounce</option>
+  </select>
   <button class="run-btn" onclick="runBacktest()">🚀 RUN BACKTEST</button>
+</div>
+
+<!-- Target controls -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 16px;background:#060d14;border-bottom:1px solid #0d1b2a;font-size:11px;align-items:center">
+  <span style="color:#8090a8">Manual Targets:</span>
+  <label style="color:#8090a8">SL%
+    <input id="sl_pct" type="number" value="15" min="5" max="30" step="1"
+      style="width:50px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:4px;padding:3px;margin-left:4px">
+  </label>
+  <label style="color:#8090a8">T1%
+    <input id="t1_pct" type="number" value="20" min="5" max="50" step="1"
+      style="width:50px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:4px;padding:3px;margin-left:4px">
+  </label>
+  <label style="color:#8090a8">T2%
+    <input id="t2_pct" type="number" value="35" min="10" max="80" step="1"
+      style="width:50px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:4px;padding:3px;margin-left:4px">
+  </label>
+  <label style="color:#8090a8">T3%
+    <input id="t3_pct" type="number" value="50" min="20" max="100" step="5"
+      style="width:50px;background:#0d1b2a;border:1px solid #1e3a5f;color:#fff;border-radius:4px;padding:3px;margin-left:4px">
+  </label>
+  <span style="color:#5a6a7a;font-size:9px">← Drag to test different targets</span>
 </div>
 
 <div id="results" style="display:none">
@@ -108,10 +139,19 @@ async function runBacktest() {
   document.getElementById('loading').style.display='block';
 
   try {
+    var strategy = document.getElementById('strategy').value;
+    var sl_pct = parseFloat(document.getElementById('sl_pct').value)/100;
+    var t1_pct = parseFloat(document.getElementById('t1_pct').value)/100;
+    var t2_pct = parseFloat(document.getElementById('t2_pct').value)/100;
+    var t3_pct = parseFloat(document.getElementById('t3_pct').value)/100;
+
     var r = await fetch('/api/v3/backtest', {
       method:'POST',
       headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},
-      body: JSON.stringify({symbol:sym,opt_type:opt,interval:tf,days:parseInt(days)})
+      body: JSON.stringify({
+        symbol:sym, opt_type:opt, interval:tf, days:parseInt(days),
+        strategy:strategy, sl_pct:sl_pct, t1_pct:t1_pct, t2_pct:t2_pct, t3_pct:t3_pct
+      })
     });
     var d = await r.json();
     document.getElementById('loading').style.display='none';

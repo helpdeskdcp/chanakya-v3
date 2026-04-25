@@ -279,7 +279,7 @@ def simulate_real_trade(signal, opt_candles, sl_pct=0.15, t1_pct=0.20, t2_pct=0.
     return result
 
 
-def run_real_backtest(symbol="NIFTY", interval="FIVE_MINUTE", days=30, opt_type="CE"):
+def run_real_backtest(symbol="NIFTY", interval="FIVE_MINUTE", days=30, opt_type="CE", sl_pct=0.15, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
     """Full backtest with real option candles"""
     config = OPTION_SYMBOLS.get(symbol)
     if not config:
@@ -311,7 +311,7 @@ def run_real_backtest(symbol="NIFTY", interval="FIVE_MINUTE", days=30, opt_type=
         if not opt_candles: continue
 
         # Simulate trade
-        trade = simulate_real_trade(sig, opt_candles)
+        trade = simulate_real_trade(sig, opt_candles, sl_pct=sl_pct, t1_pct=t1_pct, t2_pct=t2_pct, t3_pct=t3_pct)
         if not trade: continue
 
         trade['option_symbol'] = opt_sym
@@ -377,3 +377,275 @@ def run_real_backtest(symbol="NIFTY", interval="FIVE_MINUTE", days=30, opt_type=
         "profit_factor": round(abs(sum(t['pnl'] for t in wins)/sum(t['pnl'] for t in losses)),2) if losses and sum(t['pnl'] for t in losses)!=0 else 0,
         "trade_list":   trades,
     }
+
+
+def run_strategy_backtest_api(strategy_name, symbol="NIFTY", interval="FIVE_MINUTE",
+                               days=30, opt_type="CE",
+                               sl_pct=0.15, t1_pct=0.20, t2_pct=0.35, t3_pct=0.50):
+    """Run named strategy backtest from API"""
+    from engine.candle_db import get_candles_db
+
+    STRATEGIES = {
+        "EMA_CROSS":     _ema_cross_signals,
+        "SUPERTREND":    _supertrend_signals,
+        "MACD_MOMENTUM": _macd_signals,
+        "RSI_REVERSAL":  _rsi_reversal_signals,
+        "BB_SQUEEZE":    _bb_squeeze_signals,
+        "VWAP_BOUNCE":   _vwap_bounce_signals,
+    }
+
+    fn = STRATEGIES.get(strategy_name)
+    if not fn:
+        return {"error": f"Unknown strategy: {strategy_name}"}
+
+    config = OPTION_SYMBOLS.get(symbol)
+    if not config: return {"error": f"Symbol {symbol} not configured"}
+
+    spot_candles = get_candles_db(symbol, interval, days=days)
+    if len(spot_candles) < 55:
+        return {"error": f"Not enough candles: {len(spot_candles)}"}
+
+    signals = fn(spot_candles, opt_type)
+    if not signals:
+        return {"error": "No signals", "candles": len(spot_candles)}
+
+    trades = []; last_exit_i = 0
+    for sig in signals:
+        if sig["candle_i"] < last_exit_i+5: continue
+        opt_info = find_atm_option(sig["spot"], config["options"], opt_type)
+        if not opt_info: continue
+        opt_candles = get_option_candles(opt_info["symbol"], interval, days=days)
+        if not opt_candles: continue
+        trade = simulate_real_trade(sig, opt_candles,
+                                    sl_pct=sl_pct, t1_pct=t1_pct,
+                                    t2_pct=t2_pct, t3_pct=t3_pct)
+        if not trade: continue
+        trade["option_symbol"] = opt_info["symbol"]
+        trade["strike"]        = opt_info["strike"]
+        trade["strategy"]      = strategy_name
+        trades.append(trade)
+        last_exit_i = sig["candle_i"] + trade["bars_held"]
+
+    if not trades: return {"error": "No trades", "signals": len(signals)}
+
+    wins  = [t for t in trades if t["pnl"]>0]
+    loss  = [t for t in trades if t["pnl"]<=0]
+    t_pnl = sum(t["pnl"] for t in trades)
+    t1h   = sum(1 for t in trades if t["t1_hit"])
+    t2h   = sum(1 for t in trades if t["t2_hit"])
+    t3h   = sum(1 for t in trades if t["t3_hit"])
+    exits = {}
+    for t in trades: exits[t["exit_reason"]] = exits.get(t["exit_reason"],0)+1
+    aw = sum(t["pnl"] for t in wins)/len(wins)  if wins else 0
+    al = sum(t["pnl"] for t in loss)/len(loss) if loss else 0
+    pf = abs(sum(t["pnl"] for t in wins)/sum(t["pnl"] for t in loss)) if loss and sum(t["pnl"] for t in loss)!=0 else 0
+    rr = abs(aw/al) if al<0 else 0
+    cum=pk=dd=0
+    for t in trades:
+        cum+=t["pnl"]
+        if cum>pk: pk=cum
+        if pk-cum>dd: dd=pk-cum
+    mw=ml=cw=cl=0
+    for t in trades:
+        if t["pnl"]>0: cw+=1;cl=0;mw=max(mw,cw)
+        else: cl+=1;cw=0;ml=max(ml,cl)
+
+    return {
+        "strategy":    strategy_name,
+        "symbol":      symbol, "opt_type": opt_type,
+        "interval":    interval, "days": days,
+        "data_type":   "REAL_OPTION_CANDLES",
+        "spot_candles": len(spot_candles),
+        "signals":     len(signals), "trades": len(trades),
+        "wins":        len(wins),    "losses": len(loss),
+        "win_rate":    round(len(wins)/len(trades)*100,1),
+        "total_pnl":   round(t_pnl,2),
+        "avg_win":     round(aw,2), "avg_loss": round(al,2),
+        "rr_ratio":    round(rr,2), "profit_factor": round(pf,2),
+        "max_drawdown": round(dd,2),
+        "t1_rate":     round(t1h/len(trades)*100,1),
+        "t2_rate":     round(t2h/len(trades)*100,1),
+        "t3_rate":     round(t3h/len(trades)*100,1),
+        "exit_reasons": exits,
+        "max_consec_win": mw, "max_consec_loss": ml,
+        "sl_pct": sl_pct, "t1_pct": t1_pct,
+        "t2_pct": t2_pct, "t3_pct": t3_pct,
+        "trade_list": trades,
+    }
+
+
+# Strategy signal functions (reuse from backtest)
+def _ema_cross_signals(spot_candles, opt_type="CE"):
+    from datetime import datetime
+    import pytz
+    IST2 = pytz.timezone("Asia/Kolkata")
+    signals=[]; closes=[c["close"] for c in spot_candles]
+    vwaps=calc_vwap(spot_candles); ema9=calc_ema(closes,9); ema21=calc_ema(closes,21); ema50=calc_ema(closes,50)
+    prev_i=-10
+    for i in range(52,len(spot_candles)-3):
+        if i-prev_i<10: continue
+        c=spot_candles[i]; dt=datetime.fromtimestamp(c["ts"],IST2); h,m=dt.hour,dt.minute
+        if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30) or dt.weekday()>=5: continue
+        e9=ema9[i];e9p=ema9[i-1];e21=ema21[i];e21p=ema21[i-1];e50=ema50[i]
+        if any(x is None for x in [e9,e9p,e21,e21p,e50]): continue
+        score=0
+        if opt_type=="CE":
+            if e9p<e21p and e9>e21: score+=40
+            if e9>e21>e50: score+=25
+            if c["close"]>vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])<55: score+=15
+        else:
+            if e9p>e21p and e9<e21: score+=40
+            if e9<e21<e50: score+=25
+            if c["close"]<vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])>45: score+=15
+        if score>=70:
+            signals.append({"ts":c["ts"],"score":score,"opt_type":opt_type,"spot":c["close"],
+                "vwap":round(vwaps[i],2),"rsi":calc_rsi(closes[max(0,i-20):i+1]),
+                "atr":calc_atr(spot_candles[:i+1]),"candle_i":i})
+            prev_i=i
+    return signals
+
+def _supertrend_signals(spot_candles, opt_type="CE"):
+    from datetime import datetime; import pytz; IST2=pytz.timezone("Asia/Kolkata")
+    signals=[]; closes=[c["close"] for c in spot_candles]; vwaps=calc_vwap(spot_candles); ema21=calc_ema(closes,21); prev_i=-10
+    for i in range(25,len(spot_candles)-3):
+        if i-prev_i<10: continue
+        c=spot_candles[i]; pc=spot_candles[i-1]; dt=datetime.fromtimestamp(c["ts"],IST2); h,m=dt.hour,dt.minute
+        if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30) or dt.weekday()>=5: continue
+        atr_v=calc_atr(spot_candles[:i+1],14)
+        if atr_v<20: continue
+        e21=ema21[i]
+        if e21 is None: continue
+        upper=e21+2*atr_v; lower=e21-2*atr_v; ltp=c["close"]; pltp=pc["close"]; score=0
+        if opt_type=="CE":
+            if pltp<lower and ltp>lower: score+=40
+            if ltp>e21: score+=25
+            if ltp>vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])<55: score+=15
+        else:
+            if pltp>upper and ltp<upper: score+=40
+            if ltp<e21: score+=25
+            if ltp<vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])>45: score+=15
+        if score>=70:
+            signals.append({"ts":c["ts"],"score":score,"opt_type":opt_type,"spot":ltp,
+                "vwap":round(vwaps[i],2),"rsi":calc_rsi(closes[max(0,i-20):i+1]),"atr":round(atr_v,2),"candle_i":i})
+            prev_i=i
+    return signals
+
+def _macd_signals(spot_candles, opt_type="CE"):
+    from datetime import datetime; import pytz; IST2=pytz.timezone("Asia/Kolkata")
+    signals=[]; closes=[c["close"] for c in spot_candles]; vwaps=calc_vwap(spot_candles)
+    ema12=calc_ema(closes,12); ema26=calc_ema(closes,26); prev_i=-10
+    ml=[e12-e26 if e12 and e26 else None for e12,e26 in zip(ema12,ema26)]
+    sv_raw=calc_ema([v for v in ml if v is not None],9)
+    sv=[None]*ml.count(None)+sv_raw[:len(ml)-ml.count(None)]
+    for i in range(35,len(spot_candles)-3):
+        if i-prev_i<10: continue
+        c=spot_candles[i]; dt=datetime.fromtimestamp(c["ts"],IST2); h,m=dt.hour,dt.minute
+        if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30) or dt.weekday()>=5: continue
+        ml_i=ml[i];ml_p=ml[i-1];sv_i=sv[i] if i<len(sv) else None;sv_p=sv[i-1] if i-1<len(sv) else None
+        if any(x is None for x in [ml_i,ml_p,sv_i,sv_p]): continue
+        score=0
+        if opt_type=="CE":
+            if ml_p<sv_p and ml_i>sv_i: score+=40
+            if ml_i>0: score+=20
+            if c["close"]>vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])<60: score+=20
+        else:
+            if ml_p>sv_p and ml_i<sv_i: score+=40
+            if ml_i<0: score+=20
+            if c["close"]<vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])>40: score+=20
+        if score>=70:
+            signals.append({"ts":c["ts"],"score":score,"opt_type":opt_type,"spot":c["close"],
+                "vwap":round(vwaps[i],2),"rsi":calc_rsi(closes[max(0,i-20):i+1]),
+                "atr":calc_atr(spot_candles[:i+1]),"candle_i":i})
+            prev_i=i
+    return signals
+
+def _rsi_reversal_signals(spot_candles, opt_type="CE"):
+    from datetime import datetime; import pytz; IST2=pytz.timezone("Asia/Kolkata")
+    signals=[]; closes=[c["close"] for c in spot_candles]; vwaps=calc_vwap(spot_candles); ema21=calc_ema(closes,21); prev_i=-10
+    for i in range(20,len(spot_candles)-3):
+        if i-prev_i<8: continue
+        c=spot_candles[i]; dt=datetime.fromtimestamp(c["ts"],IST2); h,m=dt.hour,dt.minute
+        if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30) or dt.weekday()>=5: continue
+        rsi_v=calc_rsi(closes[max(0,i-20):i+1]); rsi_p=calc_rsi(closes[max(0,i-21):i]); e21=ema21[i]; score=0
+        if opt_type=="CE":
+            if rsi_p<30 and rsi_v>30: score+=40
+            elif rsi_v<35: score+=20
+            if c["close"]>vwaps[i]: score+=20
+            if e21 and c["close"]>e21: score+=20
+            if calc_atr(spot_candles[:i+1])>10: score+=20
+        else:
+            if rsi_p>70 and rsi_v<70: score+=40
+            elif rsi_v>65: score+=20
+            if c["close"]<vwaps[i]: score+=20
+            if e21 and c["close"]<e21: score+=20
+            if calc_atr(spot_candles[:i+1])>10: score+=20
+        if score>=70:
+            signals.append({"ts":c["ts"],"score":score,"opt_type":opt_type,"spot":c["close"],
+                "vwap":round(vwaps[i],2),"rsi":rsi_v,"atr":calc_atr(spot_candles[:i+1]),"candle_i":i})
+            prev_i=i
+    return signals
+
+def _bb_squeeze_signals(spot_candles, opt_type="CE"):
+    from datetime import datetime; import pytz; IST2=pytz.timezone("Asia/Kolkata")
+    signals=[]; closes=[c["close"] for c in spot_candles]; vwaps=calc_vwap(spot_candles); ema20=calc_ema(closes,20); prev_i=-10
+    for i in range(22,len(spot_candles)-3):
+        if i-prev_i<10: continue
+        c=spot_candles[i]; dt=datetime.fromtimestamp(c["ts"],IST2); h,m=dt.hour,dt.minute
+        if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30) or dt.weekday()>=5: continue
+        e20=ema20[i]
+        if e20 is None: continue
+        w=closes[max(0,i-19):i+1]; std=(sum((x-sum(w)/len(w))**2 for x in w)/len(w))**0.5
+        upper=e20+2*std; lower=e20-2*std; bw=(upper-lower)/e20; ltp=c["close"]; score=0
+        if opt_type=="CE":
+            if bw<0.02 and ltp>upper: score+=40
+            elif ltp>upper: score+=25
+            if ltp>vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])<65: score+=20
+            if calc_atr(spot_candles[:i+1])>10: score+=20
+        else:
+            if bw<0.02 and ltp<lower: score+=40
+            elif ltp<lower: score+=25
+            if ltp<vwaps[i]: score+=20
+            if calc_rsi(closes[max(0,i-20):i+1])>35: score+=20
+            if calc_atr(spot_candles[:i+1])>10: score+=20
+        if score>=70:
+            signals.append({"ts":c["ts"],"score":score,"opt_type":opt_type,"spot":ltp,
+                "vwap":round(vwaps[i],2),"rsi":calc_rsi(closes[max(0,i-20):i+1]),
+                "atr":calc_atr(spot_candles[:i+1]),"candle_i":i})
+            prev_i=i
+    return signals
+
+def _vwap_bounce_signals(spot_candles, opt_type="CE"):
+    from datetime import datetime; import pytz; IST2=pytz.timezone("Asia/Kolkata")
+    signals=[]; closes=[c["close"] for c in spot_candles]; vwaps=calc_vwap(spot_candles)
+    ema9=calc_ema(closes,9); ema21=calc_ema(closes,21); prev_i=-8
+    for i in range(25,len(spot_candles)-3):
+        if i-prev_i<8: continue
+        c=spot_candles[i]; pc=spot_candles[i-1]; dt=datetime.fromtimestamp(c["ts"],IST2); h,m=dt.hour,dt.minute
+        if (9,15)<=(h,m)<=(9,30) or (15,0)<=(h,m)<=(15,30) or dt.weekday()>=5: continue
+        e9=ema9[i]; e21=ema21[i]
+        if e9 is None or e21 is None: continue
+        vw=vwaps[i]; vwp=vwaps[i-1]; rsi_v=calc_rsi(closes[max(0,i-20):i+1]); ltp=c["close"]; pltp=pc["close"]; score=0
+        if opt_type=="CE":
+            if pc["low"]<=vwp*1.002 and ltp>vw: score+=35
+            elif pltp<vwp and ltp>vw: score+=25
+            if e9>e21: score+=25
+            if rsi_v<50: score+=20
+            if calc_atr(spot_candles[:i+1])>10: score+=20
+        else:
+            if pc["high"]>=vwp*0.998 and ltp<vw: score+=35
+            elif pltp>vwp and ltp<vw: score+=25
+            if e9<e21: score+=25
+            if rsi_v>50: score+=20
+            if calc_atr(spot_candles[:i+1])>10: score+=20
+        if score>=70:
+            signals.append({"ts":c["ts"],"score":score,"opt_type":opt_type,"spot":ltp,
+                "vwap":round(vw,2),"rsi":rsi_v,"atr":calc_atr(spot_candles[:i+1]),"candle_i":i})
+            prev_i=i
+    return signals
