@@ -142,6 +142,19 @@ def store_candles(symbol, exchange, interval, raw_candles):
     logger.debug(f"Stored {saved} new candles: {symbol} {interval}")
     return saved
 
+def _is_market_hours(ts, exchange="NSE"):
+    """Filter out non-market hours candles"""
+    from datetime import datetime
+    dt = datetime.fromtimestamp(ts, IST)
+    h, m = dt.hour, dt.minute
+    wd = dt.weekday()
+    if wd >= 5: return False  # Weekend
+    if exchange == "NSE":
+        return (9, 15) <= (h, m) <= (15, 30)
+    elif exchange == "MCX":
+        return (9, 0) <= (h, m) or (h, m) <= (23, 30)
+    return True
+
 def get_candles_db(symbol, interval, limit=500, days=None):
     """
     Fetch candles from DB — fast SQLite query

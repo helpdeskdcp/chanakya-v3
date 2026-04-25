@@ -117,7 +117,10 @@ var chartOpts = {
   layout: {background:{color:'#060d14'}, textColor:'#8090a8'},
   grid: {vertLines:{color:'#0d1b2a'}, horzLines:{color:'#0d1b2a'}},
   crosshair: {mode:1},
-  timeScale: {borderColor:'#1e3a5f', timeVisible:true, secondsVisible:false},
+  timeScale: {borderColor:'#1e3a5f', timeVisible:true, secondsVisible:false, tickMarkFormatter: function(time) {
+    var d = new Date((time + 19800) * 1000); // +5:30 IST offset
+    return d.getUTCHours().toString().padStart(2,'0')+':'+d.getUTCMinutes().toString().padStart(2,'0');
+  }},
   rightPriceScale: {borderColor:'#1e3a5f'},
   handleScroll: true,
   handleScale: true,
