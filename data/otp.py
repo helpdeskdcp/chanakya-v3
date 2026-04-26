@@ -18,7 +18,7 @@ def save_otp(identifier, otp, purpose="verify"):
     # Delete old OTPs
     conn.execute("DELETE FROM otps WHERE identifier=? AND purpose=?",
                  (identifier, purpose))
-    expiry = (datetime.now(IST) + timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M:%S")
+    expiry = (datetime.now(IST) + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS otps (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,8 +58,8 @@ def verify_otp(identifier, otp_input, purpose="verify"):
             return False, "OTP not found or expired"
 
         # Check expiry
-        expiry = datetime.strptime(row["expiry"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=IST)
-        if datetime.now(IST) > expiry:
+        expiry = datetime.strptime(row["expiry"], "%Y-%m-%d %H:%M:%S")
+        if datetime.now() > expiry:
             return False, "OTP expired — request new one"
 
         if row["otp"] != otp_input.strip():

@@ -1981,13 +1981,6 @@ def register_send_otp():
     ok, msg, channel = send_otp(contact, purpose="verify")
 
     if ok:
-        # Store temp registration data in session
-        session["reg_pending"] = {
-            "username": username,
-            "password": password,
-            "contact":  contact,
-            "channel":  channel,
-        }
         return jsonify({
             "success": True,
             "channel": channel,
@@ -2006,35 +1999,37 @@ def register_verify_otp():
     if not eula_accepted:
         return jsonify({"success":False,"error":"Please accept the User Agreement"})
 
-    reg = session.get("reg_pending")
-    if not reg:
-        return jsonify({"success":False,"error":"Session expired — start registration again"})
+    # Get reg data from request (stateless)
+    username = data.get("username","").strip()
+    password = data.get("password","").strip()
+    contact  = data.get("contact","").strip()
+
+    if not username or not password or not contact:
+        return jsonify({"success":False,"error":"Username, password and contact required"})
 
     from data.otp import verify_otp
-    ok, msg = verify_otp(reg["contact"], otp_input, purpose="verify")
-
+    ok, msg = verify_otp(contact, otp_input, purpose="verify")
     if not ok:
         return jsonify({"success":False,"error":msg})
 
     # Create user
-    from data.users import register_user
-    ok2, msg2 = register_user(reg["username"], reg["password"], role="viewer")
+    from data.users import register_user, get_user
+    if get_user(username):
+        return jsonify({"success":False,"error":"Username already taken"})
+
+    ok2, msg2 = register_user(username, password, role="viewer")
     if not ok2:
         return jsonify({"success":False,"error":msg2})
 
     # Update contact info
     import sqlite3
     conn = sqlite3.connect("data/users.db")
-    if "@" in reg["contact"]:
-        conn.execute("UPDATE users SET upi_name=? WHERE username=?",
-                     (reg["contact"], reg["username"]))
+    if "@" in contact:
+        conn.execute("UPDATE users SET upi_name=? WHERE username=?", (contact, username))
     else:
-        conn.execute("UPDATE users SET telegram_id=? WHERE username=?",
-                     (reg["contact"], reg["username"]))
+        conn.execute("UPDATE users SET telegram_id=? WHERE username=?", (contact, username))
     conn.commit()
     conn.close()
-
-    session.pop("reg_pending", None)
 
     # Welcome telegram + email
     from engine.telegram import telegram
