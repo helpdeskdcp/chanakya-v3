@@ -430,7 +430,6 @@ def api_google_auth():
         # Find or create user
         user = conn.execute("SELECT * FROM users WHERE username=?", (email,)).fetchone()
         if not user:
-            # Also check by email in upi_name (we store name there)
             username = email.split('@')[0].lower().replace('.','_')[:20]
             base = username; i=1
             while conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone():
@@ -440,18 +439,25 @@ def api_google_auth():
             from data.users import hash_password
             conn.execute("""
                 INSERT INTO users
-                (username,password_hash,role,active,trial_start,trial_days,pref_mode,broker_name,upi_name,created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-            """, (username, hash_password(uid[:20]), 'viewer', 1, now, 15, 'PAPER', 'none', name, now))
+                (username,password_hash,role,active,trial_start,trial_days,
+                 pref_mode,broker_name,broker_connected,upi_name,created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """, (username, hash_password(uid[:20]),
+                   'viewer', 1, now, 15,
+                   'PAPER', 'none', 0, name, now))
             conn.commit()
             uid_row = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
             conn.execute("INSERT INTO audit_log (user_id,action,details,created_at) VALUES (?,?,?,?)",
                          (uid_row[0], 'GOOGLE_REGISTER', f"email={email} uid={uid}", now))
             conn.commit()
-            role = 'viewer'
+            role = 'viewer'  # ALWAYS viewer for new Google users
         else:
             username = user['username']
-            role     = user['role']
+            # NEVER give admin role via Google SSO
+            role = user['role'] if user['role'] != 'admin' else 'premium'
+            # But if email matches admin, allow
+            if email == 'dcpstudio1982@gmail.com':
+                role = user['role']
 
         conn.close()
 
