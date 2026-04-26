@@ -396,8 +396,10 @@ def api_register():
         # Auto login
         import hashlib, time
         token = hashlib.md5(f"{username}{time.time()}".encode()).hexdigest()
-        from app.main import _sessions
-        _sessions[token] = {"username":username,"role":"viewer","login_time":time.time()}
+        import sys as _sys
+        _main = _sys.modules.get('__main__') or _sys.modules.get('app.main')
+        _sess = getattr(_main, '_sessions', {})
+        _sess[token] = {"username":username,"role":"viewer","login_time":time.time()}
 
         logger.info(f"New user registered: {username} ({email})")
         return jsonify({"success":True,"token":token,"username":username,
@@ -454,8 +456,10 @@ def api_google_auth():
         conn.close()
 
         token = hashlib.md5(f"{username}{time.time()}".encode()).hexdigest()
-        from app.main import _sessions
-        _sessions[token] = {"username":username,"role":role,"login_time":time.time()}
+        import sys as _sys
+        _main = _sys.modules.get('__main__') or _sys.modules.get('app.main')
+        _sess = getattr(_main, '_sessions', {})
+        _sess[token] = {"username":username,"role":role,"login_time":time.time()}
 
         logger.info(f"Google auth: {username} ({email})")
         return jsonify({"success":True,"token":token,"username":username,"role":role})
