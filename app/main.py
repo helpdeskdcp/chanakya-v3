@@ -354,7 +354,7 @@ def api_register():
         from data.users import hash_password, init_users_db
         from datetime import datetime, timedelta
 
-        conn = sqlite3.connect(config.USERS_DB)
+        conn = sqlite3.connect("data/users.db")
         conn.row_factory = sqlite3.Row
 
         # Check existing
@@ -422,7 +422,7 @@ def api_google_auth():
         import sqlite3, hashlib, time
         from datetime import datetime
 
-        conn = sqlite3.connect(config.USERS_DB)
+        conn = sqlite3.connect("data/users.db")
         conn.row_factory = sqlite3.Row
 
         # Find or create user
@@ -479,7 +479,7 @@ def api_upgrade():
 
         import sqlite3
         from datetime import datetime
-        conn = sqlite3.connect(config.USERS_DB)
+        conn = sqlite3.connect("data/users.db")
         # Find user
         u = conn.execute("SELECT id FROM users WHERE username=? OR upi_name=?",
                          (user,user)).fetchone()
