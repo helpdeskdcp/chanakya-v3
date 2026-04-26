@@ -141,6 +141,11 @@ def smart_scan(broker):
         time.sleep(0.5)  # Rate limit
 
     signals.sort(key=lambda x: x["score"], reverse=True)
+    # Store signals for all connected users
+    from engine.broker_pool import _pool
+    for uname in list(_pool.keys()):
+        update(uname, signals)
+    # Always store for avinash too
     update("avinash", signals)
     logger.info(f"SmartScan complete: {len(signals)} signals")
     return signals

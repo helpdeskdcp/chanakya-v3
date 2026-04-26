@@ -26,15 +26,18 @@ def update(username, signals):
     except Exception as e:
         logger.debug(f"Signal store write: {e}")
 
-def get(username, fallback="avinash"):
-    """Flask reads signals from file"""
+def get(username, fallback=None):
+    """Flask reads signals — per user ONLY, no cross-user fallback"""
     try:
         if not os.path.exists(STORE_FILE):
             return []
         with open(STORE_FILE) as f:
             data = json.load(f)
-        # Try user first, then fallback
-        entry = data.get(username) or data.get(fallback)
+        # STRICT: only user's own signals
+        entry = data.get(username)
+        # Admin fallback only if explicitly set
+        if not entry and fallback and fallback != username:
+            entry = data.get(fallback)
         if not entry:
             return []
         # Max 5 min old
