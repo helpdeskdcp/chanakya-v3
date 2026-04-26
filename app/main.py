@@ -740,13 +740,23 @@ def _get_user_broker_info(username):
         return {}
 
 def _get_user_capital(username):
-    # STRICT: only user's own broker — no global fallback
+    # Check user role first
+    import sqlite3 as _sq3
+    try:
+        _conn = _sq3.connect("data/users.db")
+        _conn.row_factory = _sq3.Row
+        _u = _conn.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        _conn.close()
+        if _u and _u['role'] == 'viewer':
+            return 100000.0  # ₹1L virtual for demo users
+    except Exception:
+        pass
+    # Premium/admin: use own broker
     from engine.broker_pool import _pool
     ub = _pool.get(username)
     if ub and ub.connected:
         if ub.capital > 0:
             return ub.capital
-        # Try fresh funds
         try:
             funds = ub.get_funds()
             if funds > 0: return funds
