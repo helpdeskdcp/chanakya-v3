@@ -541,41 +541,35 @@ def _get_user_broker_info(username):
         return {}
 
 def _get_user_capital(username):
+    # STRICT: only user's own broker — no global fallback
     from engine.broker_pool import _pool
     ub = _pool.get(username)
-    if ub and ub.connected and ub.capital > 0:
-        return ub.capital
-    if broker.connected:
+    if ub and ub.connected:
+        if ub.capital > 0:
+            return ub.capital
+        # Try fresh funds
         try:
-            return broker.get_funds()
+            funds = ub.get_funds()
+            if funds > 0: return funds
         except Exception:
             pass
-    info = _get_user_broker_info(username)
-    if info.get("connected"):
-        return float(info.get("capital") or 0)
     return 0.0
 
 def _get_user_broker_status(username):
-    # Check pool first
+    # STRICT: only user's own broker
     from engine.broker_pool import _pool
     ub = _pool.get(username)
     if ub and ub.connected:
         return "connected"
-    # Fallback to global broker
-    if broker.connected:
-        return "connected"
-    info = _get_user_broker_info(username)
-    return "connected" if info.get("connected") else "not_connected"
+    return "not_connected"
 
 def _get_user_broker_name(username):
+    # STRICT: only user's own broker
     from engine.broker_pool import _pool
     ub = _pool.get(username)
     if ub and ub.user_name:
         return ub.user_name
-    if broker.user_name:
-        return broker.user_name
-    info = _get_user_broker_info(username)
-    return info.get("user_name","")
+    return ""
 
 @app.route("/api/v3/dashboard")
 @require_auth
