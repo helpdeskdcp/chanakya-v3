@@ -497,17 +497,7 @@ def api_upgrade():
         # Admin alert
         try:
             from engine.telegram import telegram
-            telegram.admin_alert(
-                f"💰 Payment Request
-"
-                f"User: {user}
-Plan: {plan}
-"
-                f"Amount: ₹{amount}
-UTR: {utr}
-"
-                f"Action: /admin → Payments tab"
-            )
+            telegram.admin_alert(f"💰 Payment Request\nUser: {user}\nPlan: {plan}\nAmount: ₹{amount}\nUTR: {utr}\nAction: Admin → Payments tab")
         except Exception: pass
 
         conn.close()
