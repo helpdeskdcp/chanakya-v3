@@ -324,6 +324,211 @@ def run_backtest_api():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+
+# ── Auth Routes ───────────────────────────────────────────
+
+@app.route("/v3/auth")
+def auth_page():
+    """Registration + Login page"""
+    return render_template("auth_v3.html")
+
+@app.route("/api/v3/auth/register", methods=["POST"])
+def api_register():
+    """New user registration — DEMO 15 days"""
+    try:
+        import re, secrets
+        data   = request.json or {}
+        name   = data.get("name","").strip()
+        email  = data.get("email","").strip().lower()
+        mobile = data.get("mobile","").strip()
+        pwd    = data.get("password","")
+
+        if not name or not email or not pwd:
+            return jsonify({"success":False,"error":"Name, email and password required"})
+        if len(pwd) < 8:
+            return jsonify({"success":False,"error":"Password min 8 chars"})
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return jsonify({"success":False,"error":"Invalid email"})
+
+        import sqlite3
+        from data.users import hash_password, init_users_db
+        from datetime import datetime, timedelta
+
+        conn = sqlite3.connect(config.USERS_DB)
+        conn.row_factory = sqlite3.Row
+
+        # Check existing
+        ex = conn.execute("SELECT id FROM users WHERE username=? OR username=?",
+                          (email, email.split('@')[0])).fetchone()
+        if ex:
+            conn.close()
+            return jsonify({"success":False,"error":"Email already registered"})
+
+        # Create username from email
+        username = email.split('@')[0].lower().replace('.','_')[:20]
+        # Make unique
+        base = username
+        i = 1
+        while conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone():
+            username = f"{base}{i}"; i+=1
+
+        now = datetime.utcnow().isoformat()
+        trial_start = now
+        trial_days  = 15
+        pwd_hash    = hash_password(pwd)
+
+        conn.execute("""
+            INSERT INTO users
+            (username, password_hash, role, active, trial_start, trial_days,
+             pref_mode, broker_name, upi_name, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, (username, pwd_hash, 'viewer', 1, trial_start, trial_days,
+              'PAPER', 'none', name, now))
+        conn.commit()
+
+        # Store email+mobile in audit_log (simple)
+        uid = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()[0]
+        conn.execute("INSERT INTO audit_log (user_id,action,details,created_at) VALUES (?,?,?,?)",
+                     (uid, 'REGISTER', f"email={email} mobile={mobile} phone_verified={data.get('phone_verified',False)}", now))
+        conn.commit()
+        conn.close()
+
+        # Auto login
+        import hashlib, time
+        token = hashlib.md5(f"{username}{time.time()}".encode()).hexdigest()
+        from app.main import _sessions
+        _sessions[token] = {"username":username,"role":"viewer","login_time":time.time()}
+
+        logger.info(f"New user registered: {username} ({email})")
+        return jsonify({"success":True,"token":token,"username":username,
+                        "role":"viewer","trial_days":trial_days})
+    except Exception as e:
+        logger.error(f"Register: {e}")
+        return jsonify({"success":False,"error":str(e)})
+
+
+@app.route("/api/v3/auth/google", methods=["POST"])
+def api_google_auth():
+    """Google OAuth login/register"""
+    try:
+        data  = request.json or {}
+        email = data.get("email","").strip().lower()
+        name  = data.get("name","") or email.split('@')[0]
+        uid   = data.get("uid","")
+
+        if not email or not uid:
+            return jsonify({"success":False,"error":"Invalid Google token"})
+
+        import sqlite3, hashlib, time
+        from datetime import datetime
+
+        conn = sqlite3.connect(config.USERS_DB)
+        conn.row_factory = sqlite3.Row
+
+        # Find or create user
+        user = conn.execute("SELECT * FROM users WHERE username=?", (email,)).fetchone()
+        if not user:
+            # Also check by email in upi_name (we store name there)
+            username = email.split('@')[0].lower().replace('.','_')[:20]
+            base = username; i=1
+            while conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone():
+                username=f"{base}{i}"; i+=1
+
+            now = datetime.utcnow().isoformat()
+            from data.users import hash_password
+            conn.execute("""
+                INSERT INTO users
+                (username,password_hash,role,active,trial_start,trial_days,pref_mode,broker_name,upi_name,created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            """, (username, hash_password(uid[:20]), 'viewer', 1, now, 15, 'PAPER', 'none', name, now))
+            conn.commit()
+            uid_row = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+            conn.execute("INSERT INTO audit_log (user_id,action,details,created_at) VALUES (?,?,?,?)",
+                         (uid_row[0], 'GOOGLE_REGISTER', f"email={email} uid={uid}", now))
+            conn.commit()
+            role = 'viewer'
+        else:
+            username = user['username']
+            role     = user['role']
+
+        conn.close()
+
+        token = hashlib.md5(f"{username}{time.time()}".encode()).hexdigest()
+        from app.main import _sessions
+        _sessions[token] = {"username":username,"role":role,"login_time":time.time()}
+
+        logger.info(f"Google auth: {username} ({email})")
+        return jsonify({"success":True,"token":token,"username":username,"role":role})
+    except Exception as e:
+        logger.error(f"Google auth: {e}")
+        return jsonify({"success":False,"error":str(e)})
+
+
+@app.route("/api/v3/auth/upgrade", methods=["POST"])
+def api_upgrade():
+    """Submit UPI payment for premium"""
+    try:
+        data   = request.json or {}
+        user   = data.get("username","").strip()
+        utr    = data.get("utr","").strip()
+        plan   = data.get("plan","monthly")
+        amount = float(data.get("amount",999))
+
+        if not user or not utr:
+            return jsonify({"success":False,"error":"Username and UTR required"})
+
+        import sqlite3
+        from datetime import datetime
+        conn = sqlite3.connect(config.USERS_DB)
+        # Find user
+        u = conn.execute("SELECT id FROM users WHERE username=? OR upi_name=?",
+                         (user,user)).fetchone()
+        if not u:
+            conn.close()
+            return jsonify({"success":False,"error":"User not found"})
+
+        now = datetime.utcnow().isoformat()
+        conn.execute("""
+            INSERT INTO payments (user_id,amount,utr_number,status,created_at)
+            VALUES (?,?,?,?,?)
+        """, (u[0], amount, utr, 'PENDING', now))
+        conn.commit()
+
+        # Admin alert
+        try:
+            from engine.telegram import telegram
+            telegram.admin_alert(
+                f"💰 Payment Request
+"
+                f"User: {user}
+Plan: {plan}
+"
+                f"Amount: ₹{amount}
+UTR: {utr}
+"
+                f"Action: /admin → Payments tab"
+            )
+        except Exception: pass
+
+        conn.close()
+        return jsonify({"success":True,"message":"Payment submitted! Verify within 24h."})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+
+@app.route("/api/v3/auth/reset-password", methods=["POST"])
+def api_reset_password():
+    """Backend password reset (email)"""
+    try:
+        data  = request.json or {}
+        email = data.get("email","").strip().lower()
+        if not email:
+            return jsonify({"success":False,"error":"Email required"})
+        # Firebase handles actual reset — just acknowledge
+        return jsonify({"success":True,"message":f"Reset link sent to {email}"})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/v3/backtest")
 def backtest_page():
     """Backtest dashboard page"""

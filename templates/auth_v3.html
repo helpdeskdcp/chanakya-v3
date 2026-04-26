@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chanakya AI — Login / Register</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.container{width:100%;max-width:420px;padding:16px}
+.logo{text-align:center;margin-bottom:24px}
+.logo-title{font-size:28px;font-weight:900;color:#d4af37}
+.logo-sub{font-size:11px;color:#8090a8;margin-top:4px}
+.card{background:#0a1520;border:1px solid #1e3a5f;border-radius:16px;padding:24px}
+.tabs{display:flex;gap:0;margin-bottom:20px;border-radius:8px;overflow:hidden;border:1px solid #1e3a5f}
+.tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:12px;font-weight:700;background:#0a1520;color:#8090a8;transition:.2s}
+.tab.active{background:#00c8ff;color:#000}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:10px;color:#8090a8;margin-bottom:5px;font-weight:700;text-transform:uppercase}
+.form-group input{width:100%;padding:10px 12px;background:#060d14;border:1px solid #1e3a5f;border-radius:8px;color:#e0e8f0;font-size:13px;outline:none;transition:.2s}
+.form-group input:focus{border-color:#00c8ff}
+.form-group input::placeholder{color:#3a4a5a}
+.btn{width:100%;padding:12px;border-radius:8px;border:none;font-size:13px;font-weight:800;cursor:pointer;transition:.2s;margin-bottom:10px}
+.btn-primary{background:linear-gradient(135deg,#00c8ff,#0090c0);color:#000}
+.btn-google{background:#fff;color:#333;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-phone{background:linear-gradient(135deg,#00e676,#00a050);color:#000}
+.divider{text-align:center;font-size:10px;color:#3a4a5a;margin:12px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:#1e3a5f}
+.divider::before{left:0}.divider::after{right:0}
+.plan-badge{display:inline-block;padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700}
+.demo-badge{background:#1e3a5f;color:#00c8ff}
+.premium-badge{background:#d4af3733;color:#d4af37}
+.msg{padding:10px 12px;border-radius:8px;font-size:11px;margin-bottom:12px;display:none}
+.msg.success{background:#00e67622;border:1px solid #00e676;color:#00e676}
+.msg.error{background:#ff525222;border:1px solid #ff5252;color:#ff5252}
+.msg.info{background:#00c8ff22;border:1px solid #00c8ff;color:#00c8ff}
+.otp-row{display:flex;gap:8px}
+.otp-row input{flex:1}
+.otp-row button{padding:10px 14px;background:#1e3a5f;border:1px solid #00c8ff;border-radius:8px;color:#00c8ff;font-size:11px;cursor:pointer;white-space:nowrap;font-weight:700}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.plan{border:1px solid #1e3a5f;border-radius:8px;padding:10px;text-align:center;cursor:pointer;transition:.2s}
+.plan.selected{border-color:#d4af37;background:#d4af3711}
+.plan-name{font-size:12px;font-weight:800;color:#d4af37}
+.plan-price{font-size:18px;font-weight:900;margin:4px 0}
+.plan-days{font-size:9px;color:#8090a8}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">
+    <div class="logo-title">⚡ CHANAKYA AI</div>
+    <div class="logo-sub">Professional Options Trading Platform</div>
+  </div>
+
+  <div class="card">
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" id="tab-login" onclick="showTab('login')">Login</div>
+      <div class="tab" id="tab-register" onclick="showTab('register')">Register</div>
+      <div class="tab" id="tab-upgrade" onclick="showTab('upgrade')">Upgrade 💎</div>
+    </div>
+
+    <!-- Message -->
+    <div class="msg" id="msg"></div>
+
+    <!-- LOGIN FORM -->
+    <div id="form-login">
+      <div class="form-group">
+        <label>Email or Username</label>
+        <input id="l-user" type="text" placeholder="email@example.com or username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="l-pass" type="password" placeholder="Enter password">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">🔐 Login</button>
+      <div class="divider">OR</div>
+      <button class="btn btn-google" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M24 9.5c3.6 0 6.7 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.8 13.3l8 6.2C12.6 13 17.8 9.5 24 9.5z"/><path fill="#34A853" d="M46.9 24.6c0-1.7-.2-3.3-.5-4.8H24v9.1h12.9c-.6 3-2.3 5.5-4.9 7.2l7.7 6c4.5-4.2 7.2-10.4 7.2-17.5z"/><path fill="#FBBC05" d="M10.8 28.6c-.6-1.7-.9-3.4-.9-5.2s.3-3.5.9-5.2l-8-6.2C1 15 0 19.4 0 24s1 9 2.8 12.7l8-6.1z"/><path fill="#EA4335" d="M24 48c6.5 0 12-2.1 16-5.8l-7.7-6c-2.1 1.4-4.8 2.2-8.3 2.2-6.2 0-11.4-4.2-13.2-9.8l-8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+      <div style="text-align:center;margin-top:8px">
+        <a href="#" onclick="showTab('reset')" style="font-size:11px;color:#8090a8">Forgot password?</a>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="form-register" style="display:none">
+      <div style="background:#00e67611;border:1px solid #00e676;border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:10px;color:#00e676">
+        🎁 Free Demo: 15 days paper trading + ₹1,00,000 virtual capital
+      </div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input id="r-name" type="text" placeholder="Your full name">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="r-email" type="email" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label>Mobile Number (for OTP)</label>
+        <div class="otp-row">
+          <input id="r-mobile" type="tel" placeholder="+91 9876543210">
+          <button onclick="sendOTP()">Send OTP</button>
+        </div>
+      </div>
+      <div class="form-group" id="otp-group" style="display:none">
+        <label>Enter OTP</label>
+        <div class="otp-row">
+          <input id="r-otp" type="number" placeholder="6-digit OTP">
+          <button onclick="verifyOTP()">Verify</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="r-pass" type="password" placeholder="Min 8 characters">
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input id="r-pass2" type="password" placeholder="Repeat password">
+      </div>
+      <div id="phone-verify-status" style="display:none;font-size:10px;color:#00e676;margin-bottom:10px">✅ Mobile verified!</div>
+      <button class="btn btn-primary" onclick="doRegister()">🚀 Create Free Account</button>
+      <div class="divider">OR</div>
+      <button class="btn btn-google" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M24 9.5c3.6 0 6.7 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.8 13.3l8 6.2C12.6 13 17.8 9.5 24 9.5z"/><path fill="#34A853" d="M46.9 24.6c0-1.7-.2-3.3-.5-4.8H24v9.1h12.9c-.6 3-2.3 5.5-4.9 7.2l7.7 6c4.5-4.2 7.2-10.4 7.2-17.5z"/><path fill="#FBBC05" d="M10.8 28.6c-.6-1.7-.9-3.2s.3-3.5.9-5.2l-8-6.2C1 15 0 19.4 0 24s1 9 2.8 12.7l8-6.1z"/><path fill="#EA4335" d="M24 48c6.5 0 12-2.1 16-5.8l-7.7-6c-2.1 1.4-4.8 2.2-8.3 2.2-6.2 0-11.4-4.2-13.2-9.8l-8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+        Register with Google
+      </button>
+    </div>
+
+    <!-- UPGRADE FORM -->
+    <div id="form-upgrade" style="display:none">
+      <div style="font-size:12px;color:#8090a8;margin-bottom:14px">
+        Upgrade to Premium for unlimited signals, live trading & priority support.
+      </div>
+      <!-- Plans -->
+      <div class="plans">
+        <div class="plan" id="plan-monthly" onclick="selectPlan('monthly',999)">
+          <div class="plan-name">Monthly</div>
+          <div class="plan-price" style="color:#00c8ff">₹999</div>
+          <div class="plan-days">30 days</div>
+        </div>
+        <div class="plan selected" id="plan-quarterly" onclick="selectPlan('quarterly',2499)">
+          <div class="plan-name">Quarterly ⭐</div>
+          <div class="plan-price" style="color:#d4af37">₹2,499</div>
+          <div class="plan-days">90 days</div>
+        </div>
+        <div class="plan" id="plan-halfyear" onclick="selectPlan('halfyear',4499)">
+          <div class="plan-name">Half Year</div>
+          <div class="plan-price" style="color:#00e676">₹4,499</div>
+          <div class="plan-days">180 days</div>
+        </div>
+        <div class="plan" id="plan-yearly" onclick="selectPlan('yearly',7999)">
+          <div class="plan-name">Yearly 🔥</div>
+          <div class="plan-price" style="color:#ff9800">₹7,999</div>
+          <div class="plan-days">365 days</div>
+        </div>
+      </div>
+      <!-- UPI Payment -->
+      <div style="background:#0d1b2a;border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="font-size:10px;color:#8090a8;margin-bottom:6px">PAY VIA UPI</div>
+        <div style="font-size:14px;font-weight:900;color:#d4af37" id="upi-amount">₹2,499</div>
+        <div style="font-size:11px;color:#e0e8f0;margin-top:4px">UPI ID: <b id="upi-id">chanakya@upi</b></div>
+        <div style="font-size:9px;color:#8090a8;margin-top:4px">Pay and enter UTR number below</div>
+      </div>
+      <div class="form-group">
+        <label>Your Username / Email</label>
+        <input id="u-user" type="text" placeholder="Login username or email">
+      </div>
+      <div class="form-group">
+        <label>UTR / Transaction ID</label>
+        <input id="u-utr" type="text" placeholder="12-digit UTR number">
+      </div>
+      <button class="btn btn-primary" onclick="doUpgrade()">💎 Submit Payment</button>
+    </div>
+
+    <!-- RESET FORM -->
+    <div id="form-reset" style="display:none">
+      <div style="font-size:12px;color:#8090a8;margin-bottom:14px">
+        Enter your email to receive a password reset link.
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="reset-email" type="email" placeholder="email@example.com">
+      </div>
+      <button class="btn btn-primary" onclick="doReset()">📧 Send Reset Link</button>
+      <button class="btn" style="background:#1e3a5f;color:#8090a8" onclick="showTab('login')">← Back to Login</button>
+    </div>
+
+  </div>
+
+  <div style="text-align:center;margin-top:16px;font-size:10px;color:#3a4a5a">
+    © 2026 Chanakya AI · Secure Trading Platform
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp }        from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider,
+         signInWithPhoneNumber, RecaptchaVerifier,
+         sendPasswordResetEmail }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDM98aH-k4Dyu7Cg67AmJ8vXwkfNMulwq0",
+  authDomain:        "chanakyav3-4d3d3.firebaseapp.com",
+  projectId:         "chanakyav3-4d3d3",
+  storageBucket:     "chanakyav3-4d3d3.firebasestorage.app",
+  messagingSenderId: "364419378621",
+  appId:             "1:364419378621:web:988f9d66c6541af68336d4"
+};
+
+const fbApp  = initializeApp(FIREBASE_CONFIG);
+const fbAuth = getAuth(fbApp);
+fbAuth.languageCode = 'en';
+
+var _confirmResult = null;
+var _phoneVerified = false;
+var _selectedPlan  = 'quarterly';
+var _selectedAmt   = 2499;
+
+function showMsg(text, type='info') {
+  var el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+  el.style.display = 'block';
+  if (type !== 'error') setTimeout(function(){ el.style.display='none'; }, 4000);
+}
+
+window.showTab = function(tab) {
+  ['login','register','upgrade','reset'].forEach(function(t) {
+    document.getElementById('form-'+t).style.display = 'none';
+    var tabEl = document.getElementById('tab-'+t);
+    if (tabEl) tabEl.classList.remove('active');
+  });
+  document.getElementById('form-'+tab).style.display = 'block';
+  var tabEl = document.getElementById('tab-'+tab);
+  if (tabEl) tabEl.classList.add('active');
+  document.getElementById('msg').style.display = 'none';
+};
+
+// ── LOGIN ─────────────────────────────────────────────────
+window.doLogin = async function() {
+  var user = document.getElementById('l-user').value.trim();
+  var pass = document.getElementById('l-pass').value;
+  if (!user || !pass) { showMsg('Email/username and password required', 'error'); return; }
+
+  showMsg('Logging in...', 'info');
+  try {
+    var r = await fetch('/api/v3/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:user, password:pass})
+    });
+    var d = await r.json();
+    if (d.success) {
+      localStorage.setItem('cv3t', d.token);
+      localStorage.setItem('cv3u', user);
+      showMsg('Login successful! Redirecting...', 'success');
+      setTimeout(function(){ window.location.href='/v3'; }, 800);
+    } else {
+      showMsg(d.error || 'Login failed', 'error');
+    }
+  } catch(e) {
+    showMsg('Connection error', 'error');
+  }
+};
+
+// ── GOOGLE LOGIN ──────────────────────────────────────────
+window.doGoogleLogin = async function() {
+  try {
+    var provider = new GoogleAuthProvider();
+    var result   = await signInWithPopup(fbAuth, provider);
+    var user     = result.user;
+    var idToken  = await user.getIdToken();
+
+    showMsg('Verifying with Google...', 'info');
+    var r = await fetch('/api/v3/auth/google', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        id_token: idToken,
+        email:    user.email,
+        name:     user.displayName,
+        photo:    user.photoURL,
+        uid:      user.uid
+      })
+    });
+    var d = await r.json();
+    if (d.success) {
+      localStorage.setItem('cv3t', d.token);
+      localStorage.setItem('cv3u', d.username);
+      showMsg('Welcome ' + (user.displayName||'') + '!', 'success');
+      setTimeout(function(){ window.location.href='/v3'; }, 800);
+    } else {
+      showMsg(d.error || 'Google login failed', 'error');
+    }
+  } catch(e) {
+    showMsg('Google sign-in failed: '+e.message, 'error');
+  }
+};
+
+// ── PHONE OTP ─────────────────────────────────────────────
+window.sendOTP = async function() {
+  var phone = document.getElementById('r-mobile').value.trim();
+  if (!phone) { showMsg('Enter mobile number', 'error'); return; }
+  if (!phone.startsWith('+')) phone = '+91' + phone.replace(/\D/g,'');
+
+  try {
+    if (!window._recaptcha) {
+      window._recaptcha = new RecaptchaVerifier(fbAuth, 'r-mobile', {size:'invisible'});
+    }
+    showMsg('Sending OTP...', 'info');
+    _confirmResult = await signInWithPhoneNumber(fbAuth, phone, window._recaptcha);
+    document.getElementById('otp-group').style.display = 'block';
+    showMsg('OTP sent to ' + phone, 'success');
+  } catch(e) {
+    showMsg('OTP send failed: '+e.message, 'error');
+    window._recaptcha = null;
+  }
+};
+
+window.verifyOTP = async function() {
+  var otp = document.getElementById('r-otp').value.trim();
+  if (!otp || !_confirmResult) { showMsg('Enter OTP first', 'error'); return; }
+  try {
+    await _confirmResult.confirm(otp);
+    _phoneVerified = true;
+    document.getElementById('otp-group').style.display = 'none';
+    document.getElementById('phone-verify-status').style.display = 'block';
+    showMsg('Mobile verified!', 'success');
+  } catch(e) {
+    showMsg('Wrong OTP', 'error');
+  }
+};
+
+// ── REGISTER ──────────────────────────────────────────────
+window.doRegister = async function() {
+  var name  = document.getElementById('r-name').value.trim();
+  var email = document.getElementById('r-email').value.trim();
+  var mob   = document.getElementById('r-mobile').value.trim();
+  var pass  = document.getElementById('r-pass').value;
+  var pass2 = document.getElementById('r-pass2').value;
+
+  if (!name||!email||!pass) { showMsg('All fields required', 'error'); return; }
+  if (pass !== pass2) { showMsg('Passwords do not match', 'error'); return; }
+  if (pass.length < 8) { showMsg('Password min 8 chars', 'error'); return; }
+
+  showMsg('Creating account...', 'info');
+  try {
+    var r = await fetch('/api/v3/auth/register', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name:name, email:email, mobile:mob,
+        password:pass, phone_verified:_phoneVerified
+      })
+    });
+    var d = await r.json();
+    if (d.success) {
+      localStorage.setItem('cv3t', d.token);
+      localStorage.setItem('cv3u', d.username);
+      showMsg('Account created! Welcome to Chanakya AI!', 'success');
+      setTimeout(function(){ window.location.href='/v3'; }, 1200);
+    } else {
+      showMsg(d.error || 'Registration failed', 'error');
+    }
+  } catch(e) {
+    showMsg('Error: '+e.message, 'error');
+  }
+};
+
+// ── UPGRADE / UPI ─────────────────────────────────────────
+window.selectPlan = function(plan, amt) {
+  _selectedPlan = plan; _selectedAmt = amt;
+  document.querySelectorAll('.plan').forEach(function(p){ p.classList.remove('selected'); });
+  document.getElementById('plan-'+plan).classList.add('selected');
+  document.getElementById('upi-amount').textContent = '₹' + amt.toLocaleString('en-IN');
+};
+
+window.doUpgrade = async function() {
+  var user = document.getElementById('u-user').value.trim();
+  var utr  = document.getElementById('u-utr').value.trim();
+  if (!user||!utr) { showMsg('Username and UTR required', 'error'); return; }
+  if (utr.length < 10) { showMsg('Enter valid UTR number', 'error'); return; }
+
+  showMsg('Submitting payment...', 'info');
+  try {
+    var r = await fetch('/api/v3/auth/upgrade', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:user, utr:utr, plan:_selectedPlan, amount:_selectedAmt})
+    });
+    var d = await r.json();
+    if (d.success) {
+      showMsg('Payment submitted! Admin will verify within 24 hours.', 'success');
+    } else {
+      showMsg(d.error || 'Submission failed', 'error');
+    }
+  } catch(e) {
+    showMsg('Error: '+e.message, 'error');
+  }
+};
+
+// ── PASSWORD RESET ────────────────────────────────────────
+window.doReset = async function() {
+  var email = document.getElementById('reset-email').value.trim();
+  if (!email) { showMsg('Enter email', 'error'); return; }
+  try {
+    await sendPasswordResetEmail(fbAuth, email);
+    showMsg('Reset link sent to ' + email, 'success');
+  } catch(e) {
+    // Also try backend reset
+    try {
+      var r = await fetch('/api/v3/auth/reset-password', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email:email})
+      });
+      var d = await r.json();
+      showMsg(d.message || 'Reset link sent', 'success');
+    } catch(e2) {
+      showMsg('Error: '+e.message, 'error');
+    }
+  }
+};
+
+// Enter key support
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    if (document.getElementById('form-login').style.display !== 'none') doLogin();
+    else if (document.getElementById('form-register').style.display !== 'none') doRegister();
+  }
+});
+</script>
+</body>
+</html>
