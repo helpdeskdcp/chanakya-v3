@@ -1343,9 +1343,11 @@ def positions_ltp():
         ).fetchall()
         conn.close()
 
-        from engine.broker_pool import _pool
+        from engine.broker_pool import _pool, get_broker
         _ub = _pool.get(curr_username)
-        _b  = _ub if (_ub and _ub.connected) else broker
+        if not (_ub and _ub.connected):
+            _ub = get_broker(curr_username)
+        _b = _ub if (_ub and _ub.connected) else broker
 
         ltps = {}
         for p in pos:
@@ -1354,17 +1356,19 @@ def positions_ltp():
                 r = _b.api.ltpData(
                     p["exchange"] or "NFO",
                     p["trading_symbol"],
-                    p["token"]
+                    str(p["token"])
                 )
                 if r and r.get("data"):
-                    ltps[p["trading_symbol"]] = float(r["data"]["ltp"])
-                    ltps[p["id"]] = float(r["data"]["ltp"])
-            except Exception:
-                pass
+                    ltp = float(r["data"]["ltp"])
+                    ltps[p["trading_symbol"]] = ltp
+                    ltps[str(p["id"])]        = ltp
+            except Exception as _e:
+                logger.debug(f"LTP {p['trading_symbol']}: {_e}")
 
         return jsonify({"success":True,"ltps":ltps})
     except Exception as e:
-        return jsonify({"success":False,"ltps":{}})
+        logger.error(f"positions_ltp: {e}")
+        return jsonify({"success":False,"ltps":{},"error":str(e)})
 
 @app.route("/api/v3/positions")
 @require_auth
