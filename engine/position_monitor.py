@@ -57,8 +57,23 @@ def _run_sync(broker_getter_fn, db_path):
             if synced > 0:
                 logger.info(f"Synced {synced} new positions for {uname}")
 
-            # Monitor + trail
-            monitor_and_trail(broker, uname, db_path)
+            # Adaptive check — AI driven exit/trail
+            try:
+                import sqlite3 as _sq
+                _conn = _sq.connect(db_path)
+                _conn.row_factory = _sq.Row
+                _pos = _conn.execute(
+                    "SELECT id FROM trades WHERE status='OPEN' AND username=?",
+                    (uname,)
+                ).fetchall()
+                _conn.close()
+                from engine.adaptive_exit import adaptive_check
+                for _p in _pos:
+                    adaptive_check(broker, _p["id"], uname, db_path)
+            except Exception as _ae:
+                logger.debug(f"Adaptive check: {_ae}")
+                # Fallback to basic monitor
+                monitor_and_trail(broker, uname, db_path)
 
         except Exception as e:
             logger.debug(f"Monitor {u['username']}: {e}")
