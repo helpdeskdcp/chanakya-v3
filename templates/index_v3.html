@@ -1588,25 +1588,83 @@ async function loadTrades() {
 }
 
 // ── POSITIONS ─────────────────────────────────────────
+var _posData = [];
+var _posInterval = null;
+
 async function loadPositions() {
   const d = await api('/positions');
   if(!d) return;
-  stopLTPEngine();
-  _ltpSymbols = [];
-  _ltpCallbacks = {};
+  _posData = d.positions || [];
+  renderPositions();
+  // Start live P&L update
+  if(_posInterval) clearInterval(_posInterval);
+  if(_posData.length > 0) {
+    _posInterval = setInterval(updatePositionPnL, 5000);
+    updatePositionPnL();
+  }
+}
+
+function renderPositions() {
   const tb = document.getElementById('tbPOS');
-  if(!d.positions?.length) { tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>'; return; }
-  tb.innerHTML = d.positions.map(p=>`<tr>
-    <td><b>${p.symbol}</b></td>
-    <td>${p.strike||'—'}</td>
-    <td style="color:${p.opt_type==='CE'?'#00e676':'#ff5252'}">${p.opt_type}</td>
-    <td>₹${(p.entry_price||0).toFixed(2)}</td>
-    <td class="pos">₹${(p.target_price||0).toFixed(2)}</td>
-    <td class="neg">₹${(p.sl_price||0).toFixed(2)}</td>
-    <td class="${(p.pnl||0)>=0?'pos':'neg'}"><b>₹${(p.pnl||0).toFixed(0)}</b></td>
-    <td>${p.lots||1}</td>
-    <td><button class="btn b-red" onclick="exitTrade(${p.id})">Exit</button></td>
-  </tr>`).join('');
+  if(!_posData.length) {
+    tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr>';
+    return;
+  }
+  tb.innerHTML = _posData.map(function(p) {
+    var qty = (p.lots||1) * (p.lot_size||1);
+    var entryAmt = (p.entry_price||0) * qty;
+    var pnlAmt = p._livePnl !== undefined ? p._livePnl : 0;
+    var pnlPct = p._livePnlPct !== undefined ? p._livePnlPct : 0;
+    var ltp    = p._ltp !== undefined ? p._ltp : 0;
+    var pnlClr = pnlAmt >= 0 ? '#00e676' : '#ff5252';
+    var pnlSign = pnlAmt >= 0 ? '+' : '';
+    var ltpStr = ltp > 0 ? 'Rs'+ltp.toFixed(1) : '...';
+    return '<tr id="pos_'+p.id+'">' +
+      '<td><b>'+p.symbol+'</b><br><span style="font-size:9px;color:#8090a8">'+(p.trading_symbol||'').slice(0,18)+'</span></td>' +
+      '<td style="color:'+(p.opt_type==='CE'?'#00e676':'#ff5252')+'"><b>'+p.opt_type+'</b></td>' +
+      '<td>Rs'+(p.entry_price||0).toFixed(1)+'<br><span style="font-size:9px;color:#00c8ff">LTP: '+ltpStr+'</span></td>' +
+      '<td class="pos">Rs'+(p.target_price||0).toFixed(1)+'</td>' +
+      '<td class="neg">Rs'+(p.sl_price||0).toFixed(1)+'</td>' +
+      '<td style="color:'+pnlClr+'"><b>'+pnlSign+'Rs'+Math.abs(pnlAmt).toFixed(0)+'</b><br>' +
+        '<span style="font-size:9px">'+pnlSign+pnlPct.toFixed(1)+'%</span></td>' +
+      '<td>'+( p.lots||1)+'L/'+qty+'qty</td>' +
+      '<td><button class="btn b-red" onclick="exitTrade('+p.id+')">Exit</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function updatePositionPnL() {
+  if(!_posData.length) return;
+  try {
+    var ltpResp = await fetch('/api/v3/positions/ltp', {
+      headers: {'X-Auth-Token': TOKEN}
+    });
+    if(!ltpResp.ok) return;
+    var ltpData = await ltpResp.json();
+    if(!ltpData.success) return;
+    var ltpMap = ltpData.ltps || {};
+    var totalPnl = 0;
+    _posData.forEach(function(p) {
+      var key = p.trading_symbol || p.symbol;
+      var ltp = ltpMap[key] || ltpMap[p.id] || 0;
+      if(ltp > 0) {
+        var qty = (p.lots||1) * (p.lot_size||1);
+        var pnlAmt = (ltp - (p.entry_price||0)) * qty;
+        var pnlPct = ((ltp - (p.entry_price||0)) / (p.entry_price||1)) * 100;
+        p._ltp = ltp;
+        p._livePnl = pnlAmt;
+        p._livePnlPct = pnlPct;
+        totalPnl += pnlAmt;
+      }
+    });
+    renderPositions();
+    // Update total P&L in header
+    var totalEl = document.getElementById('liveTotalPnl');
+    if(totalEl) {
+      totalEl.textContent = (totalPnl>=0?'+':'')+totalPnl.toFixed(0);
+      totalEl.style.color = totalPnl>=0?'#00e676':'#ff5252';
+    }
+  } catch(e) {}
 }
 
 // ── SIGNALS ───────────────────────────────────────────

@@ -1314,6 +1314,44 @@ def get_trades():
     return jsonify({"success": True, "trades": trades, "count": len(trades)})
 
 # ── Positions API ──────────────────────────────────────
+@app.route("/api/v3/positions/ltp")
+@require_auth
+def positions_ltp():
+    """Live LTP for all open positions"""
+    try:
+        curr_username = get_current_user().get("username","")
+        import sqlite3
+        conn = sqlite3.connect(config.DB_PATH)
+        conn.row_factory = sqlite3.Row
+        pos = conn.execute(
+            "SELECT id,trading_symbol,token,exchange,entry_price,lots,lot_size FROM trades WHERE status='OPEN' AND username=?",
+            (curr_username,)
+        ).fetchall()
+        conn.close()
+
+        from engine.broker_pool import _pool
+        _ub = _pool.get(curr_username)
+        _b  = _ub if (_ub and _ub.connected) else broker
+
+        ltps = {}
+        for p in pos:
+            try:
+                if not p["trading_symbol"] or not p["token"]: continue
+                r = _b.api.ltpData(
+                    p["exchange"] or "NFO",
+                    p["trading_symbol"],
+                    p["token"]
+                )
+                if r and r.get("data"):
+                    ltps[p["trading_symbol"]] = float(r["data"]["ltp"])
+                    ltps[p["id"]] = float(r["data"]["ltp"])
+            except Exception:
+                pass
+
+        return jsonify({"success":True,"ltps":ltps})
+    except Exception as e:
+        return jsonify({"success":False,"ltps":{}})
+
 @app.route("/api/v3/positions")
 @require_auth
 def get_positions():
