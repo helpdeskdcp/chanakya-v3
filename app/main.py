@@ -177,6 +177,13 @@ def login():
                 ub = get_broker(uname)
                 if ub:
                     logger.info(f"✅ Broker auto-connected: {uname} → {ub.user_name}")
+                    # Start position monitor if not running
+                    try:
+                        from engine.position_monitor import start_monitor
+                        from engine.broker_pool import get_broker as _gb
+                        start_monitor(_gb)
+                    except Exception:
+                        pass
             except Exception as _be:
                 logger.debug(f"Broker bg connect {uname}: {_be}")
         import threading as _thr
@@ -190,6 +197,13 @@ def login():
                 ub = get_broker(uname)
                 if ub:
                     logger.info(f"✅ Broker auto-connected: {uname} → {ub.user_name}")
+                    # Start position monitor if not running
+                    try:
+                        from engine.position_monitor import start_monitor
+                        from engine.broker_pool import get_broker as _gb
+                        start_monitor(_gb)
+                    except Exception:
+                        pass
             except Exception as _be:
                 logger.debug(f"Broker bg connect {uname}: {_be}")
         import threading as _thr
@@ -1430,6 +1444,23 @@ def get_trades():
     return jsonify({"success": True, "trades": trades, "count": len(trades)})
 
 # ── Positions API ──────────────────────────────────────
+@app.route("/api/v3/positions/sync", methods=["POST"])
+@require_auth
+def sync_positions():
+    """Manually sync broker positions"""
+    try:
+        curr_username = get_current_user().get("username","")
+        from engine.broker_pool import _pool, get_broker as _gb
+        _ub = _pool.get(curr_username) or _gb(curr_username)
+        if not (_ub and _ub.connected):
+            return jsonify({"success":False,"error":"Broker not connected"})
+        from engine.position_sync import sync_broker_positions, monitor_and_trail
+        synced = sync_broker_positions(_ub, curr_username)
+        monitor_and_trail(_ub, curr_username)
+        return jsonify({"success":True,"synced":synced,"message":f"{synced} new positions synced"})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/positions/ltp")
 @require_auth
 def positions_ltp():
