@@ -1267,6 +1267,17 @@ def place_trade_v3():
         if not symbol or entry_price <= 0:
             return jsonify({"success":False,"error":"Invalid trade params"})
 
+        # Auto-fetch token if missing
+        if not token and trading_symbol:
+            try:
+                from engine.option_chain import _get_instruments
+                _insts = _get_instruments()
+                _inst = next((i for i in _insts if i.get('symbol','')==trading_symbol), None)
+                if _inst:
+                    token = _inst.get('token','')
+            except Exception:
+                pass
+
         import sqlite3 as sq
         from datetime import datetime
         import pytz
