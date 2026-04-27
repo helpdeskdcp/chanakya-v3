@@ -48,7 +48,13 @@ def sync_broker_positions(broker, username, db_path="data/chanakya_v3.db"):
                 token     = pos.get("symboltoken", "")
                 exchange  = pos.get("exchange", "NFO")
                 prod_type = pos.get("producttype", "")
-                avg_price = float(pos.get("averageprice") or pos.get("cfbuyavgprice") or 0)
+                # Angel One uses different field names
+                avg_price = float(
+                    pos.get("totalbuyavgprice") or
+                    pos.get("buyavgprice") or
+                    pos.get("averageprice") or
+                    pos.get("cfbuyavgprice") or 0
+                )
                 ltp       = float(pos.get("ltp") or 0)
                 qty       = abs(netqty)
                 opt_type  = "CE" if symbol.endswith("CE") else "PE" if symbol.endswith("PE") else "CE"
@@ -60,7 +66,7 @@ def sync_broker_positions(broker, username, db_path="data/chanakya_v3.db"):
                         base_sym = s
                         break
 
-                lot_size = LOT_SIZES.get(base_sym, 1)
+                lot_size = int(pos.get("lotsize") or LOT_SIZES.get(base_sym, 1))
                 lots = max(1, qty // lot_size)
 
                 if avg_price <= 0:
