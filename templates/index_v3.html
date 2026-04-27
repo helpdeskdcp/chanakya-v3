@@ -993,6 +993,14 @@ async function loadUserStatus() {
   const banner = document.getElementById('SUB_BANNER');
   if(d.sub_message && banner) {
     banner.style.display = 'block';
+    // Hide features for viewer/expired
+    if(d.role === 'viewer' || d.role === 'expired') {
+        var hideEls = ['navChain','navAnalytics'];
+        hideEls.forEach(function(id){
+            var el = document.getElementById(id);
+            if(el) el.style.display='none';
+        });
+    }
     if(d.role === 'expired') {
       banner.style.background = 'rgba(255,82,82,.2)';
       banner.style.borderBottom = '1px solid #ff5252';
@@ -1369,25 +1377,14 @@ async function startApp() {
   }).catch(function(){});
   toast('📡 Fetching data...', '#00c8ff');
   await loadStatus();
-  // Show admin-only nav items
-  if(window._userRole === 'admin' || TOKEN) {
-    const ns = document.getElementById('navSystem');
-    if(ns) {
-      api('/status').then(function(sd){
-      if(sd && sd.login_user) {
-        api('/admin/system').then(function(d){
-          if(d && d.success) {
-            const na=document.getElementById('navAdmin');
-            if(na) na.style.display='block';
-          }
-        }).catch(function(){});
-      }
-    }).catch(function(){});
-    api('/admin/system').then(d=>{
-      // Admin nav — always show for admin role
-        if(d?.success) ns.style.display='block';
-      });
-    }
+  // Show admin-only nav items — STRICT role check
+  if(window._userRole === 'admin') {
+    var ns2 = document.getElementById('navSystem');
+    var na2 = document.getElementById('navAdmin');
+    var nu2 = document.getElementById('navUsers');
+    if(ns2) ns2.style.display='block';
+    if(na2) na2.style.display='block';
+    if(nu2) nu2.style.display='block';
   }
   await loadUserStatus();
   toast('📊 Loading market...', '#00c8ff');
@@ -1402,25 +1399,14 @@ async function startApp() {
 
 async function loadAll() {
   await loadStatus();
-  // Show admin-only nav items
-  if(window._userRole === 'admin' || TOKEN) {
-    const ns = document.getElementById('navSystem');
-    if(ns) {
-      api('/status').then(function(sd){
-      if(sd && sd.login_user) {
-        api('/admin/system').then(function(d){
-          if(d && d.success) {
-            const na=document.getElementById('navAdmin');
-            if(na) na.style.display='block';
-          }
-        }).catch(function(){});
-      }
-    }).catch(function(){});
-    api('/admin/system').then(d=>{
-      // Admin nav — always show for admin role
-        if(d?.success) ns.style.display='block';
-      });
-    }
+  // Show admin-only nav items — STRICT role check
+  if(window._userRole === 'admin') {
+    var ns2 = document.getElementById('navSystem');
+    var na2 = document.getElementById('navAdmin');
+    var nu2 = document.getElementById('navUsers');
+    if(ns2) ns2.style.display='block';
+    if(na2) na2.style.display='block';
+    if(nu2) nu2.style.display='block';
   }
   await loadMarket();
   await loadDashboard();
