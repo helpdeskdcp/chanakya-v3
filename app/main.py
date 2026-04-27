@@ -1183,7 +1183,9 @@ def get_signals():
 
         curr_user = get_current_user()
         username  = curr_user.get("username","")
-        user_mode = _get_user_mode(username)
+        # Use requested mode if provided, else DB mode
+        req_mode  = data.get("mode","")
+        user_mode = req_mode if req_mode in ("LIVE","PAPER") else _get_user_mode(username)
 
         # Get broker — pool or fresh connect
         from engine.broker_pool import _pool, get_broker as _gb
@@ -1331,7 +1333,9 @@ def place_trade_v3():
     try:
         curr_user = get_current_user()
         username  = curr_user.get("username","")
-        user_mode = _get_user_mode(username)
+        # Use requested mode if provided, else DB mode
+        req_mode  = data.get("mode","")
+        user_mode = req_mode if req_mode in ("LIVE","PAPER") else _get_user_mode(username)
         data      = request.get_json() or {}
 
         symbol         = data.get("symbol","")
