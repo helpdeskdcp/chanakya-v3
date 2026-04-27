@@ -453,7 +453,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
             <button class="btn b-red" onclick="sqAll()">⏹ Square All</button>
           </div>
           <div style="padding:8px"><table class="tbl">
-            <thead><tr><th>Symbol</th><th>Strike</th><th>Type</th><th>Entry</th><th>Target</th><th>SL</th><th>P&L</th><th>Lots</th><th>Exit</th></tr></thead>
+            <thead><tr><th>Symbol</th><th>Entry</th><th>LTP</th><th>Target</th><th>SL</th><th>P&L</th><th>Lots/Qty</th><th>Exit</th></tr></thead>
             <tbody id="tbPOS"><tr><td colspan="9" style="text-align:center;padding:16px;color:#8090a8">No open positions</td></tr></tbody>
           </table></div>
         </div>
@@ -1611,28 +1611,46 @@ function renderPositions() {
     return;
   }
   tb.innerHTML = _posData.map(function(p) {
-    var lotSz  = p.lot_size || 1;
-    var qty    = (p.lots||1) * lotSz;
-    var ltp    = p._ltp !== undefined ? p._ltp : 0;
-    var pnlAmt = ltp > 0 ? (ltp - (p.entry_price||0)) * qty : 0;
-    var pnlPct = (p.entry_price||0) > 0 ? ((ltp-(p.entry_price||0))/(p.entry_price||1)*100) : 0;
-    var pnlClr = pnlAmt >= 0 ? '#00e676' : '#ff5252';
+    var lotSz   = p.lot_size || 1;
+    var qty     = (p.lots||1) * lotSz;
+    var entry   = p.entry_price || 0;
+    var ltp     = p._ltp || 0;
+    // BUY CE: profit when LTP > entry
+    // BUY PE: profit when LTP > entry (premium goes up when market falls)
+    // Both are BUY options — same P&L logic
+    var pnlAmt  = ltp > 0 ? (ltp - entry) * qty : 0;
+    var pnlPct  = entry > 0 ? ((ltp - entry) / entry * 100) : 0;
+    var pnlClr  = pnlAmt >= 0 ? '#00e676' : '#ff5252';
     var pnlSign = pnlAmt >= 0 ? '+' : '';
-    var ltpStr = ltp > 0 ? 'Rs'+ltp.toFixed(1) : '<span style="color:#d4af37">fetching...</span>';
-    var optSym = p.trading_symbol || (p.symbol+' '+p.opt_type);
     var typeClr = p.opt_type==='CE' ? '#00e676' : '#ff5252';
+    var optSym  = p.trading_symbol || (p.symbol+' '+p.opt_type);
+    // LTP display — separate from type column
+    var ltpStr  = ltp > 0 ? 'Rs'+ltp.toFixed(1) : '---';
     return '<tr id="pos_'+p.id+'">' +
-      '<td style="min-width:120px"><b style="color:'+typeClr+'">'+p.symbol+' '+p.opt_type+'</b><br>' +
-        '<span style="font-size:9px;color:#00c8ff">'+optSym+'</span></td>' +
-      '<td style="color:#d4af37">'+(p.strike||'—')+'</td>' +
-      '<td>Rs'+(p.entry_price||0).toFixed(1)+'<br>'+
-        '<span style="font-size:10px;color:#00c8ff">'+ltpStr+'</span></td>' +
-      '<td class="pos">Rs'+(p.target_price||0).toFixed(1)+'</td>' +
-      '<td class="neg">Rs'+(p.sl_price||0).toFixed(1)+'</td>' +
+      // Col 1: Symbol + Option name
+      '<td style="min-width:130px">' +
+        '<b style="color:'+typeClr+'">'+p.symbol+'</b> ' +
+        '<span style="color:'+typeClr+'">'+p.opt_type+'</span><br>' +
+        '<span style="font-size:9px;color:#8090a8">'+optSym.slice(0,20)+'</span>' +
+      '</td>' +
+      // Col 2: Entry price
+      '<td style="color:#e0e8f0">Rs'+entry.toFixed(1)+'</td>' +
+      // Col 3: Live LTP (separate column!)
+      '<td id="ltp_'+p.id+'" style="color:#00c8ff;font-weight:700">'+ltpStr+'</td>' +
+      // Col 4: Target
+      '<td style="color:#00e676">Rs'+(p.target_price||0).toFixed(1)+'</td>' +
+      // Col 5: Stop Loss
+      '<td style="color:#ff5252">Rs'+(p.sl_price||0).toFixed(1)+'</td>' +
+      // Col 6: P&L amount + %
       '<td style="color:'+pnlClr+';font-weight:900">' +
-        pnlSign+'Rs'+Math.abs(pnlAmt).toFixed(0)+'<br>'+
-        '<span style="font-size:9px">'+pnlSign+pnlPct.toFixed(1)+'%</span></td>' +
-      '<td style="font-size:10px">'+(p.lots||1)+'L<br>'+qty+' qty</td>' +
+        (ltp > 0 ? pnlSign+'Rs'+Math.abs(pnlAmt).toFixed(0) : '---') +
+        '<br><span style="font-size:9px">'+
+        (ltp > 0 ? pnlSign+pnlPct.toFixed(1)+'%' : '') +
+        '</span>' +
+      '</td>' +
+      // Col 7: Lots/Qty
+      '<td style="font-size:10px;color:#8090a8">'+(p.lots||1)+'L / '+qty+'</td>' +
+      // Col 8: Exit button
       '<td><button class="btn b-red" onclick="exitTrade('+p.id+')">Exit</button></td>' +
     '</tr>';
   }).join('');
