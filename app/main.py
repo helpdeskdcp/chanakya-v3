@@ -1147,12 +1147,23 @@ def get_signals():
         tokens  = get_all_tokens(_broker)
         signals = []
 
-        # Return from shared signal store
+        # Return from shared signal store — check cache first
         from engine.signal_store import get as _sig_get
         cached_sigs = _sig_get(username)
         if cached_sigs:
             return jsonify({"success":True,"signals":cached_sigs,
                            "total":len(cached_sigs),"mode":user_mode,"cached":True})
+
+        # Fallback — use avinash signals if premium user
+        if not cached_sigs and username != "avinash":
+            shared = _sig_get("avinash")
+            if shared:
+                # Store for this user too
+                from engine.signal_store import update as _sig_upd2
+                _sig_upd2(username, shared)
+                return jsonify({"success":True,"signals":shared,
+                               "total":len(shared),"mode":user_mode,"cached":True,"shared":True})
+
         logger.info(f"Signals: scanning... broker={_broker.connected}")
         for sym, info in tokens.items():
             if sym in ("VIX",): continue
