@@ -362,9 +362,9 @@ def api_register():
         import re, secrets
         data   = request.json or {}
         name   = (data.get("name") or "").strip()
-        email  = data.get("email","").strip().lower()
+        email  = (data.get("email") or "").strip().lower()
         mobile = (data.get("mobile") or "").strip()
-        pwd    = data.get("password","")
+        pwd    = (data.get("password") or "")
 
         if not name or not email or not pwd:
             return jsonify({"success":False,"error":"Name, email and password required"})
@@ -437,9 +437,9 @@ def api_google_auth():
     """Google OAuth login/register"""
     try:
         data  = request.json or {}
-        email = data.get("email","").strip().lower()
-        name  = (data.get("name") or "") or email.split('@')[0]
-        uid   = data.get("uid","")
+        email = (data.get("email") or "").strip().lower()
+        name  = (data.get("name") or "").strip() or (email.split('@')[0] if email else "user")
+        uid   = (data.get("uid") or "").strip()
 
         if not email or not uid:
             return jsonify({"success":False,"error":"Invalid Google token"})
