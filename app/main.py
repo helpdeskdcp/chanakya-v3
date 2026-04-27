@@ -1374,10 +1374,13 @@ def positions_ltp():
 @require_auth
 def get_positions():
     import sqlite3
+    curr_username = get_current_user().get("username","")
     conn = sqlite3.connect(config.DB_PATH)
     conn.row_factory = sqlite3.Row
+    # STRICT: each user sees own positions only
     rows = conn.execute(
-        "SELECT * FROM trades WHERE status='OPEN' ORDER BY created_at DESC"
+        "SELECT * FROM trades WHERE status='OPEN' AND username=? ORDER BY created_at DESC",
+        (curr_username,)
     ).fetchall()
     conn.close()
     return jsonify({"success": True, "positions": [dict(r) for r in rows]})
