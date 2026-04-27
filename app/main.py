@@ -2137,20 +2137,46 @@ def verify_payment():
 @app.route("/api/v3/admin/users")
 @require_auth
 def list_users():
-    """Admin — list all users"""
+    """Admin — list all users with role + payments"""
     user = get_current_user()
     if user.get("role") != "admin":
         return jsonify({"success": False, "error": "Admin only"}), 403
-    from data.users import get_all_users, get_user_role, get_trial_status
-    users = get_all_users()
-    for u in users:
-        u["effective_role"] = get_user_role(u["username"])
-        u["trial_days_left"] = get_trial_status(u["username"])
-        # Hide sensitive data
-        u.pop("password_hash", None)
-        u.pop("angel_password", None)
-        u.pop("angel_totp_key", None)
-    return jsonify({"success": True, "users": users})
+    import sqlite3
+    from engine.role_policy import get_effective_role, get_trial_days_left
+    conn = sqlite3.connect("data/users.db")
+    conn.row_factory = sqlite3.Row
+    users = conn.execute("""
+        SELECT id,username,role,active,pref_mode,trial_start,trial_days,
+               premium_start,premium_expiry,upi_name,created_at,last_login,broker_name
+        FROM users ORDER BY created_at DESC
+    """).fetchall()
+    payments = conn.execute("""
+        SELECT p.*,u.username FROM payments p
+        JOIN users u ON p.user_id=u.id
+        ORDER BY p.created_at DESC LIMIT 20
+    """).fetchall()
+    conn.close()
+    user_list = []
+    for usr in users:
+        eff_role  = get_effective_role(usr["username"])
+        trial_left = get_trial_days_left(usr["username"]) if usr["role"]=="viewer" else None
+        user_list.append({
+            "id":            usr["id"],
+            "username":      usr["username"],
+            "role":          usr["role"],
+            "eff_role":      eff_role,
+            "active":        usr["active"],
+            "mode":          usr["pref_mode"],
+            "trial_left":    trial_left,
+            "trial_days":    usr["trial_days"],
+            "premium_expiry":usr["premium_expiry"],
+            "email":         usr["upi_name"],
+            "created_at":    usr["created_at"],
+            "last_login":    usr["last_login"],
+            "broker":        usr["broker_name"],
+        })
+    pay_list = [dict(p) for p in payments]
+    return jsonify({"success":True,"users":user_list,"payments":pay_list,"total":len(user_list)})
 
 @app.route("/api/v3/admin/payments")
 @require_auth
