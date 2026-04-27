@@ -7,6 +7,13 @@ from datetime import datetime
 import pytz
 
 logger = logging.getLogger(__name__)
+
+def _safe_now():
+    """Safe IST now string"""
+    try:
+        return datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 IST = pytz.timezone("Asia/Kolkata")
 
 LOT_SIZES = {"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,
@@ -88,7 +95,7 @@ def sync_broker_positions(broker, username, db_path="data/chanakya_v3.db"):
 
                 if not ex:
                     # New broker position — add to DB
-                    now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+                    now = _safe_now()
                     # SL: -30% from entry
                     sl     = round(avg_price * (1 - TRAIL_CONFIG["hard_sl_pct"]), 2)
                     # Target: +50% from entry
@@ -181,7 +188,7 @@ def _process_position(broker, pos, username, db_path):
     pnl_pct = (ltp - entry) / entry * 100
 
     conn = sqlite3.connect(db_path)
-    now  = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    now  = _safe_now()
 
     # ── STOP LOSS HIT ──
     if ltp <= sl:
