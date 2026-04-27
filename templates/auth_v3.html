@@ -288,8 +288,8 @@ window.doGoogleLogin = async function() {
       body: JSON.stringify({
         id_token: idToken,
         email:    user.email,
-        name:     user.displayName,
-        photo:    user.photoURL,
+        name:     user.displayName || user.email.split('@')[0],
+        photo:    user.photoURL || '',
         uid:      user.uid
       })
     });
