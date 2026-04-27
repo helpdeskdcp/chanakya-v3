@@ -429,6 +429,15 @@ def api_google_auth():
 
         # Find or create user
         user = conn.execute("SELECT * FROM users WHERE username=?", (email,)).fetchone()
+        # Also check by email in audit_log
+        if not user:
+            _audit = conn.execute(
+                "SELECT u.username FROM audit_log al JOIN users u ON al.user_id=u.id WHERE al.details LIKE ? LIMIT 1",
+                (f"%email={email}%",)
+            ).fetchone()
+            if _audit:
+                user = conn.execute("SELECT * FROM users WHERE username=?", (_audit[0],)).fetchone()
+
         if not user:
             username = email.split('@')[0].lower().replace('.','_')[:20]
             base = username; i=1
@@ -1818,6 +1827,15 @@ def check_subscription(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         user = get_current_user()
+        # Also check by email in audit_log
+        if not user:
+            _audit = conn.execute(
+                "SELECT u.username FROM audit_log al JOIN users u ON al.user_id=u.id WHERE al.details LIKE ? LIMIT 1",
+                (f"%email={email}%",)
+            ).fetchone()
+            if _audit:
+                user = conn.execute("SELECT * FROM users WHERE username=?", (_audit[0],)).fetchone()
+
         if not user:
             return jsonify({"success": False, "error": "Unauthorized"}), 401
         username = user.get("username","")
