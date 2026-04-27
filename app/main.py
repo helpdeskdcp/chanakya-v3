@@ -686,7 +686,7 @@ def status():
         broker_user_name = _ub.user_name
         broker_connected = True
         broker_capital   = _ub.capital
-    elif _role == 'admin' and (not curr_username or curr_username == "avinash"):
+    elif _role == 'admin':
         # Admin fallback
         broker_user_name = broker.user_name
         broker_connected = broker.connected
@@ -829,21 +829,22 @@ def dashboard():
         FROM trades WHERE status='CLOSED'
         AND ABS(pnl)<100000
         AND created_at >= '2026-04-23'
-        AND (username=? OR (? = 'avinash' AND username IS NOT NULL))
-    """, (curr_username, curr_username))
+        AND username=? AND status != 'INVALID'
+    """, (curr_username,))
     r2 = cur.fetchone()
     all_trades = r2[0] or 0
     all_pnl    = round(r2[1] or 0, 2)
     all_wins   = r2[2] or 0
 
     # Open positions
-    cur.execute("SELECT COUNT(*) FROM trades WHERE status='OPEN'")
+    cur.execute("SELECT COUNT(*) FROM trades WHERE status='OPEN' AND username=?", (curr_username,))
     open_count = cur.fetchone()[0] or 0
 
     # Best strategy
     cur.execute("""SELECT strategy, SUM(pnl) as total FROM trades
         WHERE status='CLOSED' AND strategy IS NOT NULL
-        GROUP BY strategy ORDER BY total DESC LIMIT 1""")
+        AND username=? AND status != 'INVALID'
+        GROUP BY strategy ORDER BY total DESC LIMIT 1""", (curr_username,))
     bs = cur.fetchone()
     conn.close()
 
@@ -1462,7 +1463,8 @@ def analytics():
     conn = sqlite3.connect(config.DB_PATH)
     conn.row_factory = sqlite3.Row
 
-    # Overall stats
+    curr_username = get_current_user().get("username","")
+    # Overall stats — per user only
     r = conn.execute("""
         SELECT COUNT(*) t, COALESCE(SUM(pnl),0) pnl,
                SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) wins,
@@ -1470,23 +1472,26 @@ def analytics():
                AVG(CASE WHEN pnl<0 THEN pnl END) avg_loss,
                MAX(pnl) best, MIN(pnl) worst
         FROM trades WHERE status='CLOSED'
-    """).fetchone()
+        AND username=? AND status != 'INVALID'
+    """, (curr_username,)).fetchone()
 
     # Strategy breakdown
     strats = conn.execute("""
         SELECT strategy, COUNT(*) t, SUM(pnl) pnl,
                SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END) wins
         FROM trades WHERE status='CLOSED' AND strategy IS NOT NULL
+            AND username=?
         GROUP BY strategy ORDER BY pnl DESC
     """).fetchall()
 
-    # Daily P&L (30 days)
+    # Daily P&L (30 days) — per user
     daily = conn.execute("""
         SELECT date(created_at) dt, SUM(pnl) pnl, COUNT(*) trades
         FROM trades WHERE status='CLOSED'
+        AND username=? AND status != 'INVALID'
         AND created_at >= date('now','-30 days')
         GROUP BY date(created_at) ORDER BY dt
-    """).fetchall()
+    """, (curr_username,)).fetchall()
 
     conn.close()
     t = r["t"] or 1
