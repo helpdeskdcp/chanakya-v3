@@ -683,6 +683,20 @@ def chart_strikes():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+
+@app.route("/api/v3/admin/payment/qr")
+@require_auth
+def admin_payment_qr():
+    """UPI QR for payment"""
+    from engine.role_policy import UPI_ID, UPI_NAME, PLANS
+    amount = request.args.get("amount","999")
+    plan   = request.args.get("plan","monthly")
+    upi_url = f"upi://pay?pa={UPI_ID}&pn={UPI_NAME}&am={amount}&cu=INR"
+    import urllib.parse
+    qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + urllib.parse.quote(upi_url)
+    return jsonify({"success":True,"upi_id":UPI_ID,"upi_name":UPI_NAME,
+                    "upi_url":upi_url,"qr_url":qr_url,"plans":PLANS,"amount":amount,"plan":plan})
+
 @app.route("/api/v3/policy")
 @require_auth
 def user_policy():
