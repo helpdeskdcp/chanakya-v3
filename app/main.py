@@ -82,6 +82,29 @@ def get_session():
 
 INTERNAL_TOKEN = "chanakya_internal_2026"
 
+
+def require_feature(feature):
+    """Decorator to check feature access"""
+    def decorator(f):
+        import functools
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            try:
+                u = get_current_user()
+                username = u.get("username","")
+                from engine.role_policy import can_access
+                if not can_access(username, feature):
+                    from engine.role_policy import get_effective_role
+                    role = get_effective_role(username)
+                    if role == "expired":
+                        return jsonify({"success":False,"error":"Trial expired. Please upgrade to premium.","expired":True}), 403
+                    return jsonify({"success":False,"error":f"Feature '{feature}' requires premium access","upgrade":True}), 403
+            except Exception:
+                pass
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
 def require_auth(f):
     from functools import wraps
     @wraps(f)
@@ -660,6 +683,15 @@ def chart_strikes():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+@app.route("/api/v3/policy")
+@require_auth
+def user_policy():
+    """Get user role policy"""
+    username = get_current_user().get("username","")
+    from engine.role_policy import get_user_policy
+    policy = get_user_policy(username)
+    return jsonify({"success":True,"policy":policy})
+
 @app.route("/api/v3/status")
 def status():
     # Per-user broker info
@@ -706,6 +738,7 @@ def status():
         "user":          broker_user_name,
         "login_user":    curr_username,
         "mode":          _get_user_mode(curr_username) if curr_username else "PAPER",
+        "role":          get_current_user().get("role","viewer"),
         "capital":       broker_capital,
         "market_open":   signal_engine.is_market_open(),
         "mcx_open":      signal_engine.is_market_open("MCX"),
@@ -866,6 +899,7 @@ def dashboard():
         "open_trades":   open_count,
         "best_strategy": {"name": bs[0], "pnl": round(bs[1],2)} if bs else None,
         "mode":          _get_user_mode(curr_username) if curr_username else "PAPER",
+        "role":          get_current_user().get("role","viewer"),
         "vix":           _get_vix(),
         "pcr":           1.0,
         "connected":     broker.connected,

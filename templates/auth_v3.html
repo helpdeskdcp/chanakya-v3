@@ -162,8 +162,12 @@ body{background:#060d14;color:#e0e8f0;font-family:'Segoe UI',sans-serif;min-heig
       <div style="background:#0d1b2a;border-radius:8px;padding:12px;margin-bottom:14px">
         <div style="font-size:10px;color:#8090a8;margin-bottom:6px">PAY VIA UPI</div>
         <div style="font-size:14px;font-weight:900;color:#d4af37" id="upi-amount">₹2,499</div>
-        <div style="font-size:11px;color:#e0e8f0;margin-top:4px">UPI ID: <b id="upi-id">chanakya@upi</b></div>
-        <div style="font-size:9px;color:#8090a8;margin-top:4px">Pay and enter UTR number below</div>
+        <div style="font-size:11px;color:#e0e8f0;margin-top:4px">UPI ID: <b id="upi-id">helpdeskdcp-2@okicici</b></div>
+        <div style="font-size:9px;color:#8090a8;margin-top:4px">Scan QR or pay to UPI ID</div>
+        <div style="text-align:center;margin-top:8px">
+          <img id="upiQR" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=helpdeskdcp-2@okicici%26pn=Chanakya AI%26am=2499%26cu=INR"
+               style="border-radius:8px;border:2px solid #d4af37" width="150" height="150">
+        </div>
       </div>
       <div class="form-group">
         <label>Your Username / Email</label>
@@ -379,6 +383,10 @@ window.selectPlan = function(plan, amt) {
   document.querySelectorAll('.plan').forEach(function(p){ p.classList.remove('selected'); });
   document.getElementById('plan-'+plan).classList.add('selected');
   document.getElementById('upi-amount').textContent = '₹' + amt.toLocaleString('en-IN');
+  // Update QR
+  var upiUrl = 'upi://pay?pa=helpdeskdcp-2@okicici&pn=Chanakya AI&am='+amt+'&cu=INR';
+  var qrEl = document.getElementById('upiQR');
+  if(qrEl) qrEl.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data='+encodeURIComponent(upiUrl);
 };
 
 window.doUpgrade = async function() {

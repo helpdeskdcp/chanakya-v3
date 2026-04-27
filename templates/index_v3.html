@@ -359,6 +359,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-it" onclick="pg('signals',this)">⚡ AI Signals</div>
       <div class="nav-it" onclick="pg('trades',this)">📋 Trade History</div>
       <div class="nav-it" onclick="pg('positions',this)">🔴 Live Positions</div>
+      <div class="nav-it admin-only" onclick="pg('users',this)" id="navUsers" style="display:none">👥 Users</div>
       <div class="nav-sec">Analysis</div>
       <div class="nav-it" onclick="pg('chain',this)">🔗 Option Chain</div>
       <div class="nav-it" onclick="window.open('/v3/chart','_blank')">📊 Live Chart</div>
@@ -459,6 +460,35 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
         </div>
       </div>
 
+
+      <!-- USERS MANAGEMENT PAGE -->
+      <div class="pg" id="pg-users" style="display:none">
+        <div class="card">
+          <div class="ch">👥 User Management
+            <button class="btn b-blue" onclick="loadUsers()">🔄 Refresh</button>
+          </div>
+          <div id="usersContent" style="padding:8px;overflow-x:auto">
+            <div style="text-align:center;color:#8090a8;padding:20px">Loading...</div>
+          </div>
+        </div>
+        <!-- Payments -->
+        <div class="card" style="margin-top:10px">
+          <div class="ch">💰 Pending Payments</div>
+          <div id="paymentsContent" style="padding:8px">
+            <div style="text-align:center;color:#8090a8;padding:20px">Loading...</div>
+          </div>
+        </div>
+        <!-- UPI QR -->
+        <div class="card" style="margin-top:10px">
+          <div class="ch">📲 Payment QR</div>
+          <div style="padding:12px;text-align:center">
+            <div style="font-size:12px;color:#d4af37;margin-bottom:8px">UPI: helpdeskdcp-2@okicici</div>
+            <img id="adminQR" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=helpdeskdcp-2@okicici%26pn=Chanakya AI%26cu=INR"
+                 style="border-radius:8px;border:2px solid #d4af37" width="180">
+            <div style="font-size:10px;color:#8090a8;margin-top:8px">Scan to receive premium payment</div>
+          </div>
+        </div>
+      </div>
       <!-- CHAIN -->
       <div class="pg" id="pg-chain">
         <div class="card" style="margin-bottom:10px">
@@ -1688,6 +1718,85 @@ async function updatePositionPnL() {
       totalEl.style.color = totalPnl>=0?'#00e676':'#ff5252';
     }
   } catch(e) {}
+}
+
+async function loadUsers() {
+  var d = await api('/admin/users');
+  if(!d || !d.success) return;
+
+  // Users table
+  var uc = document.getElementById('usersContent');
+  var roleClr = {admin:'#d4af37',premium:'#00e676',viewer:'#00c8ff',expired:'#ff5252'};
+  var rows = d.users.map(function(u) {
+    var clr = roleClr[u.eff_role] || '#8090a8';
+    var trialBadge = u.trial_left !== null ? '<span style="color:#d4af37;font-size:9px">'+u.trial_left+'d left</span>' : '';
+    return '<tr>' +
+      '<td>'+u.id+'</td>' +
+      '<td><b>'+u.username+'</b><br><span style="font-size:9px;color:#8090a8">'+(u.email||'')+'</span></td>' +
+      '<td><span style="color:'+clr+'">'+u.eff_role.toUpperCase()+'</span><br>'+trialBadge+'</td>' +
+      '<td>'+(u.mode||'PAPER')+'</td>' +
+      '<td>'+(u.broker||'none')+'</td>' +
+      '<td style="font-size:9px;color:#8090a8">'+(u.created_at||'').slice(0,10)+'</td>' +
+      '<td>' +
+        '<select onchange="adminAction('+u.id+',this.value)" style="background:#0d1b2a;color:#e0e8f0;border:1px solid #1e3a5f;border-radius:4px;font-size:10px;padding:2px">' +
+          '<option value="">Action</option>' +
+          '<option value="premium_30">→ Premium 30d</option>' +
+          '<option value="premium_90">→ Premium 90d</option>' +
+          '<option value="viewer">→ Demo</option>' +
+          '<option value="paper">→ PAPER mode</option>' +
+          '<option value="live">→ LIVE mode</option>' +
+          '<option value="extend_7">+7 trial days</option>' +
+          '<option value="deactivate">Deactivate</option>' +
+          '<option value="activate">Activate</option>' +
+        '</select>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  uc.innerHTML = '<table class="tbl"><thead><tr><th>ID</th><th>User/Email</th><th>Role</th><th>Mode</th><th>Broker</th><th>Joined</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table>';
+
+  // Payments
+  var pc = document.getElementById('paymentsContent');
+  var pending = d.payments.filter(function(p){ return p.status==='PENDING'; });
+  if(!pending.length) {
+    pc.innerHTML = '<div style="color:#8090a8;text-align:center;padding:10px">No pending payments</div>';
+  } else {
+    var prows = pending.map(function(p) {
+      return '<tr>' +
+        '<td>'+p.username+'</td>' +
+        '<td>₹'+p.amount+'</td>' +
+        '<td style="font-size:9px">'+p.utr_number+'</td>' +
+        '<td>'+(p.created_at||'').slice(0,16)+'</td>' +
+        '<td><button class="btn b-blue" onclick="verifyPayment('+p.id+',30)" style="font-size:10px;padding:4px 8px">✅ Verify 30d</button>' +
+             '<button class="btn" onclick="verifyPayment('+p.id+',90)" style="font-size:10px;padding:4px 8px;background:#d4af3333;color:#d4af37;margin-left:4px">✅ 90d</button></td>' +
+      '</tr>';
+    }).join('');
+    pc.innerHTML = '<table class="tbl"><thead><tr><th>User</th><th>Amount</th><th>UTR</th><th>Date</th><th>Action</th></tr></thead><tbody>'+prows+'</tbody></table>';
+  }
+}
+
+async function adminAction(userId, action) {
+  if(!action) return;
+  var body = {user_id: userId, action: ''};
+  if(action==='premium_30') { body.action='activate_premium'; body.days=30; }
+  else if(action==='premium_90') { body.action='activate_premium'; body.days=90; }
+  else if(action==='viewer') { body.action='set_role'; body.value='viewer'; }
+  else if(action==='paper') { body.action='set_mode'; body.value='PAPER'; }
+  else if(action==='live') { body.action='set_mode'; body.value='LIVE'; }
+  else if(action==='extend_7') { body.action='extend_trial'; body.days=7; }
+  else if(action==='deactivate') { body.action='deactivate'; }
+  else if(action==='activate') { body.action='activate'; }
+  var r = await fetch('/api/v3/admin/user/update',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},body:JSON.stringify(body)});
+  var d = await r.json();
+  if(d.success) { toast('✅ '+action+' done!','#00e676'); loadUsers(); }
+  else toast('❌ '+d.error,'#ff5252');
+}
+
+async function verifyPayment(payId, days) {
+  var r = await fetch('/api/v3/admin/user/update',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},body:JSON.stringify({action:'verify_payment',payment_id:payId,days:days})});
+  var d = await r.json();
+  if(d.success) { toast('✅ Payment verified! Premium '+days+'d activated','#00e676'); loadUsers(); }
+  else toast('❌ '+d.error,'#ff5252');
 }
 
 // ── SIGNALS ───────────────────────────────────────────
