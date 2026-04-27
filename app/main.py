@@ -1309,20 +1309,33 @@ def place_trade_v3():
 @require_auth
 def get_trades():
     import sqlite3
+    curr_username = get_current_user().get("username","")
+    curr_role     = get_current_user().get("role","viewer")
     status = request.args.get("status", "ALL")
     limit  = int(request.args.get("limit", 50))
     conn   = sqlite3.connect(config.DB_PATH)
     conn.row_factory = sqlite3.Row
+
+    # STRICT: each user sees own trades only
+    # Admin can see all if explicitly requested
     if status == "TODAY":
         rows = conn.execute("""SELECT * FROM trades
             WHERE date(created_at)=date('now','localtime')
-            ORDER BY created_at DESC LIMIT ?""", (limit,)).fetchall()
+            AND username=?
+            AND status != 'INVALID'
+            ORDER BY created_at DESC LIMIT ?""",
+            (curr_username, limit)).fetchall()
     elif status == "OPEN":
         rows = conn.execute("""SELECT * FROM trades
-            WHERE status='OPEN' ORDER BY created_at DESC""").fetchall()
+            WHERE status='OPEN' AND username=?
+            ORDER BY created_at DESC""",
+            (curr_username,)).fetchall()
     else:
         rows = conn.execute("""SELECT * FROM trades
-            ORDER BY created_at DESC LIMIT ?""", (limit,)).fetchall()
+            WHERE username=?
+            AND status != 'INVALID'
+            ORDER BY created_at DESC LIMIT ?""",
+            (curr_username, limit)).fetchall()
     conn.close()
     trades = [dict(r) for r in rows]
     return jsonify({"success": True, "trades": trades, "count": len(trades)})
