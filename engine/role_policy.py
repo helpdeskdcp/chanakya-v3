@@ -64,7 +64,11 @@ def get_effective_role(username, db_path="data/users.db"):
             # Check premium expiry
             if u["premium_expiry"]:
                 try:
-                    exp = datetime.fromisoformat(u["premium_expiry"])
+                    exp_str = u["premium_expiry"].replace('T',' ').split('.')[0]
+                    try:
+                        exp = datetime.strptime(exp_str, "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        exp = datetime.fromisoformat(u["premium_expiry"])
                     if datetime.utcnow() > exp:
                         return "expired"
                 except Exception:
@@ -74,7 +78,15 @@ def get_effective_role(username, db_path="data/users.db"):
             # Check trial expiry
             if u["trial_start"] and u["trial_days"]:
                 try:
-                    start = datetime.fromisoformat(u["trial_start"])
+                    start_str = u["trial_start"].replace('T',' ').split('.')[0]
+                    try:
+                        start = datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        start_str = u["trial_start"].replace('T',' ').split('.')[0]
+            try:
+                start = datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                start = datetime.fromisoformat(u["trial_start"])
                     expiry = start + timedelta(days=int(u["trial_days"]))
                     if datetime.utcnow() > expiry:
                         return "expired"
@@ -102,7 +114,11 @@ def get_trial_days_left(username, db_path="data/users.db"):
         ).fetchone()
         conn.close()
         if u and u["trial_start"] and u["trial_days"]:
-            start = datetime.fromisoformat(u["trial_start"])
+            start_str = u["trial_start"].replace('T',' ').split('.')[0]
+            try:
+                start = datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                start = datetime.fromisoformat(u["trial_start"])
             expiry = start + timedelta(days=int(u["trial_days"]))
             left = (expiry - datetime.utcnow()).days
             return max(0, left)
