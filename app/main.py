@@ -659,26 +659,33 @@ def status():
     # Per-user broker pool — cache only
     from engine.broker_pool import _pool
     _ub = _pool.get(curr_username) if curr_username else None
-    if _ub and _ub.connected:
+    # Get user role first
+    import sqlite3 as _sq
+    _conn = _sq.connect("data/users.db")
+    _conn.row_factory = _sq.Row
+    _u = _conn.execute("SELECT role FROM users WHERE username=?", (curr_username,)).fetchone()
+    _conn.close()
+    _role = _u['role'] if _u else 'viewer'
+
+    if _role == 'viewer':
+        # Demo user — no broker, virtual capital
+        broker_user_name = curr_username or "Demo User"
+        broker_connected = False
+        broker_capital   = 100000.0
+    elif _ub and _ub.connected:
+        # Premium/admin with own broker
         broker_user_name = _ub.user_name
         broker_connected = True
         broker_capital   = _ub.capital
-    elif curr_username == "avinash" or not curr_username:
-        # Admin — use global broker
+    elif _role == 'admin' and (not curr_username or curr_username == "avinash"):
+        # Admin fallback
         broker_user_name = broker.user_name
         broker_connected = broker.connected
         broker_capital   = 0
     else:
-        # Non-admin — show own broker name from DB
-        try:
-            from data.users import get_broker_credentials
-            _creds = get_broker_credentials(curr_username)
-            broker_connected = bool(_creds and _creds.get("connected"))
-            broker_user_name = _creds.get("client_id","") if broker_connected else ""
-        except Exception:
-            broker_connected = False
-            broker_user_name = ""
-        broker_capital = 0
+        broker_connected = False
+        broker_user_name = ""
+        broker_capital   = 0
 
     stats = get_today_stats()
     vix = _get_vix()

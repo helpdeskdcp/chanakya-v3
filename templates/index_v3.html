@@ -1417,8 +1417,13 @@ async function loadStatus() {
   document.getElementById('tMODE').textContent = serverMode;
   updateModeBtn(serverMode);
   // Show broker full name + username
-  const brokerDisplay = conn ?
-    `✅ ${d.user} (${d.login_user})` : '❌ Not connected';
+  // Show broker info based on role
+  var brokerDisplay;
+  if(window._userRole === 'viewer') {
+    brokerDisplay = '📄 PAPER TRADING (Demo)';
+  } else {
+    brokerDisplay = conn ? '✅ '+d.user+' ('+d.login_user+')' : '❌ Not connected';
+  }
   s('sBROKER', brokerDisplay);
   s('setBROK', brokerDisplay);
   s('sUSER', d.login_user||'—');
