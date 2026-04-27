@@ -48,13 +48,16 @@ def sync_broker_positions(broker, username, db_path="data/chanakya_v3.db"):
                 token     = pos.get("symboltoken", "")
                 exchange  = pos.get("exchange", "NFO")
                 prod_type = pos.get("producttype", "")
-                # Angel One uses different field names
+                # Angel One — accurate entry price
                 avg_price = float(
+                    pos.get("netprice") or
+                    pos.get("avgnetprice") or
                     pos.get("totalbuyavgprice") or
-                    pos.get("buyavgprice") or
-                    pos.get("averageprice") or
-                    pos.get("cfbuyavgprice") or 0
+                    pos.get("buyavgprice") or 0
                 )
+                # If netprice is 0 (mixed buy/sell), use buyavgprice
+                if avg_price == 0:
+                    avg_price = float(pos.get("buyavgprice") or 0)
                 ltp       = float(pos.get("ltp") or 0)
                 qty       = abs(netqty)
                 opt_type  = "CE" if symbol.endswith("CE") else "PE" if symbol.endswith("PE") else "CE"
@@ -66,7 +69,12 @@ def sync_broker_positions(broker, username, db_path="data/chanakya_v3.db"):
                         base_sym = s
                         break
 
-                lot_size = int(pos.get("lotsize") or LOT_SIZES.get(base_sym, 1))
+                lot_size_api = int(pos.get("lotsize") or 0)
+                lot_size = lot_size_api if lot_size_api > 0 else LOT_SIZES.get(base_sym, 1)
+                # For NATURALGAS — 1 lot = 1250 qty (as per Angel One)
+                # but our lot_size should match our system
+                sys_lot = LOT_SIZES.get(base_sym, lot_size)
+                lots = max(1, qty // sys_lot) if sys_lot > 0 else 1
                 lots = max(1, qty // lot_size)
 
                 if avg_price <= 0:
@@ -81,8 +89,14 @@ def sync_broker_positions(broker, username, db_path="data/chanakya_v3.db"):
                 if not ex:
                     # New broker position — add to DB
                     now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-                    sl     = round(avg_price * (1 - TRAIL_CONFIG["hard_sl_pct"]), 1)
-                    target = round(avg_price * (1 + TRAIL_CONFIG["target1_pct"]), 1)
+                    # SL: -30% from entry
+                    sl     = round(avg_price * (1 - TRAIL_CONFIG["hard_sl_pct"]), 2)
+                    # Target: +50% from entry
+                    target = round(avg_price * (1 + TRAIL_CONFIG["target1_pct"]), 2)
+                    # Target 2 and 3 stored as metadata
+                    t2 = round(avg_price * (1 + TRAIL_CONFIG["target2_pct"]), 2)
+                    t3 = round(avg_price * (1 + TRAIL_CONFIG["target3_pct"]), 2)
+                    logger.info(f"📊 {symbol}: E=₹{avg_price} SL=₹{sl} T1=₹{target} T2=₹{t2} T3=₹{t3}")
 
                     conn.execute("""
                         INSERT INTO trades
@@ -91,7 +105,7 @@ def sync_broker_positions(broker, username, db_path="data/chanakya_v3.db"):
                          status,mode,strategy,created_at,updated_at)
                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """, (username, base_sym, exchange, opt_type, symbol, token,
-                          avg_price, sl, target, lots, lot_size, qty,
+                          avg_price, sl, target, lots, sys_lot, qty,
                           "OPEN", "LIVE", "BROKER_SYNC", now, now))
                     logger.info(f"✅ Synced broker position: {symbol} E=₹{avg_price} qty={qty}")
                     synced += 1
@@ -217,13 +231,34 @@ def _exit_position(conn, pid, ltp, pnl, reason, now, broker, pos, username):
         WHERE id=?
     """, (ltp, round(pnl, 2), pnl_pct, reason, now, now, pid))
 
-    # If LIVE mode — place actual exit order
+    # Place REAL exit order on Angel One
     mode = pos.get("mode", "PAPER")
     if mode == "LIVE":
         try:
-            from engine.order import OrderEngine
-            oe = OrderEngine(broker)
-            oe.place_exit(pid, ltp, reason)
+            trading_symbol = pos.get("trading_symbol","")
+            token          = str(pos.get("token",""))
+            exchange       = pos.get("exchange","NFO")
+            qty            = int(pos.get("quantity") or pos.get("lot_size") or 0)
+
+            if trading_symbol and token and qty > 0:
+                # Place SELL order at market price
+                order_params = {
+                    "variety":         "NORMAL",
+                    "tradingsymbol":   trading_symbol,
+                    "symboltoken":     token,
+                    "transactiontype": "SELL",
+                    "exchange":        exchange,
+                    "ordertype":       "MARKET",
+                    "producttype":     "INTRADAY",
+                    "duration":        "DAY",
+                    "quantity":        str(qty),
+                    "price":           "0",
+                    "triggerprice":    "0",
+                }
+                result = broker.api.placeOrder(order_params)
+                logger.info(f"🔴 LIVE EXIT ORDER: {trading_symbol} qty={qty} reason={reason} → {result}")
+            else:
+                logger.warning(f"Exit skipped — missing symbol/token/qty for #{pid}")
         except Exception as e:
             logger.error(f"Live exit failed #{pid}: {e}")
 
