@@ -361,9 +361,9 @@ def api_register():
     try:
         import re, secrets
         data   = request.json or {}
-        name   = data.get("name","").strip()
+        name   = (data.get("name") or "").strip()
         email  = data.get("email","").strip().lower()
-        mobile = data.get("mobile","").strip()
+        mobile = (data.get("mobile") or "").strip()
         pwd    = data.get("password","")
 
         if not name or not email or not pwd:
@@ -438,7 +438,7 @@ def api_google_auth():
     try:
         data  = request.json or {}
         email = data.get("email","").strip().lower()
-        name  = data.get("name","") or email.split('@')[0]
+        name  = (data.get("name") or "") or email.split('@')[0]
         uid   = data.get("uid","")
 
         if not email or not uid:
