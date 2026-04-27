@@ -1330,7 +1330,7 @@ async function startApp() {
   startClock();
   // Check role immediately — show admin nav
   api('/status').then(function(sd) {
-    if (sd && (sd.login_user === 'avinash' || sd.role === 'admin')) {
+    if (sd && sd.role === 'admin') {  // Only admin role — no hardcoded username
       var na = document.getElementById('navAdmin');
       var ns = document.getElementById('navSystem');
       if (na) na.style.display = 'block';
