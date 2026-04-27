@@ -1224,19 +1224,26 @@ def get_signals():
                 continue
 
         signals.sort(key=lambda x: x["score"], reverse=True)
-        # Store for ALL active users — same market signals
-        from engine.signal_store import update as _sig_upd
-        import sqlite3 as _sq3
-        try:
-            _conn3 = _sq3.connect("data/users.db")
-            _all_users = _conn3.execute(
-                "SELECT username FROM users WHERE active=1"
-            ).fetchall()
-            _conn3.close()
-            for _au in _all_users:
-                _sig_upd(_au[0], signals)
-        except Exception:
-            _sig_upd(username, signals)
+        from engine.signal_store import update as _sig_upd, get as _sig_get
+        if signals:
+            # Store for ALL active users ONLY if we have signals
+            import sqlite3 as _sq3
+            try:
+                _conn3 = _sq3.connect("data/users.db")
+                _all_users = _conn3.execute(
+                    "SELECT username FROM users WHERE active=1"
+                ).fetchall()
+                _conn3.close()
+                for _au in _all_users:
+                    _sig_upd(_au[0], signals)
+            except Exception:
+                _sig_upd(username, signals)
+        else:
+            # No signals from fresh scan — return cached if available
+            _cached = _sig_get(username)
+            if _cached:
+                return jsonify({"success":True,"signals":_cached,
+                                "total":len(_cached),"mode":user_mode,"cached":True})
         return jsonify({"success":True,"signals":signals,
                         "total":len(signals),"mode":user_mode})
     except Exception as e:
