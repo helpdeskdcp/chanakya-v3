@@ -141,21 +141,21 @@ def smart_scan(broker):
         time.sleep(0.5)  # Rate limit
 
     signals.sort(key=lambda x: x["score"], reverse=True)
-    # Store signals for ALL connected users
+    # Store signals for ALL active users — same market signals
     from engine.broker_pool import _pool
     import sqlite3 as _sq
-    # Get all active premium/admin users
+    import time as _time
     try:
         _conn = _sq.connect("data/users.db")
         _users = _conn.execute(
-            "SELECT username FROM users WHERE active=1 AND role IN ('admin','premium','viewer')"
+            "SELECT username FROM users WHERE active=1"
         ).fetchall()
         _conn.close()
         for _u in _users:
             update(_u[0], signals)
-    except Exception:
-        pass
-    # Always store for avinash
-    update("avinash", signals)
+        logger.info(f"Signal store: {len(signals)} saved for {len(_users)} users")
+    except Exception as _e:
+        logger.debug(f"Signal store error: {_e}")
+        update("avinash", signals)
     logger.info(f"SmartScan complete: {len(signals)} signals")
     return signals
