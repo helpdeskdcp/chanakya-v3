@@ -839,6 +839,7 @@ def dashboard():
     # Open positions
     cur.execute("SELECT COUNT(*) FROM trades WHERE status='OPEN' AND username=?", (curr_username,))
     open_count = cur.fetchone()[0] or 0
+    open_count = cur.fetchone()[0] or 0
 
     # Best strategy
     cur.execute("""SELECT strategy, SUM(pnl) as total FROM trades
