@@ -169,7 +169,7 @@ def get_user_role(username):
     if role == "premium":
         if u["premium_expiry"]:
             expiry = datetime.strptime(
-                u["premium_expiry"][:19], "%Y-%m-%d %H:%M:%S"
+                u["premium_expiry"][:19].replace('T',' '), "%Y-%m-%d %H:%M:%S"
             ).replace(tzinfo=IST)
             if datetime.now(IST) > expiry:
                 # Auto downgrade
@@ -230,7 +230,7 @@ def get_trial_status(username):
     if not u or u["role"] != "viewer":
         return None
     trial_start = datetime.strptime(
-        u["trial_start"][:19], "%Y-%m-%d %H:%M:%S"
+        u["trial_start"][:19].replace('T',' '), "%Y-%m-%d %H:%M:%S"
     )
     days_used = (datetime.now() - trial_start).days
     days_left = max(0, (u["trial_days"] or 15) - days_used)
