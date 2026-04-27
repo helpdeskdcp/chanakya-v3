@@ -1242,19 +1242,31 @@ def place_trade_v3():
         user_mode = _get_user_mode(username)
         data      = request.get_json() or {}
 
-        symbol      = data.get("symbol","")
-        exchange    = data.get("exchange","NSE")
-        opt_type    = data.get("opt_type","CE")
-        entry_price = float(data.get("entry_price",0))
-        target_price= float(data.get("target_price",0))
-        sl_price    = float(data.get("sl_price",0))
-        lots        = int(data.get("lots",1))
-        strategy    = data.get("strategy","MANUAL")
+        symbol         = data.get("symbol","")
+        opt_type       = data.get("opt_type","CE")
+        entry_price    = float(data.get("entry_price",0))
+        target_price   = float(data.get("target_price",0))
+        sl_price       = float(data.get("sl_price",0))
+        lots           = int(data.get("lots",1))
+        strategy       = data.get("strategy","MANUAL")
+        trading_symbol = data.get("trading_symbol","") or data.get("option_symbol","")
+        token          = data.get("token","") or data.get("option_token","")
+        strike         = float(data.get("strike",0))
+
+        # Lot sizes
+        LOT_SIZES = {"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,
+                     "CRUDEOIL":100,"NATURALGAS":250}
+        lot_size  = LOT_SIZES.get(symbol.upper(), 1)
+        quantity  = lots * lot_size
+
+        # Exchange
+        exch_map = {"NIFTY":"NFO","BANKNIFTY":"NFO","FINNIFTY":"NFO",
+                    "CRUDEOIL":"MCX","NATURALGAS":"MCX"}
+        exchange  = data.get("exchange","") or exch_map.get(symbol.upper(),"NFO")
 
         if not symbol or entry_price <= 0:
             return jsonify({"success":False,"error":"Invalid trade params"})
 
-        # Paper trade — save to DB
         import sqlite3 as sq
         from datetime import datetime
         import pytz
@@ -1265,10 +1277,12 @@ def place_trade_v3():
         cur  = conn.execute("""
             INSERT INTO trades
             (username,symbol,exchange,opt_type,entry_price,target_price,
-             sl_price,lots,strategy,status,mode,created_at,updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+             sl_price,lots,lot_size,quantity,strategy,status,mode,
+             trading_symbol,token,strike,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (username,symbol,exchange,opt_type,entry_price,target_price,
-              sl_price,lots,strategy,"OPEN",user_mode,now,now))
+              sl_price,lots,lot_size,quantity,strategy,"OPEN",user_mode,
+              trading_symbol,token,strike,now,now))
         trade_id = cur.lastrowid
         conn.commit()
         conn.close()

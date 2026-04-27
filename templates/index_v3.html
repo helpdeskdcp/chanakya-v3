@@ -1611,23 +1611,28 @@ function renderPositions() {
     return;
   }
   tb.innerHTML = _posData.map(function(p) {
-    var qty = (p.lots||1) * (p.lot_size||1);
-    var entryAmt = (p.entry_price||0) * qty;
-    var pnlAmt = p._livePnl !== undefined ? p._livePnl : 0;
-    var pnlPct = p._livePnlPct !== undefined ? p._livePnlPct : 0;
+    var lotSz  = p.lot_size || 1;
+    var qty    = (p.lots||1) * lotSz;
     var ltp    = p._ltp !== undefined ? p._ltp : 0;
+    var pnlAmt = ltp > 0 ? (ltp - (p.entry_price||0)) * qty : 0;
+    var pnlPct = (p.entry_price||0) > 0 ? ((ltp-(p.entry_price||0))/(p.entry_price||1)*100) : 0;
     var pnlClr = pnlAmt >= 0 ? '#00e676' : '#ff5252';
     var pnlSign = pnlAmt >= 0 ? '+' : '';
-    var ltpStr = ltp > 0 ? 'Rs'+ltp.toFixed(1) : '...';
+    var ltpStr = ltp > 0 ? 'Rs'+ltp.toFixed(1) : '<span style="color:#d4af37">fetching...</span>';
+    var optSym = p.trading_symbol || (p.symbol+' '+p.opt_type);
+    var typeClr = p.opt_type==='CE' ? '#00e676' : '#ff5252';
     return '<tr id="pos_'+p.id+'">' +
-      '<td><b>'+p.symbol+'</b><br><span style="font-size:9px;color:#8090a8">'+(p.trading_symbol||'').slice(0,18)+'</span></td>' +
-      '<td style="color:'+(p.opt_type==='CE'?'#00e676':'#ff5252')+'"><b>'+p.opt_type+'</b></td>' +
-      '<td>Rs'+(p.entry_price||0).toFixed(1)+'<br><span style="font-size:9px;color:#00c8ff">LTP: '+ltpStr+'</span></td>' +
+      '<td style="min-width:120px"><b style="color:'+typeClr+'">'+p.symbol+' '+p.opt_type+'</b><br>' +
+        '<span style="font-size:9px;color:#00c8ff">'+optSym+'</span></td>' +
+      '<td style="color:#d4af37">'+(p.strike||'—')+'</td>' +
+      '<td>Rs'+(p.entry_price||0).toFixed(1)+'<br>'+
+        '<span style="font-size:10px;color:#00c8ff">'+ltpStr+'</span></td>' +
       '<td class="pos">Rs'+(p.target_price||0).toFixed(1)+'</td>' +
       '<td class="neg">Rs'+(p.sl_price||0).toFixed(1)+'</td>' +
-      '<td style="color:'+pnlClr+'"><b>'+pnlSign+'Rs'+Math.abs(pnlAmt).toFixed(0)+'</b><br>' +
+      '<td style="color:'+pnlClr+';font-weight:900">' +
+        pnlSign+'Rs'+Math.abs(pnlAmt).toFixed(0)+'<br>'+
         '<span style="font-size:9px">'+pnlSign+pnlPct.toFixed(1)+'%</span></td>' +
-      '<td>'+( p.lots||1)+'L/'+qty+'qty</td>' +
+      '<td style="font-size:10px">'+(p.lots||1)+'L<br>'+qty+' qty</td>' +
       '<td><button class="btn b-red" onclick="exitTrade('+p.id+')">Exit</button></td>' +
     '</tr>';
   }).join('');
