@@ -158,7 +158,7 @@ def get_user_role(username):
     # Check trial expiry
     if role == "viewer":
         trial_start = datetime.strptime(
-            u["trial_start"][:19], "%Y-%m-%d %H:%M:%S"
+            u["trial_start"][:19].replace('T',' '), "%Y-%m-%d %H:%M:%S"
         ).replace(tzinfo=IST)
         trial_end = trial_start + timedelta(days=u["trial_days"] or 15)
         if datetime.now(IST) > trial_end:
