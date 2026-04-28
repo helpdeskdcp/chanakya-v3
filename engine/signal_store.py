@@ -41,7 +41,9 @@ def get(username, fallback=None):
         if not entry:
             return []
         # Max 5 min old
-        if time.time() - entry.get("ts", 0) > 300:
+        # Normal TTL: 5 min; extended TTL when broker offline: 8 hours
+        _ttl = 28800  # 8 hours max cache
+        if time.time() - entry.get("ts", 0) > _ttl:
             return []
         return entry.get("signals", [])
     except Exception as e:
