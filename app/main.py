@@ -1205,6 +1205,13 @@ def get_signals():
             if broker.connected:
                 _broker = broker
         if not _broker:
+            # Return cached signals even if broker disconnected
+            from engine.signal_store import get as _sig_get2
+            _cached2 = _sig_get2(username) or _sig_get2("avinash")
+            if _cached2:
+                return jsonify({"success":True,"signals":_cached2,
+                               "total":len(_cached2),"mode":user_mode,"cached":True,
+                               "reason":"broker_offline_using_cache"})
             return jsonify({"success":True,"signals":[],"reason":"Broker not connected"})
 
         tokens  = get_all_tokens(_broker)
