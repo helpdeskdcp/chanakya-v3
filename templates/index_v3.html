@@ -1839,6 +1839,11 @@ async function verifyPayment(payId, days) {
 }
 
 
+function loadEquityPage() {
+  // Equity page loaded — show brokerage calculator ready
+  document.getElementById('eqStatus').textContent = 'Ready — click Scan';
+}
+
 async function scanEquity() {
   var cap = document.getElementById('eqCap').value || 10000;
   document.getElementById('eqStatus').textContent = 'Scanning...';
@@ -2190,6 +2195,7 @@ function pg(id, el) {
   if(id==='signals')   loadSignals();
   if(id==='analytics') loadAnalytics();
   if(id==='brain')     loadBrain();
+  if(id==='equity')    loadEquityPage();
   if(id==='settings')  loadSqTimes();
   if(id==='system')    { loadSystemData(); loadAdminUsers(); }
 }
