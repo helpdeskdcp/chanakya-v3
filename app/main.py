@@ -711,6 +711,119 @@ def admin_payment_qr():
     return jsonify({"success":True,"upi_id":UPI_ID,"upi_name":UPI_NAME,
                     "upi_url":upi_url,"qr_url":qr_url,"plans":PLANS,"amount":amount,"plan":plan})
 
+
+@app.route("/api/v3/equity/signals")
+@require_auth
+def equity_signals():
+    """Scan equity signals"""
+    try:
+        curr_username = get_current_user().get("username","")
+        cap = float(request.args.get("capital", 10000))
+
+        from engine.broker_pool import _pool
+        _ub = _pool.get(curr_username)
+        _b  = _ub if (_ub and _ub.connected) else broker
+
+        if not (_b and _b.connected):
+            return jsonify({"success":False,"error":"Broker not connected"})
+
+        from engine.equity_scanner import scan_equity
+        signals = scan_equity(_b, capital=cap)
+        return jsonify({"success":True,"signals":signals,"total":len(signals),"capital":cap})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+
+@app.route("/api/v3/equity/brokerage")
+@require_auth
+def equity_brokerage():
+    """Calculate brokerage for equity trade"""
+    try:
+        buy   = float(request.args.get("buy",0))
+        sell  = float(request.args.get("sell",0))
+        qty   = int(request.args.get("qty",1))
+        typ   = request.args.get("type","intraday")
+
+        from engine.brokerage_calc import calc_equity_intraday, calc_equity_delivery, calc_options
+        if typ == "delivery":
+            r = calc_equity_delivery(buy, sell, qty)
+        elif typ == "options":
+            r = calc_options(buy, sell, qty)
+        else:
+            r = calc_equity_intraday(buy, sell, qty)
+
+        return jsonify({"success":True,"result":r})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+
+@app.route("/api/v3/equity/trade", methods=["POST"])
+@require_auth
+def equity_trade():
+    """Place equity paper/live trade"""
+    try:
+        curr_username = get_current_user().get("username","")
+        user_mode     = _get_user_mode(curr_username)
+        data          = request.json or {}
+
+        symbol    = data.get("symbol","")
+        token     = data.get("token","")
+        direction = data.get("direction","BUY")
+        entry     = float(data.get("entry",0))
+        sl        = float(data.get("sl",0))
+        target    = float(data.get("target",0))
+        qty       = int(data.get("qty",1))
+
+        if not symbol or entry <= 0 or qty <= 0:
+            return jsonify({"success":False,"error":"Invalid params"})
+
+        import sqlite3 as sq
+        from datetime import datetime
+        import pytz
+        IST = pytz.timezone("Asia/Kolkata")
+        now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+
+        conn = sq.connect(config.DB_PATH)
+        cur = conn.execute("""
+            INSERT INTO trades
+            (username,symbol,exchange,opt_type,trading_symbol,token,
+             entry_price,sl_price,target_price,lots,lot_size,quantity,
+             status,mode,strategy,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (curr_username, symbol, "NSE", direction,
+              symbol+"-EQ", token, entry, sl, target,
+              1, 1, qty, "OPEN", user_mode, "EQUITY_AI", now, now))
+        trade_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Live order
+        if user_mode == "LIVE":
+            try:
+                from engine.broker_pool import _pool
+                _ub = _pool.get(curr_username)
+                _b  = _ub if (_ub and _ub.connected) else broker
+                txn = "BUY" if direction == "BUY" else "SELL"
+                r = _b.api._postRequest("api.order.place", {
+                    "variety":"NORMAL","tradingsymbol":symbol+"-EQ",
+                    "symboltoken":token,"transactiontype":txn,
+                    "exchange":"NSE","ordertype":"MARKET",
+                    "producttype":"INTRADAY","duration":"DAY",
+                    "quantity":str(qty),"price":"0","triggerprice":"0",
+                    "squareoff":"0","stoploss":"0",
+                })
+                logger.info(f"Equity live order: {r}")
+            except Exception as _oe:
+                logger.error(f"Equity order error: {_oe}")
+
+        return jsonify({
+            "success":True,"trade_id":trade_id,"symbol":symbol,
+            "direction":direction,"entry":entry,"sl":sl,"target":target,
+            "qty":qty,"mode":user_mode
+        })
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/policy")
 @require_auth
 def user_policy():
