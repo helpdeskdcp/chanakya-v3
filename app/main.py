@@ -1198,20 +1198,20 @@ def get_signals():
             ub2 = _gb(username)
             if ub2 and ub2.connected:
                 _broker = ub2
-        # Fallback to global
+        # Fallback to global broker — NO reconnect attempt
+        if not _broker and broker.connected:
+            _broker = broker
+
+        # Return cache FIRST — always check cache
+        from engine.signal_store import get as _sig_get2
+        _cached2 = _sig_get2(username) or _sig_get2("avinash")
+
         if not _broker:
-            if not broker.connected:
-                broker.connect()
-            if broker.connected:
-                _broker = broker
-        if not _broker:
-            # Return cached signals even if broker disconnected
-            from engine.signal_store import get as _sig_get2
-            _cached2 = _sig_get2(username) or _sig_get2("avinash")
+            # Broker offline — use cache
             if _cached2:
                 return jsonify({"success":True,"signals":_cached2,
-                               "total":len(_cached2),"mode":user_mode,"cached":True,
-                               "reason":"broker_offline_using_cache"})
+                               "total":len(_cached2),"mode":user_mode,
+                               "cached":True,"reason":"broker_offline"})
             return jsonify({"success":True,"signals":[],"reason":"Broker not connected"})
 
         tokens  = get_all_tokens(_broker)
