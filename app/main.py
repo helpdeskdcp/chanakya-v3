@@ -711,6 +711,26 @@ def admin_payment_qr():
     return jsonify({"success":True,"upi_id":UPI_ID,"upi_name":UPI_NAME,
                     "upi_url":upi_url,"qr_url":qr_url,"plans":PLANS,"amount":amount,"plan":plan})
 
+
+@app.route("/api/v3/equity/brokerage")
+@require_auth
+def equity_brokerage():
+    try:
+        buy  = float(request.args.get("buy",0))
+        sell = float(request.args.get("sell",0))
+        qty  = int(request.args.get("qty",1))
+        typ  = request.args.get("type","intraday")
+        from engine.brokerage_calc import calc_equity_intraday, calc_equity_delivery, calc_options
+        if typ == "delivery":
+            r = calc_equity_delivery(buy, sell, qty)
+        elif typ == "options":
+            r = calc_options(buy, sell, qty)
+        else:
+            r = calc_equity_intraday(buy, sell, qty)
+        return jsonify({"success":True,"result":r})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/policy")
 @require_auth
 def user_policy():
