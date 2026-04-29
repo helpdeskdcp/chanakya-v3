@@ -490,6 +490,42 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
           </div>
         </div>
       </div>
+
+      <!-- EQUITY PAGE -->
+      <div class="pg" id="pg-equity" style="display:none">
+        <div class="card">
+          <div class="ch">📈 Equity Scanner
+            <button class="btn b-blue" onclick="scanEquity()">🔍 Scan</button>
+          </div>
+          <div style="padding:8px;display:flex;gap:8px;align-items:center">
+            <span style="font-size:11px;color:#8090a8">Capital: Rs</span>
+            <input id="eqCap" type="number" value="10000" style="width:90px;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:4px 8px;font-size:11px">
+            <span id="eqStatus" style="font-size:10px;color:#8090a8">Ready</span>
+          </div>
+          <div id="eqSignals" style="padding:8px;color:#8090a8;text-align:center">Click Scan to find signals</div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="ch">🧮 Brokerage Calculator</div>
+          <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="font-size:10px;color:#8090a8">Buy Price</label>
+              <input id="bcBuy" type="number" placeholder="100" style="width:100%;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:4px 8px;font-size:11px;margin-top:2px"></div>
+            <div><label style="font-size:10px;color:#8090a8">Sell Price</label>
+              <input id="bcSell" type="number" placeholder="105" style="width:100%;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:4px 8px;font-size:11px;margin-top:2px"></div>
+            <div><label style="font-size:10px;color:#8090a8">Quantity</label>
+              <input id="bcQty" type="number" placeholder="10" style="width:100%;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:4px 8px;font-size:11px;margin-top:2px"></div>
+            <div><label style="font-size:10px;color:#8090a8">Type</label>
+              <select id="bcType" style="width:100%;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:4px 8px;font-size:11px;margin-top:2px">
+                <option value="intraday">Intraday</option>
+                <option value="delivery">Delivery</option>
+                <option value="options">Options</option>
+              </select></div>
+          </div>
+          <div style="padding:0 12px 12px">
+            <button class="btn b-blue" onclick="calcBrok()" style="width:100%">Calculate</button>
+            <div id="bcRes" style="margin-top:8px;font-size:11px"></div>
+          </div>
+        </div>
+      </div>
       <!-- CHAIN -->
       <div class="pg" id="pg-chain">
         <div class="card" style="margin-bottom:10px">
@@ -1799,6 +1835,79 @@ async function verifyPayment(payId, days) {
   var d = await r.json();
   if(d.success) { toast('✅ Payment verified! Premium '+days+'d activated','#00e676'); loadUsers(); }
   else toast('❌ '+d.error,'#ff5252');
+}
+
+
+async function scanEquity() {
+  var cap = document.getElementById('eqCap').value || 10000;
+  document.getElementById('eqStatus').textContent = 'Scanning...';
+  document.getElementById('eqSignals').innerHTML = '<div style="text-align:center;color:#d4af37;padding:20px">Scanning 20 stocks...</div>';
+  var d = await api('/equity/signals?capital='+cap);
+  if(!d || !d.success) { document.getElementById('eqStatus').textContent = 'Failed'; return; }
+  document.getElementById('eqStatus').textContent = d.total+' signals';
+  if(!d.signals || !d.signals.length) {
+    document.getElementById('eqSignals').innerHTML = '<div style="text-align:center;color:#8090a8;padding:20px">No signals now</div>';
+    return;
+  }
+  var html = d.signals.map(function(s) {
+    var clr = s.direction==='BUY'?'#00e676':'#ff5252';
+    return '<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:8px;padding:10px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:4px">' +
+        '<b style="color:'+clr+'">'+(s.direction==='BUY'?'📈':'📉')+' '+s.symbol+'</b>' +
+        '<span style="font-size:9px;color:#00c8ff">'+Math.round(s.score*100)+'%</span>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:10px;margin-bottom:6px">' +
+        '<div><div style="color:#8090a8;font-size:9px">ENTRY</div><b>Rs'+s.entry+'</b></div>' +
+        '<div><div style="color:#8090a8;font-size:9px">TARGET</div><b style="color:#00e676">Rs'+s.target+'</b></div>' +
+        '<div><div style="color:#8090a8;font-size:9px">SL</div><b style="color:#ff5252">Rs'+s.sl+'</b></div>' +
+        '<div><div style="color:#8090a8;font-size:9px">QTY</div><b style="color:#d4af37">'+s.qty+'</b></div>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:6px">' +
+        '<span>RSI:<b style="color:#fff"> '+s.rsi+'</b></span>' +
+        '<span>Vol:<b style="color:#fff"> '+s.vol_ratio+'x</b></span>' +
+        '<span>RR:<b style="color:#d4af37"> '+s.rr+'</b></span>' +
+        '<span style="color:#00e676">Net:+Rs'+s.net_profit+'</span>' +
+      '</div>' +
+      '<button class="btn b-blue" onclick="equityBuy(this)" ' +
+        'data-sym="'+s.symbol+'" data-tok="'+s.token+'" data-dir="'+s.direction+'" ' +
+        'data-entry="'+s.entry+'" data-sl="'+s.sl+'" data-tgt="'+s.target+'" data-qty="'+s.qty+'" ' +
+        'style="width:100%;font-size:10px;padding:6px">'+(s.direction==='BUY'?'📈 BUY':'📉 SELL')+' '+s.symbol+'</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('eqSignals').innerHTML = html;
+}
+
+async function equityBuy(btn) {
+  var sym=btn.dataset.sym, tok=btn.dataset.tok, dir=btn.dataset.dir;
+  var entry=btn.dataset.entry, sl=btn.dataset.sl, tgt=btn.dataset.tgt, qty=btn.dataset.qty;
+  if(!confirm(dir+' '+sym+' @ Rs'+entry+' qty='+qty+'?')) return;
+  var r = await fetch('/api/v3/equity/trade',{method:'POST',
+    headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},
+    body:JSON.stringify({symbol:sym,token:tok,direction:dir,entry:parseFloat(entry),sl:parseFloat(sl),target:parseFloat(tgt),qty:parseInt(qty)})});
+  var d = await r.json();
+  if(d.success) toast('Rs '+dir+' '+sym+' #'+d.trade_id,'#00e676');
+  else toast('Rs '+d.error,'#ff5252');
+}
+
+async function calcBrok() {
+  var buy=document.getElementById('bcBuy').value;
+  var sell=document.getElementById('bcSell').value;
+  var qty=document.getElementById('bcQty').value;
+  var typ=document.getElementById('bcType').value;
+  if(!buy||!sell||!qty) return;
+  var d = await api('/equity/brokerage?buy='+buy+'&sell='+sell+'&qty='+qty+'&type='+typ);
+  if(!d||!d.success) return;
+  var r=d.result, clr=r.net_pnl>=0?'#00e676':'#ff5252';
+  document.getElementById('bcRes').innerHTML =
+    '<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:6px;padding:8px">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px">' +
+    '<div>Gross: <b>Rs'+r.gross_pnl+'</b></div>' +
+    '<div>Net: <b style="color:'+clr+'">Rs'+r.net_pnl+'</b></div>' +
+    '<div>Charges: <b style="color:#ff5252">Rs'+r.total_charges+'</b></div>' +
+    '<div>STT: <b style="color:#ff5252">Rs'+r.stt+'</b></div>' +
+    '</div>' +
+    '<div style="margin-top:4px;font-size:10px;color:#8090a8">Breakeven: <b style="color:#d4af37">Rs'+r.breakeven+'</b></div>' +
+    '</div>';
 }
 
 // ── SIGNALS ───────────────────────────────────────────
