@@ -21,6 +21,7 @@ class BrokerAPI:
 
     def connect(self, max_retries=3):
         from SmartApi import SmartConnect
+from engine.rate_limiter import get_rate_limiter as _rl
         delays = [30, 60, 90]
         for attempt in range(max_retries):
             try:

@@ -105,6 +105,8 @@ def get_oi_direct(broker, token, exchange="NFO", interval="FIVE_MINUTE", days=30
         logger.debug(f"OI fetch {token}: {e}")
     return []
 
+from engine.rate_limiter import get_rate_limiter as _rl
+
 def get_candles(broker, token, exchange="NFO", interval="FIVE_MINUTE", days=5):
     """Fetch OHLCV candles from AngelOne"""
     try:

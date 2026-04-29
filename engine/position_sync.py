@@ -7,6 +7,7 @@ from datetime import datetime
 import pytz
 
 logger = logging.getLogger(__name__)
+from engine.rate_limiter import get_rate_limiter as _rl
 
 def _safe_now():
     """Safe IST now string"""
@@ -166,6 +167,7 @@ def _process_position(broker, pos, username, db_path):
     if not pos["trading_symbol"] or not pos["token"]:
         return
 
+    _rl().wait_if_needed("ltpData")
     r = broker.api.ltpData(
         pos["exchange"] or "NFO",
         pos["trading_symbol"],

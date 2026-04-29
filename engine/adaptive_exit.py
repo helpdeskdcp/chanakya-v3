@@ -7,6 +7,7 @@ from datetime import datetime
 import pytz
 
 logger = logging.getLogger(__name__)
+from engine.rate_limiter import get_rate_limiter as _rl
 IST = pytz.timezone("Asia/Kolkata")
 
 # Decision thresholds
@@ -47,7 +48,8 @@ def adaptive_check(broker, pos_id, username, db_path="data/chanakya_v3.db"):
             return "HOLD", "Invalid entry"
 
         # 1. Get live LTP
-        r = broker.api.ltpData(
+        _rl().wait_if_needed("ltpData")
+    r = broker.api.ltpData(
             pos["exchange"] or "NFO",
             pos["trading_symbol"],
             str(pos["token"] or "")
