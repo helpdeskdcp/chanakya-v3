@@ -29,7 +29,9 @@ def get_market_context(broker=None):
             symbols = [
                 {"name":"NIFTY",  "token":"99926000","exch":"NSE"},
                 {"name":"BANKNIFTY","token":"99926009","exch":"NSE"},
-                {"name":"CRUDEOIL","token":"234230",  "exch":"MCX"},
+                {"name":"CRUDEOIL",   "token":"488290", "exch":"MCX"},
+                {"name":"NATURALGAS", "token":"488505", "exch":"MCX"},
+
             ]
             for s in symbols:
                 try:
