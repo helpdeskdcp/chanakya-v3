@@ -2248,6 +2248,15 @@ async function loadSqTimes() {
 function pg(id, el) {
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nav-it').forEach(n=>n.classList.remove('on'));
+  // Re-show admin nav after reset
+  if(window._userRole==='admin') {
+    var _na=document.getElementById('navAdmin');
+    var _ns=document.getElementById('navSystem');
+    var _nu=document.getElementById('navUsers');
+    if(_na) _na.style.display='block';
+    if(_ns) _ns.style.display='block';
+    if(_nu) _nu.style.display='block';
+  }
   const p = document.getElementById('pg-'+id);
   if(p) p.classList.add('on');
   if(el) el.classList.add('on');
