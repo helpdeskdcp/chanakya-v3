@@ -466,6 +466,30 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
 
       <!-- USERS MANAGEMENT PAGE -->
       <div class="pg" id="pg-users" style="display:none">
+        <!-- Add User Form -->
+        <div class="card" style="margin-bottom:10px">
+          <div class="ch">➕ Add New User</div>
+          <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
+            <div>
+              <label style="font-size:10px;color:#8090a8">Username</label>
+              <input id="newUsername" placeholder="username" style="width:100%;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:6px 8px;font-size:11px;margin-top:2px">
+            </div>
+            <div>
+              <label style="font-size:10px;color:#8090a8">Password</label>
+              <input id="newPassword" type="password" placeholder="password" style="width:100%;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:6px 8px;font-size:11px;margin-top:2px">
+            </div>
+            <div>
+              <label style="font-size:10px;color:#8090a8">Role</label>
+              <select id="newRole" style="width:100%;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:4px;padding:6px 8px;font-size:11px;margin-top:2px">
+                <option value="viewer">Viewer (Demo)</option>
+                <option value="premium">Premium</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button class="btn b-blue" onclick="createUser()" style="padding:6px 12px;font-size:11px">Add User</button>
+          </div>
+          <div id="addUserMsg" style="padding:0 12px 8px;font-size:11px"></div>
+        </div>
         <div class="card">
           <div class="ch">👥 User Management
             <button class="btn b-blue" onclick="loadUsers()">🔄 Refresh</button>
@@ -1758,6 +1782,26 @@ async function updatePositionPnL() {
       totalEl.style.color = totalPnl>=0?'#00e676':'#ff5252';
     }
   } catch(e) {}
+}
+
+async function createUser() {
+  var u=document.getElementById('newUsername').value.trim();
+  var p=document.getElementById('newPassword').value.trim();
+  var r=document.getElementById('newRole').value;
+  var msg=document.getElementById('addUserMsg');
+  if(!u||!p){msg.innerHTML='<span style="color:#ff5252">Username+password required</span>';return;}
+  var res=await fetch('/api/v3/admin/create-user',{method:'POST',
+    headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},
+    body:JSON.stringify({username:u,password:p,role:r})});
+  var d=await res.json();
+  if(d.success){
+    msg.innerHTML='<span style="color:#00e676">✅ User '+u+' created!</span>';
+    document.getElementById('newUsername').value='';
+    document.getElementById('newPassword').value='';
+    loadUsers();
+  } else {
+    msg.innerHTML='<span style="color:#ff5252">❌ '+d.error+'</span>';
+  }
 }
 
 async function loadUsers() {
