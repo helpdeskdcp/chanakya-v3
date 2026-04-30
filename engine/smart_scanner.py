@@ -140,6 +140,14 @@ def smart_scan(broker):
 
         time.sleep(0.5)  # Rate limit
 
+    # Signal Guard — filter weak signals
+    try:
+        from engine.signal_guard import filter_signals
+        from data.market import get_vix
+        vix = get_vix() or 18
+        signals = filter_signals(signals, {"vix": vix})
+    except Exception as _ge:
+        logger.warning(f"Signal guard: {_ge}")
     signals.sort(key=lambda x: x["score"], reverse=True)
     # Store signals for ALL active users — same market signals
     from engine.broker_pool import _pool

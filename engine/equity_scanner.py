@@ -228,6 +228,12 @@ def scan_equity(broker, capital=10000):
             logger.debug(f"Equity {stock['symbol']}: {e}")
             continue
 
+    # Signal Guard — filter out weak signals
+    try:
+        from engine.signal_guard import filter_signals
+        signals = filter_signals(signals)
+    except Exception as _ge:
+        logger.warning(f"Signal guard: {_ge}")
     signals.sort(key=lambda x: x["score"], reverse=True)
     logger.info(f"📊 Equity scan done: {len(signals)} signals")
     return signals
