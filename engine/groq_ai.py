@@ -19,7 +19,7 @@ def find_stock_token(broker, symbol):
     return None
 
 def get_any_ltp(broker, symbol):
-    """Get LTP for any stock dynamically"""
+    """Get LTP for any stock — live or prev close"""
     if not (broker and broker.connected):
         return None, None
     # Check known symbols first
