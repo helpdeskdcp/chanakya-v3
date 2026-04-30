@@ -590,8 +590,8 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
             🤖 MTF Analysis (1m+5m+15m+30m+1hr) + Groq LLaMA AI Confirmation
           </div>
           <div id="predSignals" style="padding:8px">
-            <div style="text-align:center;color:#8090a8;padding:20px">
-              Click "Scan Now" to get AI predictions
+            <div style="text-align:center;color:#8090a8;padding:20px" id="predEmpty">
+              Click "⚡ Scan Now" to get AI predictions
             </div>
           </div>
         </div>
@@ -2397,7 +2397,7 @@ function pg(id, el) {
   if(id==='system')    { loadSystemData(); loadAdminUsers(); }
   if(id==='users')     loadUsers();
   if(id==='aichat')    {}  // AI chat ready
-  if(id==='prediction') loadPredictions();
+  if(id==='prediction') { loadPredictions(); }
 }
 
 // ── CLOCK ─────────────────────────────────────────────
