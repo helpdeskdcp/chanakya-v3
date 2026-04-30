@@ -72,7 +72,7 @@ def _higher_highs(closes, n=5):
 def scan_equity(broker, capital=10000):
     from engine.brokerage_calc import calc_equity_intraday, position_size_equity
     from engine.rate_limiter import get_rate_limiter
-    from datetime import datetime
+    from datetime import datetime, timedelta
     import pytz
 
     rl  = get_rate_limiter()
