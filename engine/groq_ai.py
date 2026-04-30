@@ -59,6 +59,35 @@ SYMBOLS=[
     ("NATURALGAS","488505","MCX","commodity"),
     ("GOLD","67694","MCX","commodity"),
 ]
+
+_scrip_master = None
+
+def load_scrip_master():
+    global _scrip_master
+    if _scrip_master is None:
+        try:
+            import json
+            data = json.load(open("data/scrip_master.json"))
+            # Index by symbol for fast lookup
+            _scrip_master = {}
+            for s in data:
+                sym = s.get("symbol","").upper().replace("-EQ","")
+                exch = s.get("exch_seg","NSE")
+                if sym not in _scrip_master:
+                    _scrip_master[sym] = {"token":s.get("token",""),"exch":exch,"name":s.get("symbol","")}
+        except Exception as e:
+            logger.error("Scrip master: %s",e)
+            _scrip_master = {}
+    return _scrip_master
+
+def find_stock_token(broker, symbol):
+    """Find token from scrip master — no API call needed"""
+    master = load_scrip_master()
+    sym = symbol.upper().replace("-EQ","")
+    if sym in master:
+        return master[sym]
+    return None
+
 def get_client():
     global _client
     if not _client:
