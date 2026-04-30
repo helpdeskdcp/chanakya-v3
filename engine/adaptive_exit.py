@@ -49,7 +49,7 @@ def adaptive_check(broker, pos_id, username, db_path="data/chanakya_v3.db"):
 
         # 1. Get live LTP
         _rl().wait_if_needed("ltpData")
-    r = broker.api.ltpData(
+        r = broker.api.ltpData(
             pos["exchange"] or "NFO",
             pos["trading_symbol"],
             str(pos["token"] or "")

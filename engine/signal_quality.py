@@ -201,6 +201,30 @@ def enhanced_score(mtf_data, opts_intel=None, opt_type="CE", vix=18.0):
     return final, reasons
 
 
+def _get_ml_boost(mtf_data, opt_type="CE"):
+    """Get ML confidence boost from XGBoost"""
+    try:
+        from ai.ml_engine import get_brain
+        brain = get_brain()
+        if not brain or not brain.is_trained:
+            return 0.5
+        rsi = mtf_data.get("rsi", 50)
+        macd = mtf_data.get("macd_hist", 0)
+        ema9 = mtf_data.get("ema9", 0)
+        ema21 = mtf_data.get("ema21", 0)
+        ltp  = mtf_data.get("ltp", 1)
+        feats = [
+            rsi/100, macd/ltp if ltp>0 else 0,
+            (ema9-ema21)/ema21 if ema21>0 else 0,
+            1.0 if opt_type=="CE" else 0.0,
+            0.5, 18/50, 1/3,
+        ] + [0]*35
+        prob = float(brain.predict_proba([feats[:42]])[0][1])
+        return prob
+    except Exception:
+        return 0.5
+
+
 def make_quality_decision(mtf_data, opts_intel=None, ml_prob=None, vix=18.0):
     """
     Quality decision with all filters
