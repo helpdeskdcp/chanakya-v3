@@ -822,6 +822,33 @@ def risk_status():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+
+@app.route("/api/v3/ai-chat", methods=["POST"])
+@require_auth
+def ai_chat():
+    try:
+        data = request.json or {}
+        msg  = data.get("message","")
+        ctx  = data.get("context","")
+        if not msg:
+            return jsonify({"success":False,"error":"No message"})
+        from engine.groq_ai import chat
+        reply = chat(msg, ctx)
+        return jsonify({"success":True,"reply":reply})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+@app.route("/api/v3/ai-analyze", methods=["POST"])
+@require_auth
+def ai_analyze():
+    try:
+        from engine.groq_ai import analyze_signal
+        sig = request.json or {}
+        analysis = analyze_signal(sig)
+        return jsonify({"success":True,"analysis":analysis})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/policy")
 @require_auth
 def user_policy():

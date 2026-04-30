@@ -367,6 +367,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
        <div class="nav-it" onclick="window.open('/v3/backtest','_blank')">📈 Backtest</div>
       <div class="nav-it" onclick="pg('analytics',this)">📈 Analytics</div>
       <div class="nav-it" onclick="pg('brain',this)">🧠 AI Brain</div>
+      <div class="nav-it" onclick="pg('aichat',this)">💬 AI Chat</div>
       <div class="nav-sec">System</div>
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
       <div class="nav-it" style="color:#ff5252;font-weight:bold" onclick="killSwitch()">🚨 Kill Switch</div>
@@ -549,6 +550,31 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
           <div style="padding:0 12px 12px">
             <button class="btn b-blue" onclick="calcBrok()" style="width:100%">Calculate</button>
             <div id="bcRes" style="margin-top:8px;font-size:11px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pg" id="pg-aichat">
+        <div class="card">
+          <div class="ch">💬 Chanakya AI Chat
+            <span style="font-size:9px;color:#00e676;margin-left:8px">● LLaMA 3.3 70B</span>
+          </div>
+          <div id="aiChatMsgs" style="padding:8px;height:350px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+            <div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:8px;padding:10px;font-size:11px;color:#8090a8">
+              👋 Namaste! Chanakya AI here. Ask me about NIFTY, BANKNIFTY, MCX, equity trading!
+            </div>
+          </div>
+          <div style="padding:8px;display:flex;gap:8px">
+            <input id="aiChatInput" placeholder="NIFTY bullish aahe ka? BANKNIFTY target kaay?" 
+              style="flex:1;background:#0d1b2a;border:1px solid #1e3a5f;color:#e0e8f0;border-radius:6px;padding:8px;font-size:11px"
+              onkeydown="if(event.key==='Enter')sendAIChat()">
+            <button class="btn b-blue" onclick="sendAIChat()" style="padding:8px 12px">Send</button>
+          </div>
+          <div style="padding:0 8px 8px;display:flex;gap:4px;flex-wrap:wrap">
+            <button onclick="quickChat('NIFTY today analysis')" style="background:#0d1b2a;border:1px solid #1e3a5f;color:#8090a8;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">NIFTY</button>
+            <button onclick="quickChat('BANKNIFTY trend kaay aahe?')" style="background:#0d1b2a;border:1px solid #1e3a5f;color:#8090a8;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">BANKNIFTY</button>
+            <button onclick="quickChat('CRUDEOIL MCX analysis')" style="background:#0d1b2a;border:1px solid #1e3a5f;color:#8090a8;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">CRUDE</button>
+            <button onclick="quickChat('Best strategy for sideways market?')" style="background:#0d1b2a;border:1px solid #1e3a5f;color:#8090a8;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">Strategy</button>
           </div>
         </div>
       </div>
@@ -1977,6 +2003,28 @@ async function killSwitch() {
   else toast('Error: '+d.error,'#ff5252');
 }
 
+async function sendAIChat() {
+  var inp = document.getElementById('aiChatInput');
+  var msg = inp.value.trim();
+  if(!msg) return;
+  inp.value = '';
+  var msgs = document.getElementById('aiChatMsgs');
+  msgs.innerHTML += '<div style="background:#1e3a5f;border-radius:8px;padding:8px;font-size:11px;color:#e0e8f0;align-self:flex-end">'+msg+'</div>';
+  msgs.innerHTML += '<div id="aiTyping" style="color:#8090a8;font-size:10px">⏳ Thinking...</div>';
+  msgs.scrollTop = msgs.scrollHeight;
+  var r = await fetch('/api/v3/ai-chat',{method:'POST',
+    headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},
+    body:JSON.stringify({message:msg})});
+  var d = await r.json();
+  document.getElementById('aiTyping')?.remove();
+  var reply = d.success ? d.reply : '❌ '+d.error;
+  msgs.innerHTML += '<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:8px;padding:8px;font-size:11px;color:#e0e8f0">🤖 '+reply+'</div>';
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function quickChat(msg) {
+  document.getElementById('aiChatInput').value = msg;
+  sendAIChat();
+}
 // ── SIGNALS ───────────────────────────────────────────
 async function loadSignals() {
   const d = await api('/signals');
@@ -2269,6 +2317,7 @@ function pg(id, el) {
   if(id==='settings')  loadSqTimes();
   if(id==='system')    { loadSystemData(); loadAdminUsers(); }
   if(id==='users')     loadUsers();
+  if(id==='aichat')    {}  // AI chat ready
 }
 
 // ── CLOCK ─────────────────────────────────────────────
