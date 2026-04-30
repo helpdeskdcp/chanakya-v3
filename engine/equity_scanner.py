@@ -104,7 +104,7 @@ def scan_equity(broker, capital=10000):
             ltp    = closes[-1]
 
             # Skip if stock too expensive for capital
-            if ltp > capital * 0.5:
+            if ltp > capital * 2:  # allow all stocks
                 continue
 
             # ── INDICATORS ─────────────────────────────
