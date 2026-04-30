@@ -833,7 +833,7 @@ def ai_chat():
         if not msg:
             return jsonify({"success":False,"error":"No message"})
         from engine.groq_ai import chat
-        reply = chat(msg, ctx)
+        reply = chat(msg, broker=broker, extra_context=ctx)
         return jsonify({"success":True,"reply":reply})
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
