@@ -4,7 +4,7 @@ logger = logging.getLogger(__name__)
 SEGMENT_RULES = {
     "NSE_OPTIONS": {"min_score":70,"min_rr":2.5,"max_sl_pct":30,"min_volume_ratio":1.3,"rsi_buy":(48,68),"rsi_sell":(32,52),"max_vix":22,"block_sideways":True,"min_net_profit":150},
     "MCX_OPTIONS": {"min_score":70,"min_rr":2.0,"max_sl_pct":35,"min_volume_ratio":1.2,"rsi_buy":(45,70),"rsi_sell":(30,55),"max_vix":25,"block_sideways":True,"min_net_profit":200},
-    "NSE_EQUITY":  {"min_score":65,"min_rr":2.0,"max_sl_pct":2.0,"min_volume_ratio":1.5,"rsi_buy":(50,68),"rsi_sell":(32,50),"max_vix":20,"block_sideways":True,"min_net_profit":100},
+    "NSE_EQUITY":  {"min_score":50,"min_rr":1.5,"min_net_profit":0,"max_sl_pct":3.0,"min_volume_ratio":0.7,"rsi_buy":(40,80),"rsi_sell":(20,60),"max_vix":22,"block_sideways":False},
 }
 MCX_SYMS={"CRUDEOIL","NATURALGAS","GOLD","SILVER","COPPER"}
 
