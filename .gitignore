@@ -12,3 +12,4 @@ ai/models/*.pkl
 nohup.out
 *.so
 *.egg-info
+.env
