@@ -117,6 +117,15 @@ def require_auth(f):
                  request.args.get("t") or
                  request.cookies.get("chanakya_token",""))
         if token and token in _tokens:
+            # Check 24h expiry
+            import time as _t
+            td = _tokens[token]
+            if isinstance(td,dict):
+                age = _t.time() - td.get('ts', _t.time())
+                if age > 86400:  # 24 hours
+                    _tokens.pop(token, None)
+                    _save_tokens(_tokens)
+                    return jsonify({"success":False,"error":"Session expired","expired":True}), 401
             session["user"] = _tokens[token]
             return f(*args, **kwargs)
         # Check if user was logged out due to new session
