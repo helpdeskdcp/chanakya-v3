@@ -123,7 +123,7 @@ def check_all(signal_data, market_data=None):
     crit_fail = [f for f in failed if any(k in f for k in critical)]
     ok = len(crit_fail) == 0
     v = "APPROVED" if ok else "BLOCKED"
-    logger.info(f"[{seg}] {d.get("symbol","")} {v} p={len(passed)} f={len(failed)}")
+    sym=d.get("symbol",""); logger.info(f"[{seg}] {sym} {v} p={len(passed)} f={len(failed)}")
     return ok, passed, failed
 
 def filter_signals(signals, market_data=None):
