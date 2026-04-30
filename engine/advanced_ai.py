@@ -4,6 +4,24 @@ import pytz
 logger = logging.getLogger(__name__)
 IST = pytz.timezone("Asia/Kolkata")
 
+def get_nse_session():
+    """Get proper NSE session with cookies"""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+        "Accept": "text/html,application/json,*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Referer": "https://www.nseindia.com/",
+    }
+    s = requests.Session()
+    try:
+        s.get("https://www.nseindia.com", headers=headers, timeout=8)
+        s.get("https://www.nseindia.com/option-chain", headers=headers, timeout=8)
+    except: pass
+    s.headers.update(headers)
+    return s
+
 def get_pcr_oi(broker, symbol="NIFTY"):
     """Get PCR and OI data safely"""
     try:
@@ -16,14 +34,14 @@ def get_pcr_oi(broker, symbol="NIFTY"):
         # Use NSE option chain API
         headers = {"User-Agent":"Mozilla/5.0"}
         url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
-        s = requests.Session()
-        s.get("https://www.nseindia.com", headers=headers, timeout=5)
-        resp = s.get(url, headers=headers, timeout=5)
+        s = get_nse_session()
+        resp = s.get(url, timeout=8)
         if resp.status_code == 200:
             data = resp.json()
             records = data.get("records", {})
-            ce_oi = sum(r.get("CE",{}).get("openInterest",0) for r in records.get("data",[]) if r.get("CE"))
-            pe_oi = sum(r.get("PE",{}).get("openInterest",0) for r in records.get("data",[]) if r.get("PE"))
+            filtered = data.get("filtered",{})
+            ce_oi = filtered.get("CE",{}).get("totOI",0) or sum(r.get("CE",{}).get("openInterest",0) for r in records.get("data",[]) if r.get("CE"))
+            pe_oi = filtered.get("PE",{}).get("totOI",0) or sum(r.get("PE",{}).get("openInterest",0) for r in records.get("data",[]) if r.get("PE"))
             pcr = round(pe_oi/ce_oi, 2) if ce_oi > 0 else 1.0
             # Max pain
             strikes = {}
@@ -73,9 +91,8 @@ def get_fii_dii(broker=None):
     """Get FII/DII data"""
     try:
         headers = {"User-Agent":"Mozilla/5.0"}
-        s = requests.Session()
-        s.get("https://www.nseindia.com", headers=headers, timeout=5)
-        r = s.get("https://www.nseindia.com/api/fiidiiTradeReact", headers=headers, timeout=5)
+        s = get_nse_session()
+        r = s.get("https://www.nseindia.com/api/fiidiiTradeReact", timeout=8)
         if r.status_code == 200:
             data = r.json()
             if data:
