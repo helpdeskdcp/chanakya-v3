@@ -712,6 +712,55 @@ def admin_payment_qr():
                     "upi_url":upi_url,"qr_url":qr_url,"plans":PLANS,"amount":amount,"plan":plan})
 
 
+
+@app.route("/api/v3/equity/signals")
+@require_auth
+def equity_signals():
+    try:
+        curr_username = get_current_user().get("username","")
+        cap = float(request.args.get("capital", 10000))
+        from engine.broker_pool import _pool
+        _ub = _pool.get(curr_username)
+        _b  = _ub if (_ub and _ub.connected) else broker
+        if not (_b and _b.connected):
+            return jsonify({"success":False,"error":"Broker not connected","signals":[]})
+        from engine.equity_scanner import scan_equity
+        sigs = scan_equity(_b, capital=cap)
+        return jsonify({"success":True,"signals":sigs,"total":len(sigs),"capital":cap})
+    except Exception as e:
+        logger.error(f"Equity signals: {e}")
+        return jsonify({"success":False,"error":str(e),"signals":[]})
+
+@app.route("/api/v3/equity/trade", methods=["POST"])
+@require_auth
+def equity_trade():
+    try:
+        curr_username = get_current_user().get("username","")
+        user_mode = _get_user_mode(curr_username)
+        data = request.json or {}
+        symbol=data.get("symbol",""); token=data.get("token","")
+        direction=data.get("direction","BUY")
+        entry=float(data.get("entry",0)); sl=float(data.get("sl",0))
+        target=float(data.get("target",0)); qty=int(data.get("qty",1))
+        if not symbol or entry<=0:
+            return jsonify({"success":False,"error":"Invalid params"})
+        import sqlite3 as sq
+        from datetime import datetime
+        import pytz
+        now=datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
+        conn=sq.connect(config.DB_PATH)
+        cur=conn.execute("""INSERT INTO trades
+            (username,symbol,exchange,opt_type,trading_symbol,token,
+             entry_price,sl_price,target_price,lots,lot_size,quantity,
+             status,mode,strategy,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (curr_username,symbol,"NSE",direction,symbol+"-EQ",token,
+             entry,sl,target,1,1,qty,"OPEN",user_mode,"EQUITY_AI",now,now))
+        trade_id=cur.lastrowid; conn.commit(); conn.close()
+        return jsonify({"success":True,"trade_id":trade_id,"mode":user_mode})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/equity/brokerage")
 @require_auth
 def equity_brokerage():
