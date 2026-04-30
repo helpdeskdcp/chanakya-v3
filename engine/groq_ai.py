@@ -1,3 +1,49 @@
+
+def find_stock_token(broker, symbol):
+    """Dynamically find stock token using Angel One searchScrip"""
+    if not (broker and broker.connected):
+        return None
+    try:
+        # Try NSE first
+        for exch in ["NSE","BSE","MCX"]:
+            r = broker.api.searchScrip(exch, symbol.upper())
+            if r and r.get("data"):
+                for s in r["data"]:
+                    if s.get("tradingsymbol","").upper() == symbol.upper()+"-EQ" or                        s.get("tradingsymbol","").upper() == symbol.upper():
+                        return {
+                            "token": s.get("symboltoken",""),
+                            "exch":  exch,
+                            "name":  s.get("tradingsymbol",""),
+                        }
+    except: pass
+    return None
+
+def get_any_ltp(broker, symbol):
+    """Get LTP for any stock dynamically"""
+    if not (broker and broker.connected):
+        return None, None
+    # Check known symbols first
+    for name,token,exch,typ in SYMBOLS:
+        if name.upper() == symbol.upper():
+            try:
+                from engine.rate_limiter import get_rate_limiter
+                get_rate_limiter().wait_if_needed("ltpData")
+                r = broker.api.ltpData(exch, name, token)
+                if r and r.get("data"):
+                    return float(r["data"]["ltp"]), exch
+            except: pass
+    # Dynamic search
+    info = find_stock_token(broker, symbol)
+    if info:
+        try:
+            from engine.rate_limiter import get_rate_limiter
+            get_rate_limiter().wait_if_needed("ltpData")
+            r = broker.api.ltpData(info["exch"], info["name"], info["token"])
+            if r and r.get("data"):
+                return float(r["data"]["ltp"]), info["exch"]
+        except: pass
+    return None, None
+
 import os,logging,sqlite3
 from datetime import datetime
 import pytz
@@ -67,10 +113,43 @@ def build_context(broker=None):
     ctx="\n".join(L)
     logger.info("Groq ctx:%s",ctx[:80])
     return ctx
+def extract_stock_mentions(message):
+    """Extract stock/index names from user message"""
+    import re
+    known = ["NIFTY","BANKNIFTY","FINNIFTY","MIDCPNIFTY","CRUDEOIL","NATURALGAS",
+             "GOLD","SILVER","COPPER","SENSEX","RELIANCE","TCS","INFY","WIPRO",
+             "HDFCBANK","ICICIBANK","SBIN","AXISBANK","BAJFINANCE","TATAMOTORS",
+             "ADANIENT","ONGC","COALINDIA","NTPC","POWERGRID","HINDALCO","JSWSTEEL",
+             "TATASTEEL","MARUTI","HEROMOTOCO","BAJAJ-AUTO","EICHERMOT","M&M",
+             "SUNPHARMA","DRREDDY","CIPLA","DIVISLAB","APOLLOHOSP","ASIANPAINT",
+             "ULTRACEMCO","SHREECEM","GRASIM","NESTLEIND","TITAN","TRENT"]
+    found = []
+    msg_upper = message.upper()
+    for s in known:
+        if s in msg_upper or s.replace("-","") in msg_upper.replace("-",""):
+            found.append(s)
+    # Also extract unknown caps words
+    words = re.findall(r"[A-Z]{3,}", message.upper())
+    for w in words:
+        if w not in found and w not in ["LTP","LIVE","AANI","KAAY","AAHE","DNYA","KARU","NSE","MCX","BSE"]:
+            found.append(w)
+    return list(set(found))
+
 def chat(message,broker=None,extra_context=""):
     client=get_client()
     if not client:return "AI unavailable"
     ctx=build_context(broker)
+    # Fetch LTP for any stocks mentioned in message
+    extra_ltp = []
+    try:
+        stocks = extract_stock_mentions(message)
+        for sym in stocks[:5]:
+            ltp, exch = get_any_ltp(broker, sym)
+            if ltp and ltp > 0:
+                extra_ltp.append(f"{sym}={ltp:.2f} ({exch})")
+        if extra_ltp:
+            ctx += "\nMENTIONED STOCKS: " + " | ".join(extra_ltp)
+    except: pass
     system="You are Chanakya AI, expert Indian trading assistant.\n\nLIVE DATA:\n"+ctx+"\n\nRULES:\n- Use ONLY above live data\n- Give Entry/Target/SL for signals\n- Mention risk: Low/Medium/High\n- Reply in same language as user\n- Max 3-4 lines"
     try:
         r=client.chat.completions.create(model=MODEL,messages=[{"role":"system","content":system},{"role":"user","content":message}],max_tokens=300,temperature=0.3)
