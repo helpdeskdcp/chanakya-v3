@@ -42,7 +42,7 @@ CORS(app, origins=["https://bramha.cloud", "http://localhost:3001"], supports_cr
 
 # ── Simple Token Store (bypass cookie issues) ─────────
 import json as _json, os as _os
-_TOKEN_FILE = "/tmp/chanakya_tokens.json"
+_TOKEN_FILE = "data/chanakya_tokens.json"
 
 def _load_tokens():
     try:
