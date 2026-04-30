@@ -751,6 +751,7 @@ def equity_trade():
         direction=data.get("direction","BUY")
         entry=float(data.get("entry",0)); sl=float(data.get("sl",0))
         target=float(data.get("target",0)); qty=int(data.get("qty",1))
+        exch=data.get("exchange","NSE"); market=exch
         if not symbol or entry<=0:
             return jsonify({"success":False,"error":"Invalid params"})
         import sqlite3 as sq
@@ -763,7 +764,7 @@ def equity_trade():
              entry_price,sl_price,target_price,lots,lot_size,quantity,
              status,mode,strategy,created_at,updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (curr_username,symbol,"NSE",direction,symbol+"-EQ",token,
+            (curr_username,symbol,exch,direction,symbol+("-EQ" if exch=="NSE" else ""),token,
              entry,sl,target,1,1,qty,"OPEN",user_mode,"EQUITY_AI",now,now))
         trade_id=cur.lastrowid; conn.commit(); conn.close()
         return jsonify({"success":True,"trade_id":trade_id,"mode":user_mode})
