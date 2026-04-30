@@ -211,6 +211,31 @@ def get_live_data(broker=None):
     except:pass
     return data
 
+def get_advanced_context(broker=None):
+    """Get PCR, OI, FII, patterns safely"""
+    ctx_parts = []
+    try:
+        from engine.advanced_ai import get_pcr_oi, get_fii_dii
+        # PCR + OI
+        pcr_data = get_pcr_oi(broker, "NIFTY")
+        if pcr_data.get("pcr"):
+            ctx_parts.append(
+                f"PCR={pcr_data['pcr']} bias={pcr_data['bias']} "
+                f"MaxPain={pcr_data['max_pain']} "
+                f"Support(OI)={pcr_data['support_oi']} "
+                f"Resistance(OI)={pcr_data['resistance_oi']}"
+            )
+        # FII/DII
+        fii = get_fii_dii(broker)
+        if fii.get("fii_net") != 0:
+            ctx_parts.append(
+                f"FII={fii['fii_bias']}(Rs{fii['fii_net']:.0f}Cr) "
+                f"DII={fii['dii_bias']}(Rs{fii['dii_net']:.0f}Cr)"
+            )
+    except Exception as e:
+        logger.debug("Advanced ctx: %s", e)
+    return "\n".join(ctx_parts)
+
 def build_context(broker=None):
     mkt=get_live_data(broker)
     now=datetime.now(IST)
@@ -257,6 +282,7 @@ def chat(message,broker=None,extra_context=""):
     client=get_client()
     if not client:return "AI unavailable"
     ctx=build_context(broker)
+    adv_ctx=get_advanced_context(broker)
     # MTF analysis for mentioned stocks
     mtf_ctx=""
     try:
@@ -308,7 +334,7 @@ def chat(message,broker=None,extra_context=""):
         logger.error("MTF chat: %s",e)
 
     system=("You are Chanakya AI — expert Indian trading assistant with deep technical analysis expertise.\n\n"
-            "LIVE MARKET DATA:\n"+ctx+"\n\n"
+            "LIVE MARKET DATA:\n"+ctx+"\n\n" + (("ADVANCED DATA:\n"+adv_ctx+"\n\n") if adv_ctx else "")
             +(("MULTI-TIMEFRAME ANALYSIS:\n"+mtf_ctx+"\n") if mtf_ctx else "")
             +"PREDICTION RULES:\n"
             "- Analyze 1m+5m+15m+30m+1hr confluence for prediction\n"
@@ -320,7 +346,7 @@ def chat(message,broker=None,extra_context=""):
             "- If fake signals detected, WARN user\n"
             "- Market closed: use prev data + next session prediction\n"
             "- Reply in same language as user (Marathi/Hindi/English)\n"
-            "- Max 5 lines — be precise")
+            "- Use PCR>1.2=bullish, <0.8=bearish\n- Max Pain = strong support/resistance\n- FII buying = bullish trend\n- OI resistance = sell zone, OI support = buy zone\n- Max 5 lines — be precise")
     try:
         r=client.chat.completions.create(
             model=MODEL,

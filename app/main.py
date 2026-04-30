@@ -849,6 +849,38 @@ def ai_analyze():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+
+@app.route("/api/v3/telegram-test", methods=["POST"])
+@require_auth
+def telegram_test():
+    try:
+        from engine.advanced_ai import send_telegram
+        ok = send_telegram("🤖 Chanakya AI - Telegram connected!")
+        return jsonify({"success":ok,"message":"Sent" if ok else "No token configured"})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+@app.route("/api/v3/options-chain")
+@require_auth
+def options_chain():
+    try:
+        symbol = request.args.get("symbol","NIFTY")
+        from engine.advanced_ai import get_pcr_oi
+        data = get_pcr_oi(broker, symbol)
+        return jsonify({"success":True,"data":data})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+@app.route("/api/v3/fii-dii")
+@require_auth
+def fii_dii():
+    try:
+        from engine.advanced_ai import get_fii_dii
+        data = get_fii_dii(broker)
+        return jsonify({"success":True,"data":data})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/policy")
 @require_auth
 def user_policy():
