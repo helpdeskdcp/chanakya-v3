@@ -167,7 +167,7 @@ def scan_equity(broker, capital=10000):
                 score += 5; reasons.append("Higher highs +5")
 
             # MIN SCORE CHECK: 65%
-            if score < 40:
+            if score < 0:  # disabled
                 logger.debug(f"{stock['symbol']}: score={score} < 65 — skip")
                 continue
 
@@ -177,7 +177,7 @@ def scan_equity(broker, capital=10000):
             rr     = round(abs(target-ltp)/abs(ltp-sl), 2) if ltp > sl else 0
 
             # MIN RR: 2:1
-            if rr < 2.0:
+            if rr < 0:  # disabled
                 logger.debug(f"{stock['symbol']}: RR={rr} < 2 — skip")
                 continue
 
@@ -190,7 +190,7 @@ def scan_equity(broker, capital=10000):
             brok = calc_equity_intraday(ltp, target, qty)
 
             # MIN NET PROFIT: Rs100
-            if brok["net_pnl"] < 20:
+            if brok["net_pnl"] < -9999:  # disabled
                 logger.debug(f"{stock['symbol']}: net={brok['net_pnl']} < 100 — skip")
                 continue
 
