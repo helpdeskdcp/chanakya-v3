@@ -580,7 +580,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
         </div>
       </div>
 
-      <div class="pg" id="pg-prediction" style="display:none">
+      <div class="pg" id="pg-prediction">
         <div class="card">
           <div class="ch">🔮 Chanakya AI Preferred Predictions
             <button class="btn b-blue" onclick="runPredictionScan()" id="predScanBtn" style="font-size:10px;padding:4px 10px">⚡ Scan Now</button>
@@ -2043,6 +2043,28 @@ function quickChat(msg) {
   document.getElementById('aiChatInput').value = msg;
   sendAIChat();
 }
+async function predTrade(btn) {
+  var sym=btn.dataset.sym, dir=btn.dataset.dir;
+  var entry=btn.dataset.entry, sl=btn.dataset.sl, tgt=btn.dataset.tgt;
+  var exch=btn.dataset.exch;
+  var mode = USER_MODE || 'PAPER';
+  if(!confirm(dir+' '+sym+' @ Rs'+entry+'\nSL=Rs'+sl+' Target=Rs'+tgt+'\nMode: '+mode+'\nConfirm?')) return;
+  // Use equity trade API
+  var r = await fetch('/api/v3/equity/trade',{method:'POST',
+    headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},
+    body:JSON.stringify({symbol:sym,token:'',direction:dir,
+      entry:parseFloat(entry),sl:parseFloat(sl),target:parseFloat(tgt),
+      qty:1,exchange:exch})});
+  var d = await r.json();
+  if(d.success) {
+    toast('✅ '+dir+' '+sym+' #'+d.trade_id+' ('+mode+')', '#00e676');
+    btn.style.background='#00e676'; btn.style.color='#000';
+    btn.textContent='✅ Trade Placed #'+d.trade_id;
+  } else {
+    toast('❌ '+d.error,'#ff5252');
+  }
+}
+
 async function loadPredictions() {
   var d = await api('/chanakya-prediction');
   if(!d || !d.success) return;
@@ -2098,7 +2120,12 @@ function renderPredictions(signals) {
       '</div>' +
       (s.ai_verdict?'<div style="font-size:9px;color:#d4af37;margin-bottom:4px">🤖 '+s.ai_verdict+'</div>':'')+
       fakeWarn +
-      '<div style="font-size:9px;color:#8090a8">'+s.scanned_at+' | '+s.exchange+'</div>' +
+      '<div style="font-size:9px;color:#8090a8;margin-bottom:6px">'+s.scanned_at+' | '+s.exchange+'</div>' +
+      '<button class="btn b-blue" onclick="predTrade(this)" '+
+        'data-sym="'+s.symbol+'" data-dir="'+s.direction+'" '+
+        'data-entry="'+s.entry+'" data-sl="'+s.sl+'" data-tgt="'+s.target+'" '+
+        'data-exch="'+s.exchange+'" '+
+        'style="width:100%;font-size:10px;padding:6px">'+(s.direction==='BUY'?'📈':'📉')+' '+s.direction+' '+s.symbol+' (Paper/Live)</button>'+
     '</div>';
   }).join('');
   el.innerHTML = html;
