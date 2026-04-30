@@ -172,8 +172,8 @@ def scan_equity(broker, capital=10000):
                 continue
 
             # ── ENTRY/SL/TARGET ─────────────────────────
-            sl     = round(ltp - 1.5*atr, 2)
-            target = round(ltp + 3.0*atr, 2)
+            sl     = round(ltp - 0.8*atr, 2)
+            target = round(ltp + 2.4*atr, 2)
             rr     = round(abs(target-ltp)/abs(ltp-sl), 2) if ltp > sl else 0
 
             # MIN RR: 2:1
