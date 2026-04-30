@@ -16,31 +16,36 @@ def get_client():
     return _client
 
 def get_market_context(broker=None):
-    """Fetch live market data for AI context"""
-    ctx = {}
+    """Get live market data from broker"""
+    ctx = {"vix": 18}
+    if not broker or not broker.connected:
+        return ctx
     try:
-        from data.market import get_vix
-        ctx["vix"] = get_vix() or 18
-    except: ctx["vix"] = 18
-    if broker and broker.connected:
+        from engine.rate_limiter import get_rate_limiter
+        rl = get_rate_limiter()
+        symbols = [
+            {"name":"NIFTY",      "token":"99926000", "exch":"NSE",  "sym":"Nifty 50"},
+            {"name":"BANKNIFTY",  "token":"99926009", "exch":"NSE",  "sym":"Nifty Bank"},
+            {"name":"CRUDEOIL",   "token":"488290",   "exch":"MCX",  "sym":"CRUDEOIL"},
+            {"name":"NATURALGAS", "token":"488505",   "exch":"MCX",  "sym":"NATURALGAS"},
+            {"name":"NIFTY",      "token":"99926000", "exch":"NSE",  "sym":"NIFTY"},
+        ]
+        seen = set()
+        for s in symbols:
+            if s["name"] in seen: continue
+            seen.add(s["name"])
+            try:
+                rl.wait_if_needed("ltpData")
+                r = broker.api.ltpData(s["exch"], s["sym"], s["token"])
+                if r and r.get("data"):
+                    ctx[s["name"]] = float(r["data"]["ltp"])
+            except: pass
         try:
-            from engine.rate_limiter import get_rate_limiter
-            rl = get_rate_limiter()
-            symbols = [
-                {"name":"NIFTY",  "token":"99926000","exch":"NSE"},
-                {"name":"BANKNIFTY","token":"99926009","exch":"NSE"},
-                {"name":"CRUDEOIL",   "token":"488290", "exch":"MCX"},
-                {"name":"NATURALGAS", "token":"488505", "exch":"MCX"},
-
-            ]
-            for s in symbols:
-                try:
-                    rl.wait_if_needed("ltpData")
-                    r = broker.api.ltpData(s["exch"],s["name"],s["token"])
-                    if r and r.get("data"):
-                        ctx[s["name"]] = float(r["data"]["ltp"])
-                except: pass
+            from data.market import get_vix
+            ctx["vix"] = get_vix() or 18
         except: pass
+    except Exception as e:
+        pass
     return ctx
 
 def build_context(broker=None):
