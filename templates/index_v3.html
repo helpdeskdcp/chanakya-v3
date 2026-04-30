@@ -1868,11 +1868,17 @@ async function scanEquity() {
         '<div><div style="color:#8090a8;font-size:9px">SL</div><b style="color:#ff5252">Rs'+s.sl+'</b></div>' +
         '<div><div style="color:#8090a8;font-size:9px">QTY</div><b style="color:#d4af37">'+s.qty+'</b></div>' +
       '</div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:6px">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font-size:10px;margin-bottom:4px">' +
         '<span>RSI:<b style="color:#fff"> '+s.rsi+'</b></span>' +
         '<span>Vol:<b style="color:#fff"> '+s.vol_ratio+'x</b></span>' +
         '<span>RR:<b style="color:#d4af37"> '+s.rr+'</b></span>' +
-        '<span style="color:#00e676">Net:+Rs'+s.net_profit+'</span>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px">' +
+        '<span style="color:#00e676">Net: +Rs'+s.net_profit+'</span>' +
+        '<span style="color:#8090a8">Charges: Rs'+s.charges+'</span>' +
+      '</div>' +
+      '<div style="font-size:9px;color:#8090a8;margin-bottom:6px">' +
+        (s.reasons||[]).slice(0,3).join(' | ') +
       '</div>' +
       '<button class="btn b-blue" onclick="equityBuy(this)" ' +
         'data-sym="'+s.symbol+'" data-tok="'+s.token+'" data-dir="'+s.direction+'" ' +
