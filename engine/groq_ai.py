@@ -126,6 +126,94 @@ def get_client():
         except Exception as e:
             logger.error("Groq: %s",e)
     return _client
+
+def get_technical_analysis(broker, symbol, token, exch="NSE"):
+    """Get VWAP, MACD, EMA, RSI for any stock"""
+    try:
+        from engine.rate_limiter import get_rate_limiter
+        from engine.equity_scanner import _ema, _rsi, _macd, _vwap
+        from datetime import datetime, timedelta
+        import pytz
+        rl = get_rate_limiter()
+        IST = pytz.timezone("Asia/Kolkata")
+        now = datetime.now(IST)
+        rl.wait_if_needed("candleData")
+        r = broker.api.getCandleData({
+            "exchange": exch,
+            "symboltoken": token,
+            "interval": "FIVE_MINUTE",
+            "fromdate": (now-timedelta(days=2)).strftime("%Y-%m-%d")+" 09:15",
+            "todate": now.strftime("%Y-%m-%d %H:%M"),
+        })
+        if not r or not r.get("data") or len(r["data"]) < 10:
+            return {}
+        candles = r["data"]
+        closes = [float(c[4]) for c in candles]
+        highs  = [float(c[2]) for c in candles]
+        lows   = [float(c[3]) for c in candles]
+        vols   = [float(c[5]) for c in candles]
+        ltp    = closes[-1]
+        rsi    = _rsi(closes)
+        ema9   = _ema(closes, 9)
+        ema21  = _ema(closes, 21)
+        ema50  = _ema(closes[-50:] if len(closes)>=50 else closes, 50)
+        macd_v, macd_h = _macd(closes)
+        # VWAP
+        vwap = _vwap(candles) if len(candles)>=5 else ltp
+        # ATR
+        atr = sum([highs[i]-lows[i] for i in range(-10,0)])/10
+        # Volume ratio
+        vol_avg = sum(vols)/len(vols)
+        vol_ratio = round(vols[-1]/vol_avg,2) if vol_avg>0 else 1
+        # Signals
+        ema_cross = "BULLISH" if ema9>ema21 else "BEARISH"
+        vwap_bias = "ABOVE VWAP (Bullish)" if ltp>vwap else "BELOW VWAP (Bearish)"
+        macd_signal = "BULLISH CROSS" if macd_h>0 else "BEARISH CROSS"
+        # Fake signal filter
+        fake = []
+        if vol_ratio < 0.7: fake.append("Low Volume")
+        if abs(macd_h) < 0.1: fake.append("Weak MACD")
+        if 45<rsi<55: fake.append("RSI Neutral")
+        return {
+            "ltp": ltp, "rsi": round(rsi,1),
+            "ema9": round(ema9,1), "ema21": round(ema21,1), "ema50": round(ema50,1),
+            "macd_hist": round(macd_h,2), "macd_signal": macd_signal,
+            "vwap": round(vwap,1), "vwap_bias": vwap_bias,
+            "ema_cross": ema_cross, "vol_ratio": vol_ratio,
+            "atr": round(atr,2), "fake_signals": fake,
+            "entry": round(ltp,1),
+            "sl": round(ltp-1.5*atr,1),
+            "target": round(ltp+3*atr,1),
+        }
+    except Exception as e:
+        logger.debug("TA error %s: %s", symbol, e)
+        return {}
+
+def get_options_signals(broker):
+    """Get filtered options signals from signal cache"""
+    try:
+        import json, os
+        cache_file = "data/signal_cache.json"
+        if not os.path.exists(cache_file):
+            return []
+        cache = json.load(open(cache_file))
+        sigs = []
+        for user, data in cache.items():
+            for s in (data if isinstance(data,list) else []):
+                if s.get("score",0) > 0.6:
+                    sigs.append({
+                        "symbol": s.get("symbol",""),
+                        "direction": s.get("type",""),
+                        "entry": s.get("entry",0),
+                        "target": s.get("target",0),
+                        "sl": s.get("sl",0),
+                        "score": s.get("score",0),
+                        "rsi": s.get("rsi",50),
+                    })
+        return sigs[:5]
+    except:
+        return []
+
 def get_live_data(broker=None):
     data={}
     if not(broker and broker.connected):return data
