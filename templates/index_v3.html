@@ -369,6 +369,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-it" onclick="pg('brain',this)">🧠 AI Brain</div>
       <div class="nav-sec">System</div>
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
+      <div class="nav-it" style="color:#ff5252;font-weight:bold" onclick="killSwitch()">🚨 Kill Switch</div>
       <div class="nav-it" id="navSystem" style="display:none" onclick="pg('system',this)">🖥️ System Monitor</div>
       <div class="nav-it" id="navAdmin" style="display:none" onclick="window.location.href='/v3/admin'">👑 Admin</div>
       <div class="nav-it" onclick="logout()">⎋ Logout</div>
@@ -1920,6 +1921,16 @@ async function calcBrok() {
     '</div>' +
     '<div style="margin-top:4px;font-size:10px;color:#8090a8">Breakeven: <b style="color:#d4af37">Rs'+r.breakeven+'</b></div>' +
     '</div>';
+}
+
+async function killSwitch() {
+  if(!confirm('🚨 EMERGENCY STOP\nAll trading will stop!\nConfirm?')) return;
+  var r = await fetch('/api/v3/kill-switch',{method:'POST',
+    headers:{'Content-Type':'application/json','X-Auth-Token':TOKEN},
+    body:JSON.stringify({activate:true})});
+  var d = await r.json();
+  if(d.success) toast('🚨 KILL SWITCH ACTIVATED','#ff5252');
+  else toast('Error: '+d.error,'#ff5252');
 }
 
 // ── SIGNALS ───────────────────────────────────────────

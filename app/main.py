@@ -731,6 +731,39 @@ def equity_brokerage():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+
+@app.route("/api/v3/kill-switch", methods=["POST"])
+@require_auth
+def kill_switch_api():
+    """Emergency kill switch — admin only"""
+    try:
+        curr = get_current_user()
+        if curr.get("role") != "admin":
+            return jsonify({"success":False,"error":"Admin only"})
+        data = request.json or {}
+        activate = data.get("activate", True)
+        from engine.risk_manager import kill_switch as ks
+        ks(activate)
+        # Stop orchestrator if killing
+        if activate:
+            from engine.orchestrator import get_orchestrator
+            orch = get_orchestrator()
+            if orch: orch.emergency_stop()
+        return jsonify({"success":True,"kill_switch":activate,
+                       "message":"KILL SWITCH " + ("ACTIVATED" if activate else "DEACTIVATED")})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+@app.route("/api/v3/risk-status")
+@require_auth
+def risk_status():
+    """Get risk manager status"""
+    try:
+        from engine.risk_manager import get_status
+        return jsonify({"success":True,"status":get_status()})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/policy")
 @require_auth
 def user_policy():
