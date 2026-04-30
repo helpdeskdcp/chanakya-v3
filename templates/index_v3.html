@@ -1807,7 +1807,7 @@ async function updatePositionPnL() {
     var totalPnl = 0;
     _posData.forEach(function(p) {
       var key = p.trading_symbol || p.symbol;
-      var ltp = ltpMap[key] || ltpMap[p.id] || 0;
+      var ltp = ltpMap[key] || ltpMap[String(p.id)] || ltpMap[p.symbol] || 0;
       if(ltp > 0) {
         var qty = (p.lots||1) * (p.lot_size||1);
         var pnlAmt = (ltp - (p.entry_price||0)) * qty;
