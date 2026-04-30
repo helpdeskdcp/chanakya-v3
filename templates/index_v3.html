@@ -368,6 +368,7 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
       <div class="nav-it" onclick="pg('analytics',this)">📈 Analytics</div>
       <div class="nav-it" onclick="pg('brain',this)">🧠 AI Brain</div>
       <div class="nav-it" onclick="pg('aichat',this)">💬 AI Chat</div>
+      <div class="nav-it" onclick="pg('prediction',this)">🔮 Prediction</div>
       <div class="nav-sec">System</div>
       <div class="nav-it" onclick="pg('settings',this)">⚙️ Settings</div>
       <div class="nav-it" style="color:#ff5252;font-weight:bold" onclick="killSwitch()">🚨 Kill Switch</div>
@@ -575,6 +576,23 @@ body{background:#0a0e1a;color:#e0e6f0;font-family:'Segoe UI',sans-serif;min-heig
             <button onclick="quickChat('BANKNIFTY trend kaay aahe?')" style="background:#0d1b2a;border:1px solid #1e3a5f;color:#8090a8;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">BANKNIFTY</button>
             <button onclick="quickChat('CRUDEOIL MCX analysis')" style="background:#0d1b2a;border:1px solid #1e3a5f;color:#8090a8;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">CRUDE</button>
             <button onclick="quickChat('Best strategy for sideways market?')" style="background:#0d1b2a;border:1px solid #1e3a5f;color:#8090a8;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">Strategy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pg" id="pg-prediction" style="display:none">
+        <div class="card">
+          <div class="ch">🔮 Chanakya AI Preferred Predictions
+            <button class="btn b-blue" onclick="runPredictionScan()" id="predScanBtn" style="font-size:10px;padding:4px 10px">⚡ Scan Now</button>
+          </div>
+          <div style="padding:8px;font-size:10px;color:#8090a8" id="predLastScan">Last scan: —</div>
+          <div style="padding:4px 8px 8px;font-size:10px;color:#d4af37">
+            🤖 MTF Analysis (1m+5m+15m+30m+1hr) + Groq LLaMA AI Confirmation
+          </div>
+          <div id="predSignals" style="padding:8px">
+            <div style="text-align:center;color:#8090a8;padding:20px">
+              Click "Scan Now" to get AI predictions
+            </div>
           </div>
         </div>
       </div>
@@ -2025,6 +2043,67 @@ function quickChat(msg) {
   document.getElementById('aiChatInput').value = msg;
   sendAIChat();
 }
+async function loadPredictions() {
+  var d = await api('/chanakya-prediction');
+  if(!d || !d.success) return;
+  var el = document.getElementById('predLastScan');
+  if(el) el.textContent = 'Last scan: ' + (d.scanned_at||'—') + ' | ' + d.total + ' signals';
+  renderPredictions(d.signals||[]);
+}
+
+async function runPredictionScan() {
+  var btn = document.getElementById('predScanBtn');
+  if(btn) { btn.textContent='⏳ Scanning...'; btn.disabled=true; }
+  document.getElementById('predSignals').innerHTML = '<div style="text-align:center;color:#d4af37;padding:20px">🔮 AI scanning 16 stocks across 5 timeframes...<br>Est. 30-45 seconds</div>';
+  // Start scan
+  await fetch('/api/v3/chanakya-prediction/scan',{method:'POST',headers:{'X-Auth-Token':TOKEN}});
+  // Poll for results
+  var attempts=0;
+  var poll = setInterval(async function() {
+    attempts++;
+    var d = await api('/chanakya-prediction');
+    if(d && d.total>0 || attempts>10) {
+      clearInterval(poll);
+      if(btn) { btn.textContent='⚡ Scan Now'; btn.disabled=false; }
+      var el = document.getElementById('predLastScan');
+      if(el) el.textContent = 'Last scan: '+(d.scanned_at||'—')+' | '+d.total+' signals';
+      renderPredictions(d.signals||[]);
+    }
+  }, 5000);
+}
+
+function renderPredictions(signals) {
+  var el = document.getElementById('predSignals');
+  if(!signals.length) {
+    el.innerHTML = '<div style="text-align:center;color:#8090a8;padding:20px">No high-confidence signals found — try during market hours</div>';
+    return;
+  }
+  var html = signals.map(function(s) {
+    var clr = s.direction==='BUY' ? '#00e676' : '#ff5252';
+    var confClr = s.confidence>=80?'#00e676':s.confidence>=60?'#d4af37':'#ff9800';
+    var fakeWarn = s.fake&&s.fake.length ? '<span style="color:#ff9800;font-size:9px">⚠️ '+s.fake.join(',')+'</span>' : '';
+    return '<div style="background:#0d1b2a;border:1px solid #1e3a5f;border-radius:8px;padding:10px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+        '<span style="color:'+clr+';font-weight:bold;font-size:13px">'+s.direction+' '+s.symbol+'</span>' +
+        '<span style="color:'+confClr+';font-size:12px;font-weight:bold">'+s.confidence+'% conf</span>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;font-size:10px;margin-bottom:6px">' +
+        '<div><span style="color:#8090a8">Entry</span><br><b>Rs'+s.entry+'</b></div>' +
+        '<div><span style="color:#00e676">Target</span><br><b>Rs'+s.target+'</b></div>' +
+        '<div><span style="color:#ff5252">SL</span><br><b>Rs'+s.sl+'</b></div>' +
+        '<div><span style="color:#8090a8">RR</span><br><b>1:'+s.rr+'</b></div>' +
+      '</div>' +
+      '<div style="font-size:9px;color:#8090a8;margin-bottom:4px">' +
+        'RSI='+s.rsi+' | VWAP='+s.vwap_bias+' | MACD='+s.macd+' | '+s.bull_tf+'/5 TF agree' +
+      '</div>' +
+      (s.ai_verdict?'<div style="font-size:9px;color:#d4af37;margin-bottom:4px">🤖 '+s.ai_verdict+'</div>':'')+
+      fakeWarn +
+      '<div style="font-size:9px;color:#8090a8">'+s.scanned_at+' | '+s.exchange+'</div>' +
+    '</div>';
+  }).join('');
+  el.innerHTML = html;
+}
+
 // ── SIGNALS ───────────────────────────────────────────
 async function loadSignals() {
   const d = await api('/signals');
@@ -2318,6 +2397,7 @@ function pg(id, el) {
   if(id==='system')    { loadSystemData(); loadAdminUsers(); }
   if(id==='users')     loadUsers();
   if(id==='aichat')    {}  // AI chat ready
+  if(id==='prediction') loadPredictions();
 }
 
 // ── CLOCK ─────────────────────────────────────────────

@@ -881,6 +881,36 @@ def fii_dii():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)})
 
+
+@app.route("/api/v3/chanakya-prediction")
+@require_auth
+def chanakya_prediction():
+    """Chanakya AI Preferred Predictions"""
+    try:
+        force = request.args.get("force","0")=="1"
+        from engine.prediction_engine import get_cached_predictions, run_prediction_scan
+        if force:
+            signals = run_prediction_scan(broker)
+            scanned_at = "just now"
+        else:
+            signals, scanned_at = get_cached_predictions()
+        return jsonify({"success":True,"signals":signals,"total":len(signals),"scanned_at":scanned_at})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e),"signals":[]})
+
+@app.route("/api/v3/chanakya-prediction/scan", methods=["POST"])
+@require_auth
+def chanakya_prediction_scan():
+    """Force scan for predictions"""
+    try:
+        import threading
+        from engine.prediction_engine import run_prediction_scan
+        t = threading.Thread(target=run_prediction_scan, args=(broker,), daemon=True)
+        t.start()
+        return jsonify({"success":True,"message":"Scan started — check in 30s"})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
 @app.route("/api/v3/policy")
 @require_auth
 def user_policy():
